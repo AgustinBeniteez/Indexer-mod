@@ -2,6 +2,7 @@ package com.agustinbenitez.indexer.block.entity;
 
 import com.agustinbenitez.indexer.block.IndexerConnectorBlock;
 import com.agustinbenitez.indexer.init.ModBlockEntities;
+import com.agustinbenitez.indexer.inventory.IndexerConnectorMenu;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -21,6 +22,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import java.util.List;
 
 import javax.annotation.Nullable;
 
@@ -40,7 +42,7 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
 
     @Override
     protected AbstractContainerMenu createMenu(int id, Inventory inventory) {
-        return new ChestMenu(MenuType.GENERIC_9x1, id, inventory, this, 1);
+        return new IndexerConnectorMenu(id, inventory, this, this);
     }
 
     @Override
@@ -82,15 +84,30 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
         if (level.isClientSide()) return;
 
         // Verificar si hay un cofre conectado
-        if (entity.connectedChestPos == null) {
-            entity.updateConnectedChest();
+        BlockPos previousChestPos = entity.connectedChestPos;
+        entity.updateConnectedChest();
+        
+        // Notificar si se estableció una nueva conexión
+        if (previousChestPos == null && entity.connectedChestPos != null) {
+            // Se conectó un nuevo cofre
+            List<net.minecraft.world.entity.player.Player> nearbyPlayers = level.getEntitiesOfClass(
+                net.minecraft.world.entity.player.Player.class, 
+                new net.minecraft.world.phys.AABB(pos).inflate(16.0D)
+            );
+            
+            for (net.minecraft.world.entity.player.Player player : nearbyPlayers) {
+                player.sendSystemMessage(net.minecraft.network.chat.Component.literal("Conector conectado a cofre"));
+            }
         }
     }
 
     public void updateConnectedChest() {
         if (this.level == null) return;
 
+        BlockPos oldChestPos = this.connectedChestPos;
         this.connectedChestPos = null;
+        
+        // Buscar cofres adyacentes
         for (Direction direction : Direction.values()) {
             BlockPos adjacentPos = this.worldPosition.relative(direction);
             BlockState adjacentState = this.level.getBlockState(adjacentPos);
@@ -100,15 +117,25 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
                 return;
             }
         }
+        
+        // Si se perdió la conexión, marcar como cambiado
+        if (oldChestPos != null && this.connectedChestPos == null) {
+            this.setChanged();
+        }
     }
 
     public boolean canAcceptItem(ItemStack stack) {
-        if (this.filterItem.isEmpty()) {
-            return false; // No hay filtro configurado
+        // Verificar si hay un cofre conectado
+        if (this.connectedChestPos == null) {
+            updateConnectedChest(); // Intentar encontrar un cofre
+            if (this.connectedChestPos == null) {
+                return false; // No hay cofre conectado
+            }
         }
 
-        if (this.connectedChestPos == null) {
-            return false; // No hay cofre conectado
+        // Si no hay filtro configurado, acepta cualquier ítem
+        if (this.filterItem.isEmpty()) {
+            return true;
         }
 
         // Verificar si el ítem coincide con el filtro

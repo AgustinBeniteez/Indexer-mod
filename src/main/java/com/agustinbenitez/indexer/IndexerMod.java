@@ -4,6 +4,8 @@ import com.agustinbenitez.indexer.init.ModBlocks;
 import com.agustinbenitez.indexer.init.ModItems;
 import com.agustinbenitez.indexer.init.ModCreativeTabs;
 import com.agustinbenitez.indexer.init.ModBlockEntities;
+import com.agustinbenitez.indexer.init.ModMenuTypes;
+import com.agustinbenitez.indexer.network.ModNetworking;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.common.MinecraftForge;
@@ -26,6 +28,10 @@ public class IndexerMod {
         ModBlocks.register(modEventBus);
         ModCreativeTabs.register(modEventBus);
         ModBlockEntities.register(modEventBus);
+        ModMenuTypes.register(modEventBus);
+        
+        // Register networking
+        ModNetworking.register();
 
         // Register ourselves for server and other game events
         MinecraftForge.EVENT_BUS.register(this);

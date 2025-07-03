@@ -23,6 +23,9 @@ public class ModItems {
 
     public static final RegistryObject<Item> INDEXER_CONNECTOR_ITEM = ITEMS.register("indexer_connector",
             () -> new BlockItem(ModBlocks.INDEXER_CONNECTOR.get(), new Item.Properties()));
+            
+    public static final RegistryObject<Item> DROP_BOX_ITEM = ITEMS.register("drop_box",
+            () -> new BlockItem(ModBlocks.DROP_BOX.get(), new Item.Properties()));
 
     // Manual del Indexer
     public static final RegistryObject<Item> INDEXER_MANUAL = ITEMS.register("indexer_manual",

@@ -1,91 +1,85 @@
 package com.agustinbenitez.indexer.block.entity;
 
 import com.agustinbenitez.indexer.IndexerMod;
+import com.agustinbenitez.indexer.block.DropBoxBlock;
 import com.agustinbenitez.indexer.block.IndexerPipeBlock;
 import com.agustinbenitez.indexer.init.ModBlockEntities;
+import com.agustinbenitez.indexer.menu.IndexerControllerMenu;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.ContainerHelper;
-import net.minecraft.world.WorldlyContainer;
+import net.minecraft.world.Container;
+import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ChestMenu;
+import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 import javax.annotation.Nullable;
 import java.util.*;
 
-public class IndexerControllerBlockEntity extends RandomizableContainerBlockEntity implements WorldlyContainer {
-    private NonNullList<ItemStack> items = NonNullList.withSize(27, ItemStack.EMPTY);
-    private int transferCooldown = 0;
+public class IndexerControllerBlockEntity extends BlockEntity implements MenuProvider {
     private static final int TRANSFER_COOLDOWN_MAX = 8;
     private static final int SEARCH_RANGE = 10;
-
+    
+    private boolean enabled = true;
+    private int transferCooldown = 0;
+    private BlockPos dropChestPos = null;
+    private int previousConnectorCount = 0;
+    private boolean hasNotifiedConnection = false;
+    
+    // Datos para sincronizar con el cliente
+    protected final ContainerData data;
+    
     public IndexerControllerBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.INDEXER_CONTROLLER.get(), pos, state);
+        
+        this.data = new ContainerData() {
+            @Override
+            public int get(int index) {
+                return switch (index) {
+                    case 0 -> IndexerControllerBlockEntity.this.enabled ? 1 : 0;
+                    case 1 -> IndexerControllerBlockEntity.this.hasDropChest() ? 1 : 0;
+                    case 2 -> IndexerControllerBlockEntity.this.getConnectedChestsCount();
+                    case 3 -> IndexerControllerBlockEntity.this.getTotalAvailableSlots();
+                    default -> 0;
+                };
+            }
+
+            @Override
+            public void set(int index, int value) {
+                switch (index) {
+                    case 0 -> IndexerControllerBlockEntity.this.enabled = value == 1;
+                    // Los otros valores son de solo lectura
+                }
+            }
+
+            @Override
+            public int getCount() {
+                return 4;
+            }
+        };
     }
 
     @Override
-    protected Component getDefaultName() {
+    public Component getDisplayName() {
         return Component.translatable("container.indexer.controller");
     }
 
     @Override
-    protected AbstractContainerMenu createMenu(int id, Inventory inventory) {
-        return ChestMenu.threeRows(id, inventory, this);
+    public AbstractContainerMenu createMenu(int id, Inventory inventory, Player player) {
+        return new IndexerControllerMenu(id, inventory, this, this.data);
     }
-
-    @Override
-    public int getContainerSize() {
-        return 27;
-    }
-
-    @Override
-    public boolean isEmpty() {
-        for (ItemStack itemstack : this.items) {
-            if (!itemstack.isEmpty()) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    @Override
-    public ItemStack getItem(int slot) {
-        return this.items.get(slot);
-    }
-
-    @Override
-    public ItemStack removeItem(int slot, int amount) {
-        return ContainerHelper.removeItem(this.items, slot, amount);
-    }
-
-    @Override
-    public ItemStack removeItemNoUpdate(int slot) {
-        return ContainerHelper.takeItem(this.items, slot);
-    }
-
-    @Override
-    public void setItem(int slot, ItemStack stack) {
-        this.items.set(slot, stack);
-        if (stack.getCount() > this.getMaxStackSize()) {
-            stack.setCount(this.getMaxStackSize());
-        }
-        this.setChanged();
-    }
-
-    @Override
+    
     public boolean stillValid(Player player) {
         if (this.level.getBlockEntity(this.worldPosition) != this) {
             return false;
@@ -95,49 +89,89 @@ public class IndexerControllerBlockEntity extends RandomizableContainerBlockEnti
     }
 
     @Override
-    public void clearContent() {
-        this.items.clear();
-    }
-
-    @Override
-    protected NonNullList<ItemStack> getItems() {
-        return this.items;
-    }
-
-    @Override
-    protected void setItems(NonNullList<ItemStack> items) {
-        this.items = items;
-    }
-
-    @Override
     public void load(CompoundTag tag) {
         super.load(tag);
-        this.items = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
-        if (!this.tryLoadLootTable(tag)) {
-            ContainerHelper.loadAllItems(tag, this.items);
-        }
+        this.enabled = tag.getBoolean("Enabled");
         this.transferCooldown = tag.getInt("TransferCooldown");
+        this.previousConnectorCount = tag.getInt("PreviousConnectorCount");
+        this.hasNotifiedConnection = tag.getBoolean("HasNotifiedConnection");
+        
+        if (tag.contains("DropChestX")) {
+            this.dropChestPos = new BlockPos(
+                    tag.getInt("DropChestX"),
+                    tag.getInt("DropChestY"),
+                    tag.getInt("DropChestZ")
+            );
+        }
     }
 
     @Override
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
-        if (!this.trySaveLootTable(tag)) {
-            ContainerHelper.saveAllItems(tag, this.items);
-        }
+        tag.putBoolean("Enabled", this.enabled);
         tag.putInt("TransferCooldown", this.transferCooldown);
+        tag.putInt("PreviousConnectorCount", this.previousConnectorCount);
+        tag.putBoolean("HasNotifiedConnection", this.hasNotifiedConnection);
+        
+        if (this.dropChestPos != null) {
+            tag.putInt("DropChestX", this.dropChestPos.getX());
+            tag.putInt("DropChestY", this.dropChestPos.getY());
+            tag.putInt("DropChestZ", this.dropChestPos.getZ());
+        }
+    }
+    
+    public void toggleEnabled() {
+        this.enabled = !this.enabled;
+        this.setChanged();
+    }
+    
+    public boolean isEnabled() {
+        return this.enabled;
+    }
+    
+    public boolean hasDropChest() {
+        if (this.dropChestPos == null) {
+            updateDropChest();
+        }
+        return this.dropChestPos != null;
+    }
+    
+    public void updateDropChest() {
+        if (this.level == null) return;
+        
+        this.dropChestPos = null;
+        for (Direction direction : Direction.values()) {
+            BlockPos adjacentPos = this.worldPosition.relative(direction);
+            BlockState adjacentState = this.level.getBlockState(adjacentPos);
+            // Detectar tanto cofres normales como DropBoxes
+            if (adjacentState.getBlock() instanceof ChestBlock || adjacentState.getBlock() instanceof DropBoxBlock) {
+                this.dropChestPos = adjacentPos;
+                this.setChanged();
+                return;
+            }
+        }
+    }
+    
+    public void setDropChestPos(BlockPos pos) {
+        this.dropChestPos = pos;
+        this.setChanged();
     }
 
     public static void tick(Level level, BlockPos pos, BlockState state, IndexerControllerBlockEntity entity) {
         if (level.isClientSide()) return;
+
+        // Verificar conexiones y notificar cambios
+        entity.checkConnectionStatus(level);
+
+        if (!entity.enabled) return;
 
         if (entity.transferCooldown > 0) {
             entity.transferCooldown--;
             return;
         }
 
-        // Intentar transferir ítems a los conectores
-        boolean didTransfer = entity.transferItems();
+        // Intentar transferir ítems desde el cofre de drop
+        boolean didTransfer = entity.transferItemsFromDropChest();
 
         if (didTransfer) {
             entity.transferCooldown = TRANSFER_COOLDOWN_MAX;
@@ -145,8 +179,13 @@ public class IndexerControllerBlockEntity extends RandomizableContainerBlockEnti
         }
     }
 
-    private boolean transferItems() {
-        if (this.level == null || this.isEmpty()) {
+    private boolean transferItemsFromDropChest() {
+        if (this.level == null || !hasDropChest()) {
+            return false;
+        }
+
+        BlockEntity dropChestEntity = this.level.getBlockEntity(this.dropChestPos);
+        if (!(dropChestEntity instanceof Container dropChest)) {
             return false;
         }
 
@@ -158,16 +197,16 @@ public class IndexerControllerBlockEntity extends RandomizableContainerBlockEnti
 
         boolean transferred = false;
 
-        // Intentar transferir cada ítem a un conector apropiado
-        for (int i = 0; i < this.items.size(); i++) {
-            ItemStack stack = this.items.get(i);
+        // Intentar transferir cada ítem del cofre de drop a un conector apropiado
+        for (int i = 0; i < dropChest.getContainerSize(); i++) {
+            ItemStack stack = dropChest.getItem(i);
             if (stack.isEmpty()) continue;
 
             for (IndexerConnectorBlockEntity connector : connectors) {
                 if (connector.canAcceptItem(stack)) {
                     ItemStack remainder = connector.insertItem(stack);
                     if (remainder.getCount() < stack.getCount()) {
-                        this.items.set(i, remainder);
+                        dropChest.setItem(i, remainder);
                         transferred = true;
                         if (remainder.isEmpty()) {
                             break;
@@ -179,7 +218,86 @@ public class IndexerControllerBlockEntity extends RandomizableContainerBlockEnti
 
         return transferred;
     }
+    
+    public int getConnectedChestsCount() {
+        List<IndexerConnectorBlockEntity> connectors = findConnectors();
+        Set<BlockPos> uniqueChests = new HashSet<>();
+        
+        for (IndexerConnectorBlockEntity connector : connectors) {
+            BlockPos chestPos = connector.getConnectedChestPos();
+            if (chestPos != null) {
+                uniqueChests.add(chestPos);
+            }
+        }
+        
+        return uniqueChests.size();
+    }
+    
+    public int getTotalAvailableSlots() {
+        List<IndexerConnectorBlockEntity> connectors = findConnectors();
+        Set<BlockPos> uniqueChests = new HashSet<>();
+        int totalSlots = 0;
+        
+        for (IndexerConnectorBlockEntity connector : connectors) {
+            BlockPos chestPos = connector.getConnectedChestPos();
+            if (chestPos != null && !uniqueChests.contains(chestPos)) {
+                uniqueChests.add(chestPos);
+                BlockEntity chestEntity = this.level.getBlockEntity(chestPos);
+                if (chestEntity instanceof Container container) {
+                    // Contar slots vacíos
+                    for (int i = 0; i < container.getContainerSize(); i++) {
+                        if (container.getItem(i).isEmpty()) {
+                            totalSlots++;
+                        }
+                    }
+                }
+            }
+        }
+        
+        return totalSlots;
+    }
 
+    private void checkConnectionStatus(Level level) {
+        // Obtener el número actual de conectores
+        List<IndexerConnectorBlockEntity> connectors = findConnectors();
+        int currentConnectorCount = connectors.size();
+        
+        // Verificar si hay cambios en las conexiones
+        if (currentConnectorCount != previousConnectorCount) {
+            // Buscar jugadores cercanos para notificar
+            List<Player> nearbyPlayers = level.getEntitiesOfClass(
+                Player.class, 
+                new net.minecraft.world.phys.AABB(worldPosition).inflate(32.0D)
+            );
+            
+            for (Player player : nearbyPlayers) {
+                if (currentConnectorCount > previousConnectorCount) {
+                    // Se agregaron nuevos conectores
+                    int newConnectors = currentConnectorCount - previousConnectorCount;
+                    for (int i = 0; i < newConnectors; i++) {
+                        player.sendSystemMessage(Component.literal("conector actived"));
+                    }
+                    hasNotifiedConnection = true;
+                } else if (currentConnectorCount == 0 && hasNotifiedConnection) {
+                    // Notificar conexión perdida
+                    player.sendSystemMessage(Component.translatable("message.indexer.controller.disconnected"));
+                    hasNotifiedConnection = false;
+                } else if (currentConnectorCount < previousConnectorCount) {
+                    // Se perdieron conectores
+                    int lostConnectors = previousConnectorCount - currentConnectorCount;
+                    player.sendSystemMessage(Component.translatable("message.indexer.controller.connection_lost", lostConnectors));
+                    if (currentConnectorCount == 0) {
+                        hasNotifiedConnection = false;
+                    }
+                }
+            }
+            
+            // Actualizar el contador previo
+            previousConnectorCount = currentConnectorCount;
+            setChanged();
+        }
+    }
+    
     private List<IndexerConnectorBlockEntity> findConnectors() {
         List<IndexerConnectorBlockEntity> connectors = new ArrayList<>();
         Set<BlockPos> visited = new HashSet<>();
@@ -223,35 +341,5 @@ public class IndexerControllerBlockEntity extends RandomizableContainerBlockEnti
         return connectors;
     }
 
-    public void dropContents() {
-        if (this.level != null) {
-            net.minecraft.world.Containers.dropContents(this.level, this.worldPosition, this);
-        }
-    }
 
-    // Implementación de WorldlyContainer para permitir la automatización
-    private static final int[] SLOTS_FOR_UP = new int[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26};
-    private static final int[] SLOTS_FOR_DOWN = new int[]{}; // No extraer por abajo
-    private static final int[] SLOTS_FOR_SIDES = new int[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26};
-
-    @Override
-    public int[] getSlotsForFace(Direction direction) {
-        if (direction == Direction.UP) {
-            return SLOTS_FOR_UP;
-        } else if (direction == Direction.DOWN) {
-            return SLOTS_FOR_DOWN;
-        } else {
-            return SLOTS_FOR_SIDES;
-        }
-    }
-
-    @Override
-    public boolean canPlaceItemThroughFace(int slot, ItemStack stack, @Nullable Direction direction) {
-        return this.canPlaceItem(slot, stack);
-    }
-
-    @Override
-    public boolean canTakeItemThroughFace(int slot, ItemStack stack, Direction direction) {
-        return direction != Direction.DOWN;
-    }
 }

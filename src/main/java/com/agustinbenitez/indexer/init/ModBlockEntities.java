@@ -1,6 +1,7 @@
 package com.agustinbenitez.indexer.init;
 
 import com.agustinbenitez.indexer.IndexerMod;
+import com.agustinbenitez.indexer.block.entity.DropBoxBlockEntity;
 import com.agustinbenitez.indexer.block.entity.IndexerControllerBlockEntity;
 import com.agustinbenitez.indexer.block.entity.IndexerConnectorBlockEntity;
 
@@ -28,6 +29,14 @@ public class ModBlockEntities {
                     () -> BlockEntityType.Builder.of(
                             IndexerConnectorBlockEntity::new, 
                             ModBlocks.INDEXER_CONNECTOR.get())
+                    .build(null));
+                    
+    // Entidad de bloque para el DropBox
+    public static final RegistryObject<BlockEntityType<DropBoxBlockEntity>> DROP_BOX = 
+            BLOCK_ENTITIES.register("drop_box", 
+                    () -> BlockEntityType.Builder.of(
+                            DropBoxBlockEntity::new, 
+                            ModBlocks.DROP_BOX.get())
                     .build(null));
 
     public static void register(IEventBus eventBus) {
