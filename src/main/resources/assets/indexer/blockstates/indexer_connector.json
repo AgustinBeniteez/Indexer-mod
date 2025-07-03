@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "indexer:block/indexer_connector" },
+    "facing=east": { "model": "indexer:block/indexer_connector", "y": 90 },
+    "facing=south": { "model": "indexer:block/indexer_connector", "y": 180 },
+    "facing=west": { "model": "indexer:block/indexer_connector", "y": 270 }
+  }
+}

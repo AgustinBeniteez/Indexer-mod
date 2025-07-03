@@ -1,0 +1,10 @@
+{
+  "block.indexer.indexer_controller": "Indexer Controller",
+  "block.indexer.indexer_pipe": "Indexer Pipe",
+  "block.indexer.indexer_connector": "Indexer Connector",
+  "item.indexer.indexer_manual": "Indexer Manual",
+  "item.indexer.manual.tooltip": "Contains instructions on how to use the Indexer system",
+  "container.indexer.controller": "Indexer Controller",
+  "container.indexer.connector": "Indexer Connector",
+  "itemGroup.indexer": "Indexer"
+}

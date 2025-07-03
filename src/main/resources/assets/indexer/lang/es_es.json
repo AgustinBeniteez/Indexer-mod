@@ -1,0 +1,10 @@
+{
+  "block.indexer.indexer_controller": "Controlador Indexador",
+  "block.indexer.indexer_pipe": "Tubería Indexadora",
+  "block.indexer.indexer_connector": "Conector Indexador",
+  "item.indexer.indexer_manual": "Manual del Indexador",
+  "item.indexer.manual.tooltip": "Contiene instrucciones sobre cómo usar el sistema Indexador",
+  "container.indexer.controller": "Controlador Indexador",
+  "container.indexer.connector": "Conector Indexador",
+  "itemGroup.indexer": "Indexador"
+}

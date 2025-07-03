@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "minecraft:book"
+    },
+    {
+      "item": "indexer:indexer_controller"
+    }
+  ],
+  "result": {
+    "item": "indexer:indexer_manual"
+  }
+}
