@@ -179,6 +179,15 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
         this.setChanged();
     }
 
+    public void setConnectedChestPos(BlockPos pos) {
+        this.connectedChestPos = pos;
+        this.setChanged();
+    }
+
+    public BlockPos getConnectedChestPos() {
+        return this.connectedChestPos;
+    }
+
     @Override
     public ItemStack getItem(int slot) {
         return slot == 0 ? this.filterItem : ItemStack.EMPTY;

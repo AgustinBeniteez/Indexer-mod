@@ -3,7 +3,9 @@
   "block.indexer.indexer_pipe": "Tubería Indexadora",
   "block.indexer.indexer_connector": "Conector Indexador",
   "item.indexer.indexer_manual": "Manual del Indexador",
+  "item.indexer.indexer_adjuster": "Ajustador Indexador",
   "item.indexer.manual.tooltip": "Contiene instrucciones sobre cómo usar el sistema Indexador",
+  "item.indexer.adjuster.tooltip": "Haz clic derecho en un cofre para seleccionarlo, luego clic derecho en un conector para vincularlos",
   "container.indexer.controller": "Controlador Indexador",
   "container.indexer.connector": "Conector Indexador",
   "itemGroup.indexer": "Indexador"
