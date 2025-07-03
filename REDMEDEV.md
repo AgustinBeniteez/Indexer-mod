@@ -24,16 +24,28 @@ El proyecto utiliza Gradle para gestionar dependencias y tareas de compilación.
 
 ```bash
 # En Windows
-gradlew setupDecompWorkspace
-gradlew genIntellijRuns  # Para IntelliJ IDEA
-# o
-gradlew genEclipseRuns   # Para Eclipse
+.\gradlew setupDecompWorkspace
+
+# Para IntelliJ IDEA
+.\gradlew genIntellijRuns
+
+# Para Eclipse
+.\gradlew genEclipseRuns
+
+# Para Visual Studio Code
+.\gradlew genVSCodeRuns
 
 # En Linux/macOS
 ./gradlew setupDecompWorkspace
-./gradlew genIntellijRuns  # Para IntelliJ IDEA
-# o
-./gradlew genEclipseRuns   # Para Eclipse
+
+# Para IntelliJ IDEA
+./gradlew genIntellijRuns
+
+# Para Eclipse
+./gradlew genEclipseRuns
+
+# Para Visual Studio Code
+./gradlew genVSCodeRuns
 ```
 
 ## Compilación del Mod
@@ -42,7 +54,7 @@ Para compilar el mod y generar el archivo JAR:
 
 ```bash
 # En Windows
-gradlew build
+.\gradlew build
 
 # En Linux/macOS
 ./gradlew build
@@ -58,6 +70,10 @@ Puedes ejecutar el mod directamente desde tu IDE:
 
 - **IntelliJ IDEA**: Ejecuta la configuración "runClient" que se generó automáticamente.
 - **Eclipse**: Ejecuta la configuración de lanzamiento "runClient" que se generó automáticamente.
+- **Visual Studio Code**: 
+  1. Instala la extensión "Minecraft Development" para VS Code.
+  2. Abre la paleta de comandos (Ctrl+Shift+P) y busca "Minecraft: Run Client".
+  3. Alternativamente, puedes usar el comando `.\gradlew runClient` desde la terminal.
 
 ### Pruebas Manuales
 
@@ -128,7 +144,7 @@ Para crear un archivo JAR listo para distribución:
 
 ```bash
 # En Windows
-gradlew build
+.\gradlew build
 
 # En Linux/macOS
 ./gradlew build
@@ -141,8 +157,32 @@ El archivo JAR resultante en `build/libs/` puede distribuirse a los usuarios fin
 ### Errores de Compilación
 
 - Verifica que estás utilizando JDK 17.
-- Ejecuta `gradlew clean` y luego `gradlew build` para limpiar archivos temporales.
+- Ejecuta `.\gradlew clean` y luego `.\gradlew build` para limpiar archivos temporales.
 - Asegúrate de que todas las dependencias estén correctamente configuradas en `build.gradle`.
+
+### Problemas con Gradlew en Windows
+
+- Si recibes el error "El término 'gradlew' no se reconoce como nombre de un cmdlet, función, archivo de script o programa ejecutable", esto puede deberse a dos razones:
+  1. Estás usando la sintaxis incorrecta. Asegúrate de usar `.\gradlew` en lugar de `gradlew`.
+  2. El archivo `gradlew.bat` no existe en tu proyecto.
+
+#### Generar el Wrapper de Gradle
+
+Si el archivo `gradlew.bat` no existe en la carpeta raíz del proyecto (lo cual parece ser el caso), necesitas generar el wrapper de Gradle:
+
+1. **Instala Gradle globalmente** (si aún no lo has hecho):
+   - Descarga Gradle desde [https://gradle.org/releases/](https://gradle.org/releases/)
+   - Extrae el archivo ZIP en una ubicación de tu elección (por ejemplo, `C:\Gradle`)
+   - Añade la carpeta `bin` de Gradle a tu PATH del sistema
+   - Verifica la instalación ejecutando `gradle -v` en una nueva ventana de terminal
+
+2. **Genera el wrapper de Gradle**:
+   - Navega a la carpeta raíz del proyecto en la terminal
+   - Ejecuta el comando: `gradle wrapper --gradle-version=7.6`
+   - Esto generará los archivos `gradlew`, `gradlew.bat` y la carpeta `gradle/wrapper`
+
+3. **Ahora puedes usar los comandos gradlew**:
+   - Ejecuta `.\gradlew build` y otros comandos como se indica en esta guía
 
 ### Errores en Tiempo de Ejecución
 

@@ -225,7 +225,7 @@ public class IndexerControllerBlockEntity extends RandomizableContainerBlockEnti
 
     public void dropContents() {
         if (this.level != null) {
-            ContainerHelper.dropContents(this.level, this.worldPosition, this.items);
+            net.minecraft.world.Containers.dropContents(this.level, this.worldPosition, this);
         }
     }
 

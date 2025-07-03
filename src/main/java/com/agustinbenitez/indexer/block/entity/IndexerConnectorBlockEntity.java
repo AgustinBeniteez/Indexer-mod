@@ -12,6 +12,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ChestMenu;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -26,6 +27,7 @@ import javax.annotation.Nullable;
 public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntity {
     private ItemStack filterItem = ItemStack.EMPTY;
     private BlockPos connectedChestPos = null;
+    private net.minecraft.core.NonNullList<ItemStack> items = net.minecraft.core.NonNullList.withSize(1, ItemStack.EMPTY);
 
     public IndexerConnectorBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.INDEXER_CONNECTOR.get(), pos, state);
@@ -38,7 +40,7 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
 
     @Override
     protected AbstractContainerMenu createMenu(int id, Inventory inventory) {
-        return ChestMenu.oneRow(id, inventory, this);
+        return new ChestMenu(MenuType.GENERIC_9x1, id, inventory, this, 1);
     }
 
     @Override
@@ -226,5 +228,21 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
     @Override
     public void clearContent() {
         this.filterItem = ItemStack.EMPTY;
+        this.items.clear();
+    }
+    
+    @Override
+    protected net.minecraft.core.NonNullList<ItemStack> getItems() {
+        return this.items;
+    }
+    
+    @Override
+    protected void setItems(net.minecraft.core.NonNullList<ItemStack> items) {
+        this.items = items;
+        if (!items.isEmpty()) {
+            this.filterItem = items.get(0);
+        } else {
+            this.filterItem = ItemStack.EMPTY;
+        }
     }
 }
