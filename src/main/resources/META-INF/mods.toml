@@ -7,7 +7,7 @@ modId="indexer"
 version="1.0.0"
 displayName="Indexer"
 authors="AgustinBenitez"
-description='''An indexer to filter and organize chest contents.'''
+description='''An indexer to filter and organize container contents.'''
 
 [[dependencies.indexer]]
 modId="forge"

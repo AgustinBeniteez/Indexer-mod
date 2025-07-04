@@ -20,7 +20,7 @@ import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.ChestBlock;
+// ChestBlock import removed as we now use generic Container interface
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
@@ -30,11 +30,11 @@ import java.util.*;
 
 public class IndexerControllerBlockEntity extends BlockEntity implements MenuProvider {
     private static final int TRANSFER_COOLDOWN_MAX = 8;
-    private static final int SEARCH_RANGE = 10;
+    private static final int SEARCH_RANGE = 250; // Aumentado de 10 a 50 para permitir más conectores
     
     private boolean enabled = true;
     private int transferCooldown = 0;
-    private BlockPos dropChestPos = null;
+    private BlockPos dropContainerPos = null;
     private int previousConnectorCount = 0;
     private boolean hasNotifiedConnection = false;
     
@@ -49,8 +49,8 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
             public int get(int index) {
                 return switch (index) {
                     case 0 -> IndexerControllerBlockEntity.this.enabled ? 1 : 0;
-                    case 1 -> IndexerControllerBlockEntity.this.hasDropChest() ? 1 : 0;
-                    case 2 -> IndexerControllerBlockEntity.this.getConnectedChestsCount();
+                    case 1 -> IndexerControllerBlockEntity.this.hasDropContainer() ? 1 : 0;
+                    case 2 -> IndexerControllerBlockEntity.this.getConnectedContainersCount();
                     case 3 -> IndexerControllerBlockEntity.this.getTotalAvailableSlots();
                     default -> 0;
                 };
@@ -97,11 +97,11 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         this.previousConnectorCount = tag.getInt("PreviousConnectorCount");
         this.hasNotifiedConnection = tag.getBoolean("HasNotifiedConnection");
         
-        if (tag.contains("DropChestX")) {
-            this.dropChestPos = new BlockPos(
-                    tag.getInt("DropChestX"),
-                    tag.getInt("DropChestY"),
-                    tag.getInt("DropChestZ")
+        if (tag.contains("DropContainerX")) {
+            this.dropContainerPos = new BlockPos(
+                    tag.getInt("DropContainerX"),
+                    tag.getInt("DropContainerY"),
+                    tag.getInt("DropContainerZ")
             );
         }
     }
@@ -114,10 +114,10 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         tag.putInt("PreviousConnectorCount", this.previousConnectorCount);
         tag.putBoolean("HasNotifiedConnection", this.hasNotifiedConnection);
         
-        if (this.dropChestPos != null) {
-            tag.putInt("DropChestX", this.dropChestPos.getX());
-            tag.putInt("DropChestY", this.dropChestPos.getY());
-            tag.putInt("DropChestZ", this.dropChestPos.getZ());
+        if (this.dropContainerPos != null) {
+            tag.putInt("DropContainerX", this.dropContainerPos.getX());
+            tag.putInt("DropContainerY", this.dropContainerPos.getY());
+            tag.putInt("DropContainerZ", this.dropContainerPos.getZ());
         }
     }
     
@@ -130,31 +130,32 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         return this.enabled;
     }
     
-    public boolean hasDropChest() {
-        if (this.dropChestPos == null) {
-            updateDropChest();
+    public boolean hasDropContainer() {
+        if (this.dropContainerPos == null) {
+            updateDropContainer();
         }
-        return this.dropChestPos != null;
+        return this.dropContainerPos != null;
     }
     
-    public void updateDropChest() {
+    public void updateDropContainer() {
         if (this.level == null) return;
         
-        this.dropChestPos = null;
+        this.dropContainerPos = null;
         for (Direction direction : Direction.values()) {
             BlockPos adjacentPos = this.worldPosition.relative(direction);
             BlockState adjacentState = this.level.getBlockState(adjacentPos);
-            // Detectar tanto cofres normales como DropBoxes
-            if (adjacentState.getBlock() instanceof ChestBlock || adjacentState.getBlock() instanceof DropBoxBlock) {
-                this.dropChestPos = adjacentPos;
+            BlockEntity blockEntity = this.level.getBlockEntity(adjacentPos);
+            // Detectar cualquier tipo de contenedor
+            if (blockEntity instanceof Container) {
+                this.dropContainerPos = adjacentPos;
                 this.setChanged();
                 return;
             }
         }
     }
     
-    public void setDropChestPos(BlockPos pos) {
-        this.dropChestPos = pos;
+    public void setDropContainerPos(BlockPos pos) {
+        this.dropContainerPos = pos;
         this.setChanged();
     }
 
@@ -171,8 +172,8 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
             return;
         }
 
-        // Intentar transferir ítems desde el cofre de drop
-        boolean didTransfer = entity.transferItemsFromDropChest();
+        // Intentar transferir ítems desde el contenedor de drop
+        boolean didTransfer = entity.transferItemsFromDropContainer();
 
         if (didTransfer) {
             entity.transferCooldown = TRANSFER_COOLDOWN_MAX;
@@ -180,13 +181,13 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         }
     }
 
-    private boolean transferItemsFromDropChest() {
-        if (this.level == null || !hasDropChest()) {
+    private boolean transferItemsFromDropContainer() {
+        if (this.level == null || !hasDropContainer()) {
             return false;
         }
 
-        BlockEntity dropChestEntity = this.level.getBlockEntity(this.dropChestPos);
-        if (!(dropChestEntity instanceof Container dropChest)) {
+        BlockEntity dropContainerEntity = this.level.getBlockEntity(this.dropContainerPos);
+        if (!(dropContainerEntity instanceof Container dropContainer)) {
             return false;
         }
 
@@ -200,45 +201,81 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         IndexerMod.LOGGER.info("Found " + connectors.size() + " connectors for controller at " + worldPosition);
         boolean transferred = false;
 
-        // Intentar transferir cada ítem del cofre de drop a un conector apropiado
-        for (int i = 0; i < dropChest.getContainerSize(); i++) {
-            ItemStack stack = dropChest.getItem(i);
+        // Intentar transferir cada ítem del contenedor de drop a un conector apropiado
+        for (int i = 0; i < dropContainer.getContainerSize(); i++) {
+            ItemStack stack = dropContainer.getItem(i);
             if (stack.isEmpty()) continue;
 
             IndexerMod.LOGGER.info("Trying to transfer item: " + stack.getItem().getDescriptionId() + " x" + stack.getCount());
             
+            // Separar conectores en dos grupos: los que tienen filtro específico y los que no tienen filtro
+            List<IndexerConnectorBlockEntity> connectorsWithFilter = new ArrayList<>();
+            List<IndexerConnectorBlockEntity> connectorsWithoutFilter = new ArrayList<>();
+            
             for (IndexerConnectorBlockEntity connector : connectors) {
-                IndexerMod.LOGGER.info("  Checking connector at " + connector.getBlockPos());
-                
                 if (connector.canAcceptItem(stack)) {
-                    IndexerMod.LOGGER.info("  Connector can accept item");
-                    ItemStack remainder = connector.insertItem(stack);
+                    // Verificar si el conector tiene un filtro específico para este ítem
+                    if (!connector.getFilterItem().isEmpty() && connector.getFilterItem().getItem() == stack.getItem()) {
+                        connectorsWithFilter.add(connector);
+                    } else {
+                        connectorsWithoutFilter.add(connector);
+                    }
+                }
+            }
+            
+            IndexerMod.LOGGER.info("  Found " + connectorsWithFilter.size() + " connectors with specific filter and " + 
+                                 connectorsWithoutFilter.size() + " connectors without filter for this item");
+            
+            // Primero intentar con conectores que tienen filtro específico
+            boolean itemTransferred = false;
+            ItemStack remainder = stack.copy();
+            
+            // Intentar primero con los conectores que tienen filtro específico
+            for (IndexerConnectorBlockEntity connector : connectorsWithFilter) {
+                IndexerMod.LOGGER.info("  Trying connector with filter at " + connector.getBlockPos());
+                remainder = connector.insertItem(remainder);
+                
+                if (remainder.getCount() < stack.getCount()) {
+                    IndexerMod.LOGGER.info("  Transferred " + (stack.getCount() - remainder.getCount()) + " items to filtered connector");
+                    dropContainer.setItem(i, remainder);
+                    transferred = true;
+                    itemTransferred = true;
                     
-                    if (remainder.getCount() < stack.getCount()) {
-                        IndexerMod.LOGGER.info("  Transferred " + (stack.getCount() - remainder.getCount()) + " items");
-                        dropChest.setItem(i, remainder);
+                    if (remainder.isEmpty()) {
+                        break;
+                    }
+                }
+            }
+            
+            // Si todavía quedan ítems, intentar con los conectores sin filtro
+            if (!remainder.isEmpty() && !connectorsWithoutFilter.isEmpty()) {
+                for (IndexerConnectorBlockEntity connector : connectorsWithoutFilter) {
+                    IndexerMod.LOGGER.info("  Trying connector without filter at " + connector.getBlockPos());
+                    ItemStack newRemainder = connector.insertItem(remainder);
+                    
+                    if (newRemainder.getCount() < remainder.getCount()) {
+                        IndexerMod.LOGGER.info("  Transferred " + (remainder.getCount() - newRemainder.getCount()) + " items to non-filtered connector");
+                        dropContainer.setItem(i, newRemainder);
                         transferred = true;
-                        
-                        // Notificar a los jugadores cercanos sobre la transferencia
-                        if (transferred) {
-                            List<Player> nearbyPlayers = level.getEntitiesOfClass(
-                                Player.class, 
-                                new net.minecraft.world.phys.AABB(worldPosition).inflate(32.0D)
-                            );
-                            
-                            for (Player player : nearbyPlayers) {
-                                player.sendSystemMessage(Component.literal("Transferencia de items completada"));
-                            }
-                        }
+                        itemTransferred = true;
+                        remainder = newRemainder;
                         
                         if (remainder.isEmpty()) {
                             break;
                         }
-                    } else {
-                        IndexerMod.LOGGER.info("  Could not transfer any items");
                     }
-                } else {
-                    IndexerMod.LOGGER.info("  Connector cannot accept item");
+                }
+            }
+            
+            // Notificar a los jugadores cercanos sobre la transferencia
+            if (itemTransferred) {
+                List<Player> nearbyPlayers = level.getEntitiesOfClass(
+                    Player.class, 
+                    new net.minecraft.world.phys.AABB(worldPosition).inflate(32.0D)
+                );
+                
+                for (Player player : nearbyPlayers) {
+                    player.sendSystemMessage(Component.literal("Transferencia de items completada"));
                 }
             }
         }
@@ -246,31 +283,31 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         return transferred;
     }
     
-    public int getConnectedChestsCount() {
+    public int getConnectedContainersCount() {
         List<IndexerConnectorBlockEntity> connectors = findConnectors();
-        Set<BlockPos> uniqueChests = new HashSet<>();
+        Set<BlockPos> uniqueContainers = new HashSet<>();
         
         for (IndexerConnectorBlockEntity connector : connectors) {
-            BlockPos chestPos = connector.getConnectedChestPos();
-            if (chestPos != null) {
-                uniqueChests.add(chestPos);
+            BlockPos containerPos = connector.getConnectedContainerPos();
+            if (containerPos != null) {
+                uniqueContainers.add(containerPos);
             }
         }
         
-        return uniqueChests.size();
+        return uniqueContainers.size();
     }
     
     public int getTotalAvailableSlots() {
         List<IndexerConnectorBlockEntity> connectors = findConnectors();
-        Set<BlockPos> uniqueChests = new HashSet<>();
+        Set<BlockPos> uniqueContainers = new HashSet<>();
         int totalSlots = 0;
         
         for (IndexerConnectorBlockEntity connector : connectors) {
-            BlockPos chestPos = connector.getConnectedChestPos();
-            if (chestPos != null && !uniqueChests.contains(chestPos)) {
-                uniqueChests.add(chestPos);
-                BlockEntity chestEntity = this.level.getBlockEntity(chestPos);
-                if (chestEntity instanceof Container container) {
+            BlockPos containerPos = connector.getConnectedContainerPos();
+            if (containerPos != null && !uniqueContainers.contains(containerPos)) {
+                uniqueContainers.add(containerPos);
+                BlockEntity containerEntity = this.level.getBlockEntity(containerPos);
+                if (containerEntity instanceof Container container) {
                     // Contar slots vacíos
                     for (int i = 0; i < container.getContainerSize(); i++) {
                         if (container.getItem(i).isEmpty()) {
@@ -292,7 +329,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         // Imprimir información de depuración en el registro del servidor
         IndexerMod.LOGGER.info("Controller at " + worldPosition + " found " + currentConnectorCount + " connectors");
         for (IndexerConnectorBlockEntity connector : connectors) {
-            IndexerMod.LOGGER.info("  - Connector at " + connector.getBlockPos() + ", connected chest: " + connector.getConnectedChestPos());
+            IndexerMod.LOGGER.info("  - Connector at " + connector.getBlockPos() + ", connected container: " + connector.getConnectedContainerPos());
         }
         
         // Verificar si hay cambios en las conexiones
@@ -335,6 +372,8 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         List<IndexerConnectorBlockEntity> connectors = new ArrayList<>();
         Set<BlockPos> visited = new HashSet<>();
         Queue<BlockPos> queue = new LinkedList<>();
+        
+        IndexerMod.LOGGER.info("Starting connector search from controller at " + worldPosition);
 
         // Comenzar la búsqueda desde las posiciones adyacentes
         for (Direction direction : Direction.values()) {
@@ -360,7 +399,8 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         }
 
         // BFS para encontrar conectores a través de tuberías
-        while (!queue.isEmpty() && visited.size() <= SEARCH_RANGE) {
+        // Eliminamos la limitación de SEARCH_RANGE para permitir encontrar todos los conectores
+        while (!queue.isEmpty()) {
             BlockPos currentPos = queue.poll();
             BlockState currentState = this.level.getBlockState(currentPos);
             BlockEntity blockEntity = this.level.getBlockEntity(currentPos);
@@ -409,6 +449,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
             }
         }
 
+        IndexerMod.LOGGER.info("Connector search completed. Found " + connectors.size() + " connectors. Visited " + visited.size() + " blocks.");
         return connectors;
     }
 

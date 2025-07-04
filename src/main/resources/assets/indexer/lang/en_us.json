@@ -6,7 +6,7 @@
   "item.indexer.indexer_manual": "Indexer Manual",
   "item.indexer.indexer_adjuster": "Indexer Adjuster",
   "item.indexer.manual.tooltip": "Contains instructions on how to use the Indexer system",
-  "item.indexer.adjuster.tooltip": "Right-click on a chest to select it, then right-click on a connector to link them",
+  "item.indexer.adjuster.tooltip": "Right-click on a container to select it, then right-click on a connector to link them",
   "container.indexer.controller": "Indexer Controller",
   "container.indexer.connector": "Indexer Connector",
   "container.indexer.drop_box": "DropBox",

@@ -18,8 +18,8 @@ public class IndexerControllerMenu extends AbstractContainerMenu {
     
     // Índices de datos para sincronización
     public static final int ENABLED_INDEX = 0;
-    public static final int HAS_DROP_CHEST_INDEX = 1;
-    public static final int CONNECTED_CHESTS_COUNT_INDEX = 2;
+    public static final int HAS_DROP_CONTAINER_INDEX = 1;
+    public static final int CONNECTED_CONTAINERS_COUNT_INDEX = 2;
     public static final int TOTAL_SLOTS_INDEX = 3;
     public static final int DATA_COUNT = 4;
     
@@ -65,12 +65,12 @@ public class IndexerControllerMenu extends AbstractContainerMenu {
         return this.data.get(ENABLED_INDEX) == 1;
     }
     
-    public boolean hasDropChest() {
-        return this.data.get(HAS_DROP_CHEST_INDEX) == 1;
+    public boolean hasDropContainer() {
+        return this.data.get(HAS_DROP_CONTAINER_INDEX) == 1;
     }
     
-    public int getConnectedChestsCount() {
-        return this.data.get(CONNECTED_CHESTS_COUNT_INDEX);
+    public int getConnectedContainersCount() {
+        return this.data.get(CONNECTED_CONTAINERS_COUNT_INDEX);
     }
     
     public int getTotalAvailableSlots() {

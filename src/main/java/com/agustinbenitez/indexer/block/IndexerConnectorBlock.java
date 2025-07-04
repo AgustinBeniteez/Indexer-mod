@@ -14,7 +14,7 @@ import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.ChestBlock;
+// ChestBlock import removed as we now use generic Container interface
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
@@ -62,10 +62,10 @@ public class IndexerConnectorBlock extends BaseEntityBlock {
     public void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos fromPos, boolean isMoving) {
         super.neighborChanged(state, level, pos, block, fromPos, isMoving);
         
-        // Verificar si hay un cofre adyacente
+        // Verificar si hay un contenedor adyacente
         BlockEntity entity = level.getBlockEntity(pos);
         if (entity instanceof IndexerConnectorBlockEntity) {
-            ((IndexerConnectorBlockEntity) entity).updateConnectedChest();
+            ((IndexerConnectorBlockEntity) entity).updateConnectedContainer();
         }
     }
 
@@ -93,12 +93,12 @@ public class IndexerConnectorBlock extends BaseEntityBlock {
         return createTickerHelper(type, ModBlockEntities.INDEXER_CONNECTOR.get(), IndexerConnectorBlockEntity::tick);
     }
 
-    // Método para verificar si hay un cofre adyacente
-    public static boolean hasAdjacentChest(Level level, BlockPos pos) {
+    // Método para verificar si hay un contenedor adyacente
+    public static boolean hasAdjacentContainer(Level level, BlockPos pos) {
         for (Direction direction : Direction.values()) {
             BlockPos adjacentPos = pos.relative(direction);
-            BlockState adjacentState = level.getBlockState(adjacentPos);
-            if (adjacentState.getBlock() instanceof ChestBlock) {
+            BlockEntity adjacentEntity = level.getBlockEntity(adjacentPos);
+            if (adjacentEntity instanceof net.minecraft.world.Container) {
                 return true;
             }
         }

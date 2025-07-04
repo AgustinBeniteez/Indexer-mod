@@ -10,7 +10,7 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.ChestBlockEntity;
+// ChestBlockEntity import removed as we now use generic Container interface
 import com.agustinbenitez.indexer.block.entity.IndexerConnectorBlockEntity;
 import com.agustinbenitez.indexer.block.entity.IndexerControllerBlockEntity;
 import com.agustinbenitez.indexer.block.entity.DropBoxBlockEntity;
@@ -19,7 +19,7 @@ import javax.annotation.Nullable;
 import java.util.List;
 
 public class IndexerAdjusterItem extends Item {
-    private BlockPos selectedChestPos = null;
+    private BlockPos selectedContainerPos = null;
     private BlockPos selectedDropBoxPos = null;
     
     public IndexerAdjusterItem(Properties properties) {
@@ -38,37 +38,41 @@ public class IndexerAdjusterItem extends Item {
         
         BlockEntity blockEntity = level.getBlockEntity(pos);
         
-        // Si hace clic en un cofre
-        if (blockEntity instanceof ChestBlockEntity) {
-            selectedChestPos = pos;
+        // Si hace clic en cualquier tipo de contenedor (cofre, barril, horno, etc.)
+        if (blockEntity instanceof net.minecraft.world.Container) {
+            selectedContainerPos = pos;
             selectedDropBoxPos = null; // Resetear selección de DropBox
-            player.sendSystemMessage(Component.literal("Cofre seleccionado en: " + pos.getX() + ", " + pos.getY() + ", " + pos.getZ()));
+            // Obtener el nombre del bloque para el mensaje
+            String blockName = level.getBlockState(pos).getBlock().getDescriptionId();
+            player.sendSystemMessage(Component.literal("Contenedor seleccionado en: " + pos.getX() + ", " + pos.getY() + ", " + pos.getZ() + " (" + blockName + ")"));
             return InteractionResult.SUCCESS;
         }
         
         // Si hace clic en un DropBox
         if (blockEntity instanceof DropBoxBlockEntity) {
             selectedDropBoxPos = pos;
-            selectedChestPos = null; // Resetear selección de cofre
+            selectedContainerPos = null; // Resetear selección de contenedor
             player.sendSystemMessage(Component.literal("DropBox seleccionado en: " + pos.getX() + ", " + pos.getY() + ", " + pos.getZ()));
             return InteractionResult.SUCCESS;
         }
         
         // Si hace clic en un conector
         if (blockEntity instanceof IndexerConnectorBlockEntity connector) {
-            if (selectedChestPos != null) {
-                // Verificar que el cofre seleccionado aún existe
-                BlockEntity chestEntity = level.getBlockEntity(selectedChestPos);
-                if (chestEntity instanceof ChestBlockEntity) {
-                    connector.setConnectedChestPos(selectedChestPos);
-                    player.sendSystemMessage(Component.literal("Conector vinculado al cofre en: " + selectedChestPos.getX() + ", " + selectedChestPos.getY() + ", " + selectedChestPos.getZ()));
-                    selectedChestPos = null; // Resetear selección
+            if (selectedContainerPos != null) {
+                // Verificar que el contenedor seleccionado aún existe
+                BlockEntity containerEntity = level.getBlockEntity(selectedContainerPos);
+                if (containerEntity instanceof net.minecraft.world.Container) {
+                    connector.setConnectedContainerPos(selectedContainerPos);
+                    // Obtener el nombre del bloque para el mensaje
+                    String blockName = level.getBlockState(selectedContainerPos).getBlock().getDescriptionId();
+                    player.sendSystemMessage(Component.literal("Conector vinculado al contenedor en: " + selectedContainerPos.getX() + ", " + selectedContainerPos.getY() + ", " + selectedContainerPos.getZ() + " (" + blockName + ")"));
+                    selectedContainerPos = null; // Resetear selección
                 } else {
-                    player.sendSystemMessage(Component.literal("El cofre seleccionado ya no existe"));
-                    selectedChestPos = null;
+                    player.sendSystemMessage(Component.literal("El contenedor seleccionado ya no existe"));
+                    selectedContainerPos = null;
                 }
             } else {
-                player.sendSystemMessage(Component.literal("Primero selecciona un cofre haciendo clic derecho en él"));
+                player.sendSystemMessage(Component.literal("Primero selecciona un contenedor haciendo clic derecho en él"));
             }
             return InteractionResult.SUCCESS;
         }
@@ -79,7 +83,7 @@ public class IndexerAdjusterItem extends Item {
                 // Verificar que el DropBox seleccionado aún existe
                 BlockEntity dropBoxEntity = level.getBlockEntity(selectedDropBoxPos);
                 if (dropBoxEntity instanceof DropBoxBlockEntity) {
-                    controller.setDropChestPos(selectedDropBoxPos);
+                    controller.setDropContainerPos(selectedDropBoxPos);
                     player.sendSystemMessage(Component.literal("Controlador conectado al DropBox en: " + selectedDropBoxPos.getX() + ", " + selectedDropBoxPos.getY() + ", " + selectedDropBoxPos.getZ()));
                     selectedDropBoxPos = null; // Resetear selección
                 } else {

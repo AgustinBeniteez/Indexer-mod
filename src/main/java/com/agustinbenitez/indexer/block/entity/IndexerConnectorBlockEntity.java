@@ -12,14 +12,14 @@ import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ChestMenu;
+// ChestMenu import removed as we now use IndexerConnectorMenu
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.ChestBlock;
+// ChestBlock import removed as we now use generic Container interface
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.ChestBlockEntity;
+// ChestBlockEntity import removed as we now use generic Container interface
 import net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
@@ -29,7 +29,7 @@ import javax.annotation.Nullable;
 
 public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntity {
     private ItemStack filterItem = ItemStack.EMPTY;
-    private BlockPos connectedChestPos = null;
+    private BlockPos connectedContainerPos = null;
     private net.minecraft.core.NonNullList<ItemStack> items = net.minecraft.core.NonNullList.withSize(1, ItemStack.EMPTY);
 
     public IndexerConnectorBlockEntity(BlockPos pos, BlockState state) {
@@ -57,11 +57,11 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
         if (tag.contains("FilterItem")) {
             this.filterItem = ItemStack.of(tag.getCompound("FilterItem"));
         }
-        if (tag.contains("ChestX") && tag.contains("ChestY") && tag.contains("ChestZ")) {
-            this.connectedChestPos = new BlockPos(
-                    tag.getInt("ChestX"),
-                    tag.getInt("ChestY"),
-                    tag.getInt("ChestZ")
+        if (tag.contains("ContainerX") && tag.contains("ContainerY") && tag.contains("ContainerZ")) {
+            this.connectedContainerPos = new BlockPos(
+                    tag.getInt("ContainerX"),
+                    tag.getInt("ContainerY"),
+                    tag.getInt("ContainerZ")
             );
         }
     }
@@ -74,77 +74,86 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
             this.filterItem.save(itemTag);
             tag.put("FilterItem", itemTag);
         }
-        if (this.connectedChestPos != null) {
-            tag.putInt("ChestX", this.connectedChestPos.getX());
-            tag.putInt("ChestY", this.connectedChestPos.getY());
-            tag.putInt("ChestZ", this.connectedChestPos.getZ());
+        if (this.connectedContainerPos != null) {
+            tag.putInt("ContainerX", this.connectedContainerPos.getX());
+            tag.putInt("ContainerY", this.connectedContainerPos.getY());
+            tag.putInt("ContainerZ", this.connectedContainerPos.getZ());
         }
     }
 
     public static void tick(Level level, BlockPos pos, BlockState state, IndexerConnectorBlockEntity entity) {
         if (level.isClientSide()) return;
 
-        // Verificar si hay un cofre conectado
-        BlockPos previousChestPos = entity.connectedChestPos;
-        entity.updateConnectedChest();
+        // Verificar si hay un contenedor conectado
+        BlockPos previousContainerPos = entity.connectedContainerPos;
+        entity.updateConnectedContainer();
         
         // Notificar si se estableció una nueva conexión
-        if (previousChestPos == null && entity.connectedChestPos != null) {
-            // Se conectó un nuevo cofre
+        if (previousContainerPos == null && entity.connectedContainerPos != null) {
+            // Se conectó un nuevo contenedor
             List<net.minecraft.world.entity.player.Player> nearbyPlayers = level.getEntitiesOfClass(
                 net.minecraft.world.entity.player.Player.class, 
                 new net.minecraft.world.phys.AABB(pos).inflate(16.0D)
             );
             
+            // Obtener el nombre del bloque para el mensaje
+            String containerType = level.getBlockState(entity.connectedContainerPos).getBlock().getDescriptionId();
+            containerType = containerType.replace("block.", "");
+            
             for (net.minecraft.world.entity.player.Player player : nearbyPlayers) {
-                player.sendSystemMessage(net.minecraft.network.chat.Component.literal("Conector conectado a cofre"));
+                player.sendSystemMessage(net.minecraft.network.chat.Component.literal("Conector conectado a " + containerType));
             }
         }
     }
 
-    public void updateConnectedChest() {
+    public void updateConnectedContainer() {
         if (this.level == null) return;
 
-        BlockPos oldChestPos = this.connectedChestPos;
-        this.connectedChestPos = null;
+        BlockPos oldContainerPos = this.connectedContainerPos;
+        this.connectedContainerPos = null;
         
-        // Buscar cofres adyacentes
+        // Buscar cualquier tipo de inventario adyacente
         for (Direction direction : Direction.values()) {
             BlockPos adjacentPos = this.worldPosition.relative(direction);
-            BlockState adjacentState = this.level.getBlockState(adjacentPos);
-            if (adjacentState.getBlock() instanceof ChestBlock) {
-                this.connectedChestPos = adjacentPos;
+            BlockEntity adjacentEntity = this.level.getBlockEntity(adjacentPos);
+            
+            // Verificar si es cualquier tipo de contenedor (barril, horno, etc.)
+            if (adjacentEntity instanceof Container) {
+                this.connectedContainerPos = adjacentPos;
                 this.setChanged();
                 
+                // Obtener el nombre del bloque para los logs
+                String blockName = this.level.getBlockState(adjacentPos).getBlock().getDescriptionId();
+                
                 // Imprimir información de depuración
-                com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " connected to chest at " + adjacentPos);
+                com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " connected to container (" + blockName + ") at " + adjacentPos);
                 return;
             }
         }
         
         // Si se perdió la conexión, marcar como cambiado
-        if (oldChestPos != null && this.connectedChestPos == null) {
-            com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " lost connection to chest at " + oldChestPos);
+        if (oldContainerPos != null && this.connectedContainerPos == null) {
+            com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " lost connection to container at " + oldContainerPos);
             this.setChanged();
-        } else if (this.connectedChestPos == null) {
-            com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " could not find a chest to connect to");
+        } else if (this.connectedContainerPos == null) {
+            com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " could not find any container to connect to");
         }
     }
 
     public boolean canAcceptItem(ItemStack stack) {
-        // Verificar si hay un cofre conectado
-        if (this.connectedChestPos == null) {
-            updateConnectedChest(); // Intentar encontrar un cofre
-            if (this.connectedChestPos == null) {
-                com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " cannot accept items: no chest connected");
-                return false; // No hay cofre conectado
+        // Verificar si hay un contenedor conectado
+        if (this.connectedContainerPos == null) {
+            updateConnectedContainer(); // Intentar encontrar un contenedor
+            if (this.connectedContainerPos == null) {
+                com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " cannot accept items: no container connected");
+                return false; // No hay contenedor conectado
             }
         }
         
-        // Verificar que el cofre exista y sea accesible
-        if (this.level == null || !(this.level.getBlockEntity(this.connectedChestPos) instanceof Container)) {
-            com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " cannot accept items: chest not accessible");
-            this.connectedChestPos = null; // Resetear la conexión si el cofre ya no existe
+        // Verificar que el contenedor exista y sea accesible
+        if (this.level == null || !(this.level.getBlockEntity(this.connectedContainerPos) instanceof Container)) {
+            com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " cannot accept items: container not accessible");
+            this.connectedContainerPos = null; // Resetear la conexión si el contenedor ya no existe
             return false;
         }
 
@@ -168,21 +177,24 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
             return stack;
         }
 
-        BlockEntity chestEntity = this.level.getBlockEntity(this.connectedChestPos);
-        if (!(chestEntity instanceof Container)) {
-            com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " cannot insert item: chest is not a container");
+        BlockEntity containerEntity = this.level.getBlockEntity(this.connectedContainerPos);
+        if (!(containerEntity instanceof Container)) {
+            com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " cannot insert item: block is not a container");
             return stack;
         }
 
-        Container container = (Container) chestEntity;
+        // Obtener el nombre del bloque para los logs
+        String containerType = this.level.getBlockState(this.connectedContainerPos).getBlock().getDescriptionId();
+        
+        Container container = (Container) containerEntity;
         ItemStack remainder = stack.copy();
         int initialCount = remainder.getCount();
         
         com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " attempting to insert " + 
                                                        initialCount + " x " + stack.getItem().getDescriptionId() + 
-                                                       " into chest at " + this.connectedChestPos);
+                                                       " into container (" + containerType + ") at " + this.connectedContainerPos);
 
-        // Intentar insertar en el cofre
+        // Intentar insertar en el contenedor
         for (int i = 0; i < container.getContainerSize(); i++) {
             ItemStack slotStack = container.getItem(i);
             
@@ -220,8 +232,8 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
             }
         }
 
-        if (chestEntity instanceof ChestBlockEntity) {
-            ((ChestBlockEntity) chestEntity).setChanged();
+        if (containerEntity instanceof BlockEntity) {
+            ((BlockEntity) containerEntity).setChanged();
         }
         
         int inserted = initialCount - remainder.getCount();
@@ -237,7 +249,7 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
             
             for (net.minecraft.world.entity.player.Player player : nearbyPlayers) {
                 player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-                    "Items transferidos al cofre: " + inserted + " x " + stack.getItem().getDescriptionId()
+                    "Items transferidos al contenedor: " + inserted + " x " + stack.getItem().getDescriptionId()
                 ));
             }
         } else {
@@ -257,13 +269,13 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
         this.setChanged();
     }
 
-    public void setConnectedChestPos(BlockPos pos) {
-        this.connectedChestPos = pos;
+    public void setConnectedContainerPos(BlockPos pos) {
+        this.connectedContainerPos = pos;
         this.setChanged();
     }
 
-    public BlockPos getConnectedChestPos() {
-        return this.connectedChestPos;
+    public BlockPos getConnectedContainerPos() {
+        return this.connectedContainerPos;
     }
 
     @Override

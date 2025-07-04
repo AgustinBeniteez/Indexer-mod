@@ -65,12 +65,12 @@ public class IndexerControllerScreen extends AbstractContainerScreen<IndexerCont
         guiGraphics.drawString(this.font, statusText, 60, 25, 4210752, false);
         
         // Renderizar información del DropBox
-        String dropBoxText = "DropBox: " + (this.menu.hasDropChest() ? "Conectado" : "No conectado");
+        String dropBoxText = "DropBox: " + (this.menu.hasDropContainer() ? "Conectado" : "No conectado");
         guiGraphics.drawString(this.font, dropBoxText, 8, 40, 4210752, false);
         
-        // Renderizar información de cofres conectados
-        String chestsText = "Cofres: " + this.menu.getConnectedChestsCount();
-        guiGraphics.drawString(this.font, chestsText, 8, 52, 4210752, false);
+        // Renderizar información de contenedores conectados
+        String containersText = "Contenedores: " + this.menu.getConnectedContainersCount();
+        guiGraphics.drawString(this.font, containersText, 8, 52, 4210752, false);
         
         // Renderizar espacios disponibles
         String slotsText = "Espacios: " + this.menu.getTotalAvailableSlots();

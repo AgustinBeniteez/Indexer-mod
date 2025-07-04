@@ -47,6 +47,11 @@ public class IndexerManualItem extends Item {
             player.sendSystemMessage(Component.literal("3. Coloca Conectores Indexer junto a tus cofres.").withStyle(ChatFormatting.WHITE));
             player.sendSystemMessage(Component.literal("4. Configura cada conector con el ítem que deseas filtrar.").withStyle(ChatFormatting.WHITE));
             player.sendSystemMessage(Component.literal("5. Deposita ítems en el controlador y estos serán enviados a los cofres correspondientes.").withStyle(ChatFormatting.WHITE));
+            player.sendSystemMessage(Component.literal(""));
+            
+            player.sendSystemMessage(Component.literal("Especificaciones técnicas:").withStyle(ChatFormatting.YELLOW));
+            player.sendSystemMessage(Component.literal("- El controlador puede detectar hasta 250 bloques de distancia.").withStyle(ChatFormatting.WHITE));
+            player.sendSystemMessage(Component.literal("- No hay límite en la cantidad de conectores que puedes usar.").withStyle(ChatFormatting.WHITE));
         }
 
         return InteractionResultHolder.sidedSuccess(itemstack, level.isClientSide());
