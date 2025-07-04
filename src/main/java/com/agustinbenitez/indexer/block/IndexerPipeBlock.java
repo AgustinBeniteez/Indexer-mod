@@ -88,6 +88,17 @@ public class IndexerPipeBlock extends Block {
                neighborBlock == ModBlocks.INDEXER_CONTROLLER.get() ||
                neighborBlock == ModBlocks.INDEXER_CONNECTOR.get();
     }
+    
+    public static BooleanProperty getPropertyForDirection(Direction direction) {
+        return switch (direction) {
+            case NORTH -> NORTH;
+            case EAST -> EAST;
+            case SOUTH -> SOUTH;
+            case WEST -> WEST;
+            case UP -> UP;
+            case DOWN -> DOWN;
+        };
+    }
 
     @Override
     public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {

@@ -22,6 +22,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 import java.util.List;
 
 import javax.annotation.Nullable;
@@ -114,13 +115,19 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
             if (adjacentState.getBlock() instanceof ChestBlock) {
                 this.connectedChestPos = adjacentPos;
                 this.setChanged();
+                
+                // Imprimir información de depuración
+                com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " connected to chest at " + adjacentPos);
                 return;
             }
         }
         
         // Si se perdió la conexión, marcar como cambiado
         if (oldChestPos != null && this.connectedChestPos == null) {
+            com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " lost connection to chest at " + oldChestPos);
             this.setChanged();
+        } else if (this.connectedChestPos == null) {
+            com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " could not find a chest to connect to");
         }
     }
 
@@ -129,31 +136,51 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
         if (this.connectedChestPos == null) {
             updateConnectedChest(); // Intentar encontrar un cofre
             if (this.connectedChestPos == null) {
+                com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " cannot accept items: no chest connected");
                 return false; // No hay cofre conectado
             }
+        }
+        
+        // Verificar que el cofre exista y sea accesible
+        if (this.level == null || !(this.level.getBlockEntity(this.connectedChestPos) instanceof Container)) {
+            com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " cannot accept items: chest not accessible");
+            this.connectedChestPos = null; // Resetear la conexión si el cofre ya no existe
+            return false;
         }
 
         // Si no hay filtro configurado, acepta cualquier ítem
         if (this.filterItem.isEmpty()) {
+            com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " can accept any item (no filter)");
             return true;
         }
 
         // Verificar si el ítem coincide con el filtro
-        return this.filterItem.getItem() == stack.getItem();
+        boolean matches = this.filterItem.getItem() == stack.getItem();
+        com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " filter check: " + 
+                                                       (matches ? "accepted" : "rejected") + " item " + 
+                                                       stack.getItem().getDescriptionId());
+        return matches;
     }
 
     public ItemStack insertItem(ItemStack stack) {
         if (!canAcceptItem(stack) || this.level == null) {
+            com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " cannot insert item: item not accepted or level is null");
             return stack;
         }
 
         BlockEntity chestEntity = this.level.getBlockEntity(this.connectedChestPos);
         if (!(chestEntity instanceof Container)) {
+            com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " cannot insert item: chest is not a container");
             return stack;
         }
 
         Container container = (Container) chestEntity;
         ItemStack remainder = stack.copy();
+        int initialCount = remainder.getCount();
+        
+        com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " attempting to insert " + 
+                                                       initialCount + " x " + stack.getItem().getDescriptionId() + 
+                                                       " into chest at " + this.connectedChestPos);
 
         // Intentar insertar en el cofre
         for (int i = 0; i < container.getContainerSize(); i++) {
@@ -169,6 +196,8 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
                 container.setItem(i, newStack);
                 
                 remainder.shrink(toInsert);
+                com.agustinbenitez.indexer.IndexerMod.LOGGER.info("  Inserted " + toInsert + " items into empty slot " + i);
+                
                 if (remainder.isEmpty()) {
                     break;
                 }
@@ -182,6 +211,8 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
                     slotStack.grow(toInsert);
                     remainder.shrink(toInsert);
                     
+                    com.agustinbenitez.indexer.IndexerMod.LOGGER.info("  Added " + toInsert + " items to existing stack in slot " + i);
+                    
                     if (remainder.isEmpty()) {
                         break;
                     }
@@ -191,6 +222,26 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
 
         if (chestEntity instanceof ChestBlockEntity) {
             ((ChestBlockEntity) chestEntity).setChanged();
+        }
+        
+        int inserted = initialCount - remainder.getCount();
+        if (inserted > 0) {
+            com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " successfully inserted " + 
+                                                           inserted + " items, " + remainder.getCount() + " items remaining");
+            
+            // Notificar a los jugadores cercanos sobre la inserción
+            List<net.minecraft.world.entity.player.Player> nearbyPlayers = level.getEntitiesOfClass(
+                net.minecraft.world.entity.player.Player.class, 
+                new net.minecraft.world.phys.AABB(this.worldPosition).inflate(16.0D)
+            );
+            
+            for (net.minecraft.world.entity.player.Player player : nearbyPlayers) {
+                player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                    "Items transferidos al cofre: " + inserted + " x " + stack.getItem().getDescriptionId()
+                ));
+            }
+        } else {
+            com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " could not insert any items");
         }
 
         return remainder;

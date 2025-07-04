@@ -2,6 +2,7 @@ package com.agustinbenitez.indexer.block.entity;
 
 import com.agustinbenitez.indexer.IndexerMod;
 import com.agustinbenitez.indexer.block.DropBoxBlock;
+import com.agustinbenitez.indexer.block.IndexerConnectorBlock;
 import com.agustinbenitez.indexer.block.IndexerPipeBlock;
 import com.agustinbenitez.indexer.init.ModBlockEntities;
 import com.agustinbenitez.indexer.menu.IndexerControllerMenu;
@@ -192,9 +193,11 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         // Buscar conectores en el rango
         List<IndexerConnectorBlockEntity> connectors = findConnectors();
         if (connectors.isEmpty()) {
+            IndexerMod.LOGGER.info("No connectors found for controller at " + worldPosition);
             return false;
         }
 
+        IndexerMod.LOGGER.info("Found " + connectors.size() + " connectors for controller at " + worldPosition);
         boolean transferred = false;
 
         // Intentar transferir cada ítem del cofre de drop a un conector apropiado
@@ -202,16 +205,40 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
             ItemStack stack = dropChest.getItem(i);
             if (stack.isEmpty()) continue;
 
+            IndexerMod.LOGGER.info("Trying to transfer item: " + stack.getItem().getDescriptionId() + " x" + stack.getCount());
+            
             for (IndexerConnectorBlockEntity connector : connectors) {
+                IndexerMod.LOGGER.info("  Checking connector at " + connector.getBlockPos());
+                
                 if (connector.canAcceptItem(stack)) {
+                    IndexerMod.LOGGER.info("  Connector can accept item");
                     ItemStack remainder = connector.insertItem(stack);
+                    
                     if (remainder.getCount() < stack.getCount()) {
+                        IndexerMod.LOGGER.info("  Transferred " + (stack.getCount() - remainder.getCount()) + " items");
                         dropChest.setItem(i, remainder);
                         transferred = true;
+                        
+                        // Notificar a los jugadores cercanos sobre la transferencia
+                        if (transferred) {
+                            List<Player> nearbyPlayers = level.getEntitiesOfClass(
+                                Player.class, 
+                                new net.minecraft.world.phys.AABB(worldPosition).inflate(32.0D)
+                            );
+                            
+                            for (Player player : nearbyPlayers) {
+                                player.sendSystemMessage(Component.literal("Transferencia de items completada"));
+                            }
+                        }
+                        
                         if (remainder.isEmpty()) {
                             break;
                         }
+                    } else {
+                        IndexerMod.LOGGER.info("  Could not transfer any items");
                     }
+                } else {
+                    IndexerMod.LOGGER.info("  Connector cannot accept item");
                 }
             }
         }
@@ -262,6 +289,12 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         List<IndexerConnectorBlockEntity> connectors = findConnectors();
         int currentConnectorCount = connectors.size();
         
+        // Imprimir información de depuración en el registro del servidor
+        IndexerMod.LOGGER.info("Controller at " + worldPosition + " found " + currentConnectorCount + " connectors");
+        for (IndexerConnectorBlockEntity connector : connectors) {
+            IndexerMod.LOGGER.info("  - Connector at " + connector.getBlockPos() + ", connected chest: " + connector.getConnectedChestPos());
+        }
+        
         // Verificar si hay cambios en las conexiones
         if (currentConnectorCount != previousConnectorCount) {
             // Buscar jugadores cercanos para notificar
@@ -275,7 +308,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                     // Se agregaron nuevos conectores
                     int newConnectors = currentConnectorCount - previousConnectorCount;
                     for (int i = 0; i < newConnectors; i++) {
-                        player.sendSystemMessage(Component.literal("conector actived"));
+                        player.sendSystemMessage(Component.literal("Conector activado"));
                     }
                     hasNotifiedConnection = true;
                 } else if (currentConnectorCount == 0 && hasNotifiedConnection) {
@@ -308,18 +341,33 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
             BlockPos adjacentPos = this.worldPosition.relative(direction);
             BlockState adjacentState = this.level.getBlockState(adjacentPos);
             if (adjacentState.getBlock() instanceof IndexerPipeBlock) {
-                queue.add(adjacentPos);
-                visited.add(adjacentPos);
+                // Verificar que la tubería esté conectada en esta dirección
+                if (adjacentState.getValue(IndexerPipeBlock.getPropertyForDirection(direction.getOpposite()))) {
+                    queue.add(adjacentPos);
+                    visited.add(adjacentPos);
+                    IndexerMod.LOGGER.info("Pipe connected in direction " + direction + " at " + adjacentPos);
+                } else {
+                    IndexerMod.LOGGER.info("Pipe NOT connected in direction " + direction + " at " + adjacentPos);
+                }
+            } else if (adjacentState.getBlock() instanceof IndexerConnectorBlock) {
+                // Si hay un conector directamente adyacente, agregarlo
+                BlockEntity blockEntity = this.level.getBlockEntity(adjacentPos);
+                if (blockEntity instanceof IndexerConnectorBlockEntity) {
+                    connectors.add((IndexerConnectorBlockEntity) blockEntity);
+                    IndexerMod.LOGGER.info("Found adjacent connector at " + adjacentPos);
+                }
             }
         }
 
-        // BFS para encontrar conectores
+        // BFS para encontrar conectores a través de tuberías
         while (!queue.isEmpty() && visited.size() <= SEARCH_RANGE) {
             BlockPos currentPos = queue.poll();
+            BlockState currentState = this.level.getBlockState(currentPos);
             BlockEntity blockEntity = this.level.getBlockEntity(currentPos);
 
             if (blockEntity instanceof IndexerConnectorBlockEntity) {
                 connectors.add((IndexerConnectorBlockEntity) blockEntity);
+                IndexerMod.LOGGER.info("Found connector through pipes at " + currentPos);
                 continue;
             }
 
@@ -332,8 +380,31 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                 Block nextBlock = nextState.getBlock();
 
                 if (nextBlock instanceof IndexerPipeBlock) {
-                    queue.add(nextPos);
-                    visited.add(nextPos);
+                    // Verificar que la tubería esté conectada en ambas direcciones
+                    boolean currentPipeConnected = currentState.getBlock() instanceof IndexerPipeBlock && 
+                                                 currentState.getValue(IndexerPipeBlock.getPropertyForDirection(direction));
+                    boolean nextPipeConnected = nextState.getValue(IndexerPipeBlock.getPropertyForDirection(direction.getOpposite()));
+                    
+                    if (currentPipeConnected && nextPipeConnected) {
+                        queue.add(nextPos);
+                        visited.add(nextPos);
+                        IndexerMod.LOGGER.info("Following pipe connection from " + currentPos + " to " + nextPos);
+                    } else {
+                        IndexerMod.LOGGER.info("Pipe connection broken between " + currentPos + " and " + nextPos);
+                    }
+                } else if (nextBlock instanceof IndexerConnectorBlock) {
+                    // Verificar que la tubería actual esté conectada al conector
+                    boolean currentPipeConnected = currentState.getBlock() instanceof IndexerPipeBlock && 
+                                                 currentState.getValue(IndexerPipeBlock.getPropertyForDirection(direction));
+                    
+                    if (currentPipeConnected) {
+                        BlockEntity nextEntity = this.level.getBlockEntity(nextPos);
+                        if (nextEntity instanceof IndexerConnectorBlockEntity) {
+                            connectors.add((IndexerConnectorBlockEntity) nextEntity);
+                            visited.add(nextPos);
+                            IndexerMod.LOGGER.info("Found connector at end of pipe at " + nextPos);
+                        }
+                    }
                 }
             }
         }
