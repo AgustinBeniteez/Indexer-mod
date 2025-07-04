@@ -9,13 +9,14 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 
 public class IndexerConnectorScreen extends AbstractContainerScreen<IndexerConnectorMenu> {
-    private static final ResourceLocation TEXTURE = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/indexer_connector.png");
+    private static final ResourceLocation TEXTURE = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/menu_conector.png");
     
     public IndexerConnectorScreen(IndexerConnectorMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
         this.imageWidth = 176;
-        this.imageHeight = 70; // Altura pequeña para solo un slot
-        this.inventoryLabelY = this.imageHeight - 10;
+        this.imageHeight = 166; // Altura estándar para incluir el inventario del jugador
+        this.inventoryLabelY = 74; // Posición de la etiqueta del inventario
+        this.titleLabelY = 6; // Posición del título
     }
     
     @Override
@@ -31,6 +32,9 @@ public class IndexerConnectorScreen extends AbstractContainerScreen<IndexerConne
     protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         // Renderizar título
         guiGraphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, 4210752, false);
+        
+        // Renderizar etiqueta del inventario del jugador
+        guiGraphics.drawString(this.font, this.playerInventoryTitle, 8, this.inventoryLabelY, 4210752, false);
         
         // Renderizar texto "Filtro"
         Component filterText = Component.literal("Filtro");

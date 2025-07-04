@@ -11,17 +11,26 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.inventory.ContainerLevelAccess;
 
 public class IndexerConnectorMenu extends AbstractContainerMenu {
     private final Container container;
     private final IndexerConnectorBlockEntity blockEntity;
+    private final ContainerLevelAccess access;
+
+    // Constantes para la posición del inventario del jugador
+    private static final int INVENTORY_START_X = 8;
+    private static final int INVENTORY_START_Y = 84;
+    private static final int HOTBAR_START_Y = 142;
+    private static final int SLOT_SIZE = 18;
 
     public IndexerConnectorMenu(int id, Inventory playerInventory, Container container, IndexerConnectorBlockEntity blockEntity) {
         super(ModMenuTypes.INDEXER_CONNECTOR_MENU.get(), id);
         this.container = container;
         this.blockEntity = blockEntity;
+        this.access = blockEntity != null ? ContainerLevelAccess.create(blockEntity.getLevel(), blockEntity.getBlockPos()) : ContainerLevelAccess.NULL;
 
-        // Solo un slot para el filtro en el centro
+        // Slot para el filtro en el centro
         this.addSlot(new Slot(container, 0, 80, 35) {
             @Override
             public boolean mayPlace(ItemStack stack) {
@@ -34,6 +43,22 @@ public class IndexerConnectorMenu extends AbstractContainerMenu {
                 return 1; // Solo permitir un ítem como filtro
             }
         });
+        
+        // Añadir slots del inventario del jugador (3 filas x 9 columnas)
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < 9; col++) {
+                this.addSlot(new Slot(playerInventory, col + row * 9 + 9, 
+                        INVENTORY_START_X + col * SLOT_SIZE, 
+                        INVENTORY_START_Y + row * SLOT_SIZE));
+            }
+        }
+        
+        // Añadir slots de la barra de acceso rápido (hotbar)
+        for (int col = 0; col < 9; col++) {
+            this.addSlot(new Slot(playerInventory, col, 
+                    INVENTORY_START_X + col * SLOT_SIZE, 
+                    HOTBAR_START_Y));  
+        }
     }
 
     public IndexerConnectorMenu(int id, Inventory playerInventory) {
@@ -42,12 +67,40 @@ public class IndexerConnectorMenu extends AbstractContainerMenu {
 
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
-        // No hay transferencia rápida ya que solo tenemos un slot
-        return ItemStack.EMPTY;
+        ItemStack itemstack = ItemStack.EMPTY;
+        Slot slot = this.slots.get(index);
+        
+        if (slot != null && slot.hasItem()) {
+            ItemStack slotStack = slot.getItem();
+            itemstack = slotStack.copy();
+            
+            if (index == 0) {
+                // Si es el slot del filtro, mover al inventario del jugador
+                if (!this.moveItemStackTo(slotStack, 1, this.slots.size(), true)) {
+                    return ItemStack.EMPTY;
+                }
+            } else {
+                // Si es un slot del inventario del jugador, mover al slot del filtro
+                if (!this.moveItemStackTo(slotStack, 0, 1, false)) {
+                    return ItemStack.EMPTY;
+                }
+            }
+            
+            if (slotStack.isEmpty()) {
+                slot.set(ItemStack.EMPTY);
+            } else {
+                slot.setChanged();
+            }
+        }
+        
+        return itemstack;
     }
 
     @Override
     public boolean stillValid(Player player) {
+        if (this.blockEntity != null) {
+            return stillValid(this.access, player, this.blockEntity.getBlockState().getBlock());
+        }
         return this.container.stillValid(player);
     }
 
