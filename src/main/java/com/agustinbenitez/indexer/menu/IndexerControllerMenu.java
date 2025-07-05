@@ -21,7 +21,8 @@ public class IndexerControllerMenu extends AbstractContainerMenu {
     public static final int HAS_DROP_CONTAINER_INDEX = 1;
     public static final int CONNECTED_CONTAINERS_COUNT_INDEX = 2;
     public static final int TOTAL_SLOTS_INDEX = 3;
-    public static final int DATA_COUNT = 4;
+    public static final int ITEMS_PER_TRANSFER_INDEX = 4;
+    public static final int DATA_COUNT = 5;
     
     // Constructor para el lado del servidor
     public IndexerControllerMenu(int containerId, Inventory inventory, IndexerControllerBlockEntity entity, ContainerData data) {
@@ -75,6 +76,10 @@ public class IndexerControllerMenu extends AbstractContainerMenu {
     
     public int getTotalAvailableSlots() {
         return this.data.get(TOTAL_SLOTS_INDEX);
+    }
+    
+    public int getItemsPerTransfer() {
+        return this.data.get(ITEMS_PER_TRANSFER_INDEX);
     }
     
     // Método para alternar el estado de habilitado/deshabilitado

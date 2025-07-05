@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "GRG",
+    "RIR",
+    "GRG"
+  ],
+  "key": {
+    "G": {
+      "item": "minecraft:gold_ingot"
+    },
+    "R": {
+      "item": "minecraft:redstone"
+    },
+    "I": {
+      "item": "indexer:indexer_controller"
+    }
+  },
+  "result": {
+    "item": "indexer:transfer_speed_upgrade_basic",
+    "count": 1
+  }
+}

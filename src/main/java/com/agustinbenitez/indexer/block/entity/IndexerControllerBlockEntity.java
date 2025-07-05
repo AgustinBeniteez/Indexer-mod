@@ -31,8 +31,10 @@ import java.util.*;
 
 public class IndexerControllerBlockEntity extends BlockEntity implements MenuProvider {
     private static final int TRANSFER_COOLDOWN_MAX = 8;
-    private static final int ITEMS_PER_TRANSFER = 1; // Número de items a transferir por ciclo
+    private static final int DEFAULT_ITEMS_PER_TRANSFER = 1; // Valor predeterminado
     private static final int SEARCH_RANGE = 250; // Aumentado de 10 a 50 para permitir más conectores
+    
+    private int itemsPerTransfer = DEFAULT_ITEMS_PER_TRANSFER; // Número de items a transferir por ciclo
     
     private boolean enabled = true;
     private int transferCooldown = 0;
@@ -54,6 +56,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                     case 1 -> IndexerControllerBlockEntity.this.hasDropContainer() ? 1 : 0;
                     case 2 -> IndexerControllerBlockEntity.this.getConnectedContainersCount();
                     case 3 -> IndexerControllerBlockEntity.this.getTotalAvailableSlots();
+                    case 4 -> IndexerControllerBlockEntity.this.getItemsPerTransfer();
                     default -> 0;
                 };
             }
@@ -68,7 +71,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
 
             @Override
             public int getCount() {
-                return 4;
+                return 5;
             }
         };
     }
@@ -99,6 +102,13 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         this.previousConnectorCount = tag.getInt("PreviousConnectorCount");
         this.hasNotifiedConnection = tag.getBoolean("HasNotifiedConnection");
         
+        // Cargar la velocidad de transferencia personalizada
+        if (tag.contains("ItemsPerTransfer")) {
+            this.itemsPerTransfer = tag.getInt("ItemsPerTransfer");
+        } else {
+            this.itemsPerTransfer = DEFAULT_ITEMS_PER_TRANSFER;
+        }
+        
         if (tag.contains("DropContainerX")) {
             this.dropContainerPos = new BlockPos(
                     tag.getInt("DropContainerX"),
@@ -115,6 +125,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         tag.putInt("TransferCooldown", this.transferCooldown);
         tag.putInt("PreviousConnectorCount", this.previousConnectorCount);
         tag.putBoolean("HasNotifiedConnection", this.hasNotifiedConnection);
+        tag.putInt("ItemsPerTransfer", this.itemsPerTransfer);
         
         if (this.dropContainerPos != null) {
             tag.putInt("DropContainerX", this.dropContainerPos.getX());
@@ -130,6 +141,15 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
     
     public boolean isEnabled() {
         return this.enabled;
+    }
+    
+    public int getItemsPerTransfer() {
+        return this.itemsPerTransfer;
+    }
+    
+    public void setItemsPerTransfer(int value) {
+        this.itemsPerTransfer = Math.max(1, value); // Asegurar que sea al menos 1
+        this.setChanged();
     }
     
     public boolean hasDropContainer() {
@@ -313,7 +333,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         // Intentar transferir cada ítem del contenedor de drop a un conector apropiado
         for (int i = 0; i < dropContainer.getContainerSize(); i++) {
             // Si ya transferimos el máximo de items por ciclo, salir del bucle
-            if (itemsTransferredThisCycle >= ITEMS_PER_TRANSFER) {
+            if (itemsTransferredThisCycle >= this.itemsPerTransfer) {
                 break;
             }
             
@@ -348,11 +368,11 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
             for (IndexerConnectorBlockEntity connector : connectorsWithFilter) {
                 IndexerMod.LOGGER.info("  Trying connector with filter at " + connector.getBlockPos());
                 
-                // Limitar la cantidad de items a transferir por ciclo
+                // Transferir múltiples ítems a la vez según la velocidad configurada
                 ItemStack transferStack = remainder.copy();
-                if (transferStack.getCount() > 1) {
-                    transferStack.setCount(1); // Transferir solo 1 item a la vez
-                }
+                // Intentamos transferir tantos ítems como sea posible, hasta el máximo por ciclo
+                int itemsToTransfer = Math.min(transferStack.getCount(), this.itemsPerTransfer);
+                transferStack.setCount(itemsToTransfer);
                 
                 ItemStack newRemainder = connector.insertItem(transferStack);
                 
@@ -367,7 +387,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                     IndexerMod.LOGGER.info("  Transferred " + itemsTransferred + " items to filtered connector");
                     transferred = true;
                     itemTransferred = true;
-                    itemsTransferredThisCycle++;
+                    itemsTransferredThisCycle += itemsTransferred;
                     
                     if (remainder.isEmpty()) {
                         break;
@@ -375,21 +395,21 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                 }
                 
                 // Si ya transferimos el máximo de items por ciclo, salir del bucle
-                if (itemsTransferredThisCycle >= ITEMS_PER_TRANSFER) {
+                if (itemsTransferredThisCycle >= this.itemsPerTransfer) {
                     break;
                 }
             }
             
             // Si todavía quedan ítems y no hemos alcanzado el límite, intentar con los conectores sin filtro
-            if (!remainder.isEmpty() && !connectorsWithoutFilter.isEmpty() && itemsTransferredThisCycle < ITEMS_PER_TRANSFER) {
+            if (!remainder.isEmpty() && !connectorsWithoutFilter.isEmpty() && itemsTransferredThisCycle < this.itemsPerTransfer) {
                 for (IndexerConnectorBlockEntity connector : connectorsWithoutFilter) {
                     IndexerMod.LOGGER.info("  Trying connector without filter at " + connector.getBlockPos());
                     
-                    // Limitar la cantidad de items a transferir por ciclo
+                    // Transferir múltiples ítems a la vez según la velocidad configurada
                     ItemStack transferStack = remainder.copy();
-                    if (transferStack.getCount() > 1) {
-                        transferStack.setCount(1); // Transferir solo 1 item a la vez
-                    }
+                    // Intentamos transferir tantos ítems como sea posible, hasta el máximo por ciclo
+                    int itemsToTransfer = Math.min(transferStack.getCount(), this.itemsPerTransfer);
+                    transferStack.setCount(itemsToTransfer);
                     
                     ItemStack newRemainder = connector.insertItem(transferStack);
                     
@@ -404,7 +424,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                         IndexerMod.LOGGER.info("  Transferred " + itemsTransferred + " items to non-filtered connector");
                         transferred = true;
                         itemTransferred = true;
-                        itemsTransferredThisCycle++;
+                        itemsTransferredThisCycle += itemsTransferred;
                         
                         if (remainder.isEmpty()) {
                             break;
@@ -412,7 +432,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                     }
                     
                     // Si ya transferimos el máximo de items por ciclo, salir del bucle
-                    if (itemsTransferredThisCycle >= ITEMS_PER_TRANSFER) {
+                    if (itemsTransferredThisCycle >= this.itemsPerTransfer) {
                         break;
                     }
                 }

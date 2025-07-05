@@ -75,5 +75,9 @@ public class IndexerControllerScreen extends AbstractContainerScreen<IndexerCont
         // Renderizar espacios disponibles
         String slotsText = "Espacios: " + this.menu.getTotalAvailableSlots();
         guiGraphics.drawString(this.font, slotsText, 100, 52, 4210752, false);
+        
+        // Renderizar velocidad de transferencia
+        String transferRateText = "Velocidad: " + this.menu.getItemsPerTransfer() + " ítems a la vez";
+        guiGraphics.drawString(this.font, transferRateText, 8, 64, 0x008800, false);
     }
 }

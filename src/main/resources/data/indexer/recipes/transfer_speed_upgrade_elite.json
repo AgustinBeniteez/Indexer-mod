@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "NNN",
+    "NUN",
+    "NNN"
+  ],
+  "key": {
+    "N": {
+      "item": "minecraft:netherite_ingot"
+    },
+    "U": {
+      "item": "indexer:transfer_speed_upgrade_advanced"
+    }
+  },
+  "result": {
+    "item": "indexer:transfer_speed_upgrade_elite",
+    "count": 1
+  }
+}
