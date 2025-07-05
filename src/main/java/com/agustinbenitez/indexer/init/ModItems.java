@@ -2,7 +2,6 @@ package com.agustinbenitez.indexer.init;
 
 import com.agustinbenitez.indexer.IndexerMod;
 import com.agustinbenitez.indexer.item.IndexerManualItem;
-import com.agustinbenitez.indexer.item.IndexerAdjusterItem;
 
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
@@ -31,9 +30,7 @@ public class ModItems {
     public static final RegistryObject<Item> INDEXER_MANUAL = ITEMS.register("indexer_manual",
             () -> new IndexerManualItem(new Item.Properties().stacksTo(1)));
 
-    // Ajustador del Indexer
-    public static final RegistryObject<Item> INDEXER_ADJUSTER = ITEMS.register("indexer_adjuster",
-            () -> new IndexerAdjusterItem(new Item.Properties().stacksTo(1)));
+
 
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);

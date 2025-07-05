@@ -1,25 +1,25 @@
 {
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    "IBI",
-    "RCR",
-    "III"
+    "IRI",
+    "RHR",
+    "ICI"
   ],
   "key": {
     "I": {
       "tag": "forge:ingots/iron"
     },
-    "B": {
-      "item": "minecraft:iron_block"
-    },
     "R": {
-      "item": "minecraft:repeater"
+      "item": "minecraft:redstone"
+    },
+    "H": {
+      "item": "minecraft:hopper"
     },
     "C": {
       "item": "minecraft:chest"
     }
   },
   "result": {
-    "item": "indexer:indexer_controller"
+    "item": "indexer:drop_box"
   }
 }

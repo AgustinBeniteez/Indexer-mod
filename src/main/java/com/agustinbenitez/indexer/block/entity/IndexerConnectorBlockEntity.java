@@ -136,10 +136,27 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
         }
         
         // Verificar que el contenedor exista y sea accesible
-        if (this.level == null || !(this.level.getBlockEntity(this.connectedContainerPos) instanceof Container)) {
+        if (this.level == null) {
+            com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " cannot accept items: level is null");
+            return false;
+        }
+        
+        BlockEntity containerEntity = this.level.getBlockEntity(this.connectedContainerPos);
+        if (!(containerEntity instanceof Container)) {
             com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " cannot accept items: container not accessible");
             this.connectedContainerPos = null; // Resetear la conexión si el contenedor ya no existe
             return false;
+        }
+
+        // Verificar si es carbón o carbón vegetal y si el contenedor es un horno
+        boolean isCoalOrCharcoal = stack.getItem().getDescriptionId().equals("item.minecraft.coal") || 
+                                  stack.getItem().getDescriptionId().equals("item.minecraft.charcoal");
+        boolean isFurnace = containerEntity.getClass().getName().contains("FurnaceBlockEntity");
+        
+        // Si es carbón/carbón vegetal y el contenedor es un horno, permitir siempre
+        if (isCoalOrCharcoal && isFurnace) {
+            com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " accepting coal/charcoal for furnace regardless of filter");
+            return true;
         }
 
         // Si no hay filtro configurado, acepta cualquier ítem
@@ -179,7 +196,81 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
                                                        initialCount + " x " + stack.getItem().getDescriptionId() + 
                                                        " into container (" + containerType + ") at " + this.connectedContainerPos);
 
-        // Intentar insertar en el contenedor
+        // Verificar si es un horno y el ítem es carbón o carbón vegetal
+        boolean isCoalOrCharcoal = stack.getItem().getDescriptionId().equals("item.minecraft.coal") || 
+                                  stack.getItem().getDescriptionId().equals("item.minecraft.charcoal");
+        
+        // Si es un horno (AbstractFurnaceBlockEntity) y el ítem es carbón/carbón vegetal
+        if (containerEntity.getClass().getName().contains("FurnaceBlockEntity") && isCoalOrCharcoal) {
+            com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Detected furnace and coal/charcoal, attempting to insert into fuel slot");
+            
+            // El slot de combustible en AbstractFurnaceBlockEntity es 1
+            final int FURNACE_FUEL_SLOT = 1;
+            
+            if (FURNACE_FUEL_SLOT < container.getContainerSize()) {
+                ItemStack fuelSlotStack = container.getItem(FURNACE_FUEL_SLOT);
+                
+                if (fuelSlotStack.isEmpty()) {
+                    // Slot de combustible vacío, insertar todo lo que podamos
+                    int maxStackSize = Math.min(container.getMaxStackSize(), remainder.getMaxStackSize());
+                    int toInsert = Math.min(remainder.getCount(), maxStackSize);
+                    
+                    ItemStack newStack = remainder.copy();
+                    newStack.setCount(toInsert);
+                    container.setItem(FURNACE_FUEL_SLOT, newStack);
+                    
+                    remainder.shrink(toInsert);
+                    com.agustinbenitez.indexer.IndexerMod.LOGGER.info("  Inserted " + toInsert + " coal/charcoal into furnace fuel slot");
+                    
+                    if (remainder.isEmpty()) {
+                        if (containerEntity instanceof BlockEntity) {
+                            ((BlockEntity) containerEntity).setChanged();
+                        }
+                        return ItemStack.EMPTY;
+                    }
+                } else if (ItemStack.isSameItemSameTags(fuelSlotStack, remainder)) {
+                    // Mismo ítem en el slot de combustible, intentar apilar
+                    int maxStackSize = Math.min(container.getMaxStackSize(), fuelSlotStack.getMaxStackSize());
+                    int space = maxStackSize - fuelSlotStack.getCount();
+                    
+                    if (space > 0) {
+                        int toInsert = Math.min(remainder.getCount(), space);
+                        fuelSlotStack.grow(toInsert);
+                        remainder.shrink(toInsert);
+                        
+                        com.agustinbenitez.indexer.IndexerMod.LOGGER.info("  Added " + toInsert + " coal/charcoal to existing stack in furnace fuel slot");
+                        
+                        if (remainder.isEmpty()) {
+                            if (containerEntity instanceof BlockEntity) {
+                                ((BlockEntity) containerEntity).setChanged();
+                            }
+                            return ItemStack.EMPTY;
+                        }
+                    }
+                }
+                
+                // Si llegamos aquí, significa que no pudimos insertar todo el carbón en este horno
+                // porque el slot de combustible está lleno o casi lleno
+                if (!remainder.isEmpty()) {
+                    com.agustinbenitez.indexer.IndexerMod.LOGGER.info("  Fuel slot is full or nearly full, cannot insert more coal/charcoal");
+                    // No continuamos con el comportamiento normal para este horno
+                    // Devolvemos el remainder para que el controlador intente con otro conector
+                    if (containerEntity instanceof BlockEntity) {
+                        ((BlockEntity) containerEntity).setChanged();
+                    }
+                    return remainder;
+                }
+            }
+            
+            // Si es un horno y carbón, SOLO intentamos insertar en el slot de combustible
+            // No continuamos con el comportamiento normal para otros slots
+            if (containerEntity instanceof BlockEntity) {
+                ((BlockEntity) containerEntity).setChanged();
+            }
+            return remainder;
+        }
+
+        // Comportamiento normal para otros contenedores o si no se pudo insertar todo en el slot de combustible
         for (int i = 0; i < container.getContainerSize(); i++) {
             ItemStack slotStack = container.getItem(i);
             

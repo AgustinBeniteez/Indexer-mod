@@ -25,7 +25,6 @@ public class ModCreativeTabs {
                         output.accept(ModItems.INDEXER_CONNECTOR_ITEM.get());
                         output.accept(ModItems.DROP_BOX_ITEM.get());
                         output.accept(ModItems.INDEXER_MANUAL.get());
-                        output.accept(ModItems.INDEXER_ADJUSTER.get());
                     })
                     .build());
 

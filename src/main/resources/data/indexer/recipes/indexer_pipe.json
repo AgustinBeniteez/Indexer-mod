@@ -1,20 +1,15 @@
 {
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    "III",
-    "RRR",
-    "III"
+    "II"
   ],
   "key": {
     "I": {
       "tag": "forge:ingots/iron"
-    },
-    "R": {
-      "item": "minecraft:redstone"
     }
   },
   "result": {
     "item": "indexer:indexer_pipe",
-    "count": 8
+    "count": 10
   }
 }

@@ -281,13 +281,16 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         }
     }
 
+    // Variable para almacenar la referencia al BlockEntity del DropBox
+    private BlockEntity dropContainerEntity;
+    
     private boolean transferItemsFromDropContainer() {
         if (this.level == null || !hasDropContainer()) {
             return false;
         }
 
-        BlockEntity dropContainerEntity = this.level.getBlockEntity(this.dropContainerPos);
-        if (!(dropContainerEntity instanceof Container dropContainer)) {
+        this.dropContainerEntity = this.level.getBlockEntity(this.dropContainerPos);
+        if (!(this.dropContainerEntity instanceof Container dropContainer)) {
             return false;
         }
 
@@ -300,6 +303,9 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
 
         IndexerMod.LOGGER.info("Found " + connectors.size() + " connectors for controller at " + worldPosition);
         boolean transferred = false;
+        
+        // Primero, verificar si hay hornos que necesiten rellenar su combustible
+        transferred = checkAndRefillFurnaceFuel(connectors, dropContainer) || transferred;
 
         // Contador para limitar la cantidad de items transferidos por ciclo
         int itemsTransferredThisCycle = 0;
@@ -456,6 +462,97 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         return totalSlots;
     }
 
+    /**
+     * Verifica si hay hornos conectados que necesiten rellenar su combustible y los rellena con carbón del DropBox
+     * @param connectors Lista de conectores encontrados
+     * @param dropContainer El contenedor de origen (DropBox)
+     * @return true si se transfirió algún ítem, false en caso contrario
+     */
+    private boolean checkAndRefillFurnaceFuel(List<IndexerConnectorBlockEntity> connectors, Container dropContainer) {
+        if (this.level == null) return false;
+        
+        boolean transferred = false;
+        
+        // Buscar conectores que estén conectados a hornos
+        for (IndexerConnectorBlockEntity connector : connectors) {
+            BlockPos containerPos = connector.getConnectedContainerPos();
+            if (containerPos == null) continue;
+            
+            BlockEntity containerEntity = this.level.getBlockEntity(containerPos);
+            if (containerEntity == null) continue;
+            
+            // Verificar si es un horno
+            if (containerEntity.getClass().getName().contains("FurnaceBlockEntity") && containerEntity instanceof Container furnace) {
+                // El slot de combustible en AbstractFurnaceBlockEntity es 1
+                final int FURNACE_FUEL_SLOT = 1;
+                
+                if (FURNACE_FUEL_SLOT < furnace.getContainerSize()) {
+                    ItemStack fuelSlotStack = furnace.getItem(FURNACE_FUEL_SLOT);
+                    
+                    // Verificar si el slot de combustible está vacío o tiene menos de 64 ítems
+                    boolean needsRefill = fuelSlotStack.isEmpty() || 
+                                         (fuelSlotStack.getItem().getDescriptionId().equals("item.minecraft.coal") || 
+                                          fuelSlotStack.getItem().getDescriptionId().equals("item.minecraft.charcoal")) && 
+                                         fuelSlotStack.getCount() < 64;
+                    
+                    if (needsRefill) {
+                        IndexerMod.LOGGER.info("Furnace at " + containerPos + " needs fuel refill");
+                        
+                        // Buscar carbón o carbón vegetal en el DropBox
+                        for (int i = 0; i < dropContainer.getContainerSize(); i++) {
+                            ItemStack stack = dropContainer.getItem(i);
+                            if (stack.isEmpty()) continue;
+                            
+                            boolean isCoalOrCharcoal = stack.getItem().getDescriptionId().equals("item.minecraft.coal") || 
+                                                     stack.getItem().getDescriptionId().equals("item.minecraft.charcoal");
+                            
+                            if (isCoalOrCharcoal) {
+                                // Calcular cuánto carbón necesitamos transferir
+                                int spaceInFurnace = fuelSlotStack.isEmpty() ? 64 : 64 - fuelSlotStack.getCount();
+                                int toTransfer = Math.min(stack.getCount(), spaceInFurnace);
+                                
+                                if (toTransfer > 0) {
+                                    // Transferir el carbón al horno
+                                    if (fuelSlotStack.isEmpty()) {
+                                        // Slot vacío, crear nuevo stack
+                                        ItemStack newStack = stack.copy();
+                                        newStack.setCount(toTransfer);
+                                        furnace.setItem(FURNACE_FUEL_SLOT, newStack);
+                                    } else {
+                                        // Añadir al stack existente
+                                        fuelSlotStack.grow(toTransfer);
+                                    }
+                                    
+                                    // Actualizar el stack en el DropBox
+                                    stack.shrink(toTransfer);
+                                    if (stack.isEmpty()) {
+                                        dropContainer.setItem(i, ItemStack.EMPTY);
+                                    } else {
+                                        dropContainer.setItem(i, stack);
+                                    }
+                                    
+                                    // Marcar como cambiados
+                                    if (containerEntity instanceof BlockEntity) {
+                                        ((BlockEntity) containerEntity).setChanged();
+                                    }
+                                    if (dropContainerEntity instanceof BlockEntity) {
+                                        ((BlockEntity) dropContainerEntity).setChanged();
+                                    }
+                                    
+                                    IndexerMod.LOGGER.info("Refilled furnace at " + containerPos + " with " + toTransfer + " coal/charcoal");
+                                    transferred = true;
+                                    break; // Salir del bucle de ítems del DropBox
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        return transferred;
+    }
+    
     private void checkConnectionStatus(Level level) {
         // Obtener el número actual de conectores
         List<IndexerConnectorBlockEntity> connectors = findConnectors();

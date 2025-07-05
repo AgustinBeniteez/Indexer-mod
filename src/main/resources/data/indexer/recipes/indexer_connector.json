@@ -1,22 +1,22 @@
 {
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    "IHI",
-    "RPR",
-    "IHI"
+    "ITI",
+    "RFR",
+    "ITI"
   ],
   "key": {
     "I": {
       "tag": "forge:ingots/iron"
     },
-    "H": {
-      "item": "minecraft:hopper"
+    "T": {
+      "item": "minecraft:redstone_torch"
     },
     "R": {
       "item": "minecraft:redstone"
     },
-    "P": {
-      "item": "indexer:indexer_pipe"
+    "F": {
+      "item": "minecraft:item_frame"
     }
   },
   "result": {

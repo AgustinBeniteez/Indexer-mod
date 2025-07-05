@@ -4,9 +4,7 @@
   "block.indexer.indexer_connector": "Indexer Connector",
   "block.indexer.drop_box": "DropBox",
   "item.indexer.indexer_manual": "Indexer Manual",
-  "item.indexer.indexer_adjuster": "Indexer Adjuster",
   "item.indexer.manual.tooltip": "Contains instructions on how to use the Indexer system",
-  "item.indexer.adjuster.tooltip": "Right-click on a container to select it, then right-click on a connector to link them",
   "container.indexer.controller": "Indexer Controller",
   "container.indexer.connector": "Indexer Connector",
   "container.indexer.drop_box": "DropBox",
@@ -16,7 +14,5 @@
   "message.indexer.controller.disconnected": "Controller disconnected from all connectors",
   "message.indexer.controller.connection_changed": "Controller now connected to %d connector(s)",
   "message.indexer.controller.connection_lost": "Lost %d connector(s)",
-  "message.indexer.adjuster.dropbox_selected": "DropBox selected at %d, %d, %d",
-  "message.indexer.adjuster.dropbox_connected": "DropBox connected to controller successfully",
   "itemGroup.indexer": "Indexer"
 }
