@@ -1,0 +1,12 @@
+{
+  "parent": "block/cube",
+  "textures": {
+    "particle": "indexer:block/indexer_connector_front",
+    "down": "indexer:block/indexer_connector_side",
+    "up": "indexer:block/indexer_connector_top_off",
+    "north": "indexer:block/indexer_connector_front",
+    "east": "indexer:block/indexer_connector_side",
+    "south": "indexer:block/indexer_connector_side",
+    "west": "indexer:block/indexer_connector_side"
+  }
+}

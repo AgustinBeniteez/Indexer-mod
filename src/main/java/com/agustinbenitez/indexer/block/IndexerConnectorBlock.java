@@ -1,7 +1,10 @@
 package com.agustinbenitez.indexer.block;
 
 import com.agustinbenitez.indexer.block.entity.IndexerConnectorBlockEntity;
+import com.agustinbenitez.indexer.block.entity.IndexerControllerBlockEntity;
 import com.agustinbenitez.indexer.init.ModBlockEntities;
+import com.agustinbenitez.indexer.block.IndexerControllerBlock;
+import com.agustinbenitez.indexer.block.IndexerPipeBlock;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -22,20 +25,32 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraftforge.network.NetworkHooks;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Queue;
+import java.util.LinkedList;
+import java.util.Set;
 
 public class IndexerConnectorBlock extends BaseEntityBlock {
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
+    public static final BooleanProperty CONNECTED = BooleanProperty.create("connected");
     private static final VoxelShape SHAPE = Block.box(0, 0, 0, 16, 16, 16);
 
     public IndexerConnectorBlock(Properties properties) {
         super(properties);
+        this.registerDefaultState(this.stateDefinition.any()
+            .setValue(FACING, Direction.NORTH)
+            .setValue(CONNECTED, false));
     }
 
     @Override
@@ -45,12 +60,17 @@ public class IndexerConnectorBlock extends BaseEntityBlock {
 
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
-        return this.defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+        Level level = context.getLevel();
+        BlockPos pos = context.getClickedPos();
+        boolean isConnected = isConnectedToController(level, pos);
+        return this.defaultBlockState()
+                .setValue(FACING, context.getHorizontalDirection().getOpposite())
+                .setValue(CONNECTED, isConnected);
     }
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING);
+        builder.add(FACING, CONNECTED);
     }
 
     @Override
@@ -66,6 +86,12 @@ public class IndexerConnectorBlock extends BaseEntityBlock {
         BlockEntity entity = level.getBlockEntity(pos);
         if (entity instanceof IndexerConnectorBlockEntity) {
             ((IndexerConnectorBlockEntity) entity).updateConnectedContainer();
+        }
+        
+        // Actualizar el estado de conexión con el controlador
+        boolean isConnected = isConnectedToController(level, pos);
+        if (state.getValue(CONNECTED) != isConnected) {
+            level.setBlock(pos, state.setValue(CONNECTED, isConnected), Block.UPDATE_ALL);
         }
     }
 
@@ -102,6 +128,66 @@ public class IndexerConnectorBlock extends BaseEntityBlock {
                 return true;
             }
         }
+        return false;
+    }
+    
+    // Método para verificar si el conector está conectado a un controlador
+    public static boolean isConnectedToController(Level level, BlockPos pos) {
+        if (level == null) return false;
+        
+        Set<BlockPos> visited = new HashSet<>();
+        Queue<BlockPos> queue = new LinkedList<>();
+        
+        // Comenzar la búsqueda desde las posiciones adyacentes
+        for (Direction direction : Direction.values()) {
+            BlockPos adjacentPos = pos.relative(direction);
+            BlockState adjacentState = level.getBlockState(adjacentPos);
+            
+            // Si hay un controlador directamente adyacente
+            if (adjacentState.getBlock() instanceof IndexerControllerBlock) {
+                return true;
+            }
+            
+            // Si hay una tubería adyacente, añadirla a la cola para BFS
+            if (adjacentState.getBlock() instanceof IndexerPipeBlock) {
+                queue.add(adjacentPos);
+                visited.add(adjacentPos);
+            }
+        }
+        
+        // BFS para encontrar un controlador a través de tuberías
+        while (!queue.isEmpty()) {
+            BlockPos currentPos = queue.poll();
+            BlockState currentState = level.getBlockState(currentPos);
+            
+            // Explorar en todas las direcciones
+            for (Direction direction : Direction.values()) {
+                BlockPos nextPos = currentPos.relative(direction);
+                if (visited.contains(nextPos)) continue;
+                
+                BlockState nextState = level.getBlockState(nextPos);
+                Block nextBlock = nextState.getBlock();
+                
+                // Si encontramos un controlador, retornar true
+                if (nextBlock instanceof IndexerControllerBlock) {
+                    return true;
+                }
+                
+                // Si encontramos otra tubería, añadirla a la cola
+                if (nextBlock instanceof IndexerPipeBlock) {
+                    // Verificar que la tubería esté conectada en ambas direcciones
+                    boolean currentPipeConnected = currentState.getBlock() instanceof IndexerPipeBlock && 
+                                                 currentState.getValue(IndexerPipeBlock.getPropertyForDirection(direction));
+                    boolean nextPipeConnected = nextState.getValue(IndexerPipeBlock.getPropertyForDirection(direction.getOpposite()));
+                    
+                    if (currentPipeConnected && nextPipeConnected) {
+                        queue.add(nextPos);
+                        visited.add(nextPos);
+                    }
+                }
+            }
+        }
+        
         return false;
     }
 }
