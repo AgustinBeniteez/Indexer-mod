@@ -5,6 +5,7 @@ import com.agustinbenitez.indexer.block.DropBoxBlock;
 import com.agustinbenitez.indexer.block.IndexerConnectorBlock;
 import com.agustinbenitez.indexer.block.IndexerPipeBlock;
 import com.agustinbenitez.indexer.init.ModBlockEntities;
+import com.agustinbenitez.indexer.init.ModBlocks;
 import com.agustinbenitez.indexer.menu.IndexerControllerMenu;
 
 import net.minecraft.core.BlockPos;
@@ -30,6 +31,7 @@ import java.util.*;
 
 public class IndexerControllerBlockEntity extends BlockEntity implements MenuProvider {
     private static final int TRANSFER_COOLDOWN_MAX = 8;
+    private static final int ITEMS_PER_TRANSFER = 1; // Número de items a transferir por ciclo
     private static final int SEARCH_RANGE = 250; // Aumentado de 10 a 50 para permitir más conectores
     
     private boolean enabled = true;
@@ -134,22 +136,104 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         if (this.dropContainerPos == null) {
             updateDropContainer();
         }
-        return this.dropContainerPos != null;
+        
+        // Verificar si la posición existe y si realmente hay un contenedor allí
+        if (this.dropContainerPos != null && this.level != null) {
+            BlockEntity blockEntity = this.level.getBlockEntity(this.dropContainerPos);
+            return blockEntity instanceof Container;
+        }
+        
+        return false;
     }
     
     public void updateDropContainer() {
         if (this.level == null) return;
         
+        BlockPos oldDropContainerPos = this.dropContainerPos;
         this.dropContainerPos = null;
+        
+        // Primero buscar contenedores adyacentes
         for (Direction direction : Direction.values()) {
             BlockPos adjacentPos = this.worldPosition.relative(direction);
-            BlockState adjacentState = this.level.getBlockState(adjacentPos);
             BlockEntity blockEntity = this.level.getBlockEntity(adjacentPos);
             // Detectar cualquier tipo de contenedor
             if (blockEntity instanceof Container) {
                 this.dropContainerPos = adjacentPos;
-                this.setChanged();
+                if (!adjacentPos.equals(oldDropContainerPos)) {
+                    this.setChanged();
+                    IndexerMod.LOGGER.info("Found adjacent container at " + adjacentPos);
+                }
                 return;
+            }
+        }
+        
+        // Si no hay contenedores adyacentes, buscar a través de tuberías
+        Set<BlockPos> visited = new HashSet<>();
+        Queue<BlockPos> queue = new LinkedList<>();
+        
+        // Comenzar la búsqueda desde las posiciones adyacentes con tuberías
+        for (Direction direction : Direction.values()) {
+            BlockPos adjacentPos = this.worldPosition.relative(direction);
+            BlockState adjacentState = this.level.getBlockState(adjacentPos);
+            if (adjacentState.getBlock() instanceof IndexerPipeBlock) {
+                // Verificar que la tubería esté conectada en esta dirección
+                if (adjacentState.getValue(IndexerPipeBlock.getPropertyForDirection(direction.getOpposite()))) {
+                    queue.add(adjacentPos);
+                    visited.add(adjacentPos);
+                    IndexerMod.LOGGER.info("Pipe connected in direction " + direction + " at " + adjacentPos);
+                }
+            }
+        }
+        
+        // BFS para encontrar DropBox a través de tuberías
+        while (!queue.isEmpty()) {
+            BlockPos currentPos = queue.poll();
+            BlockState currentState = this.level.getBlockState(currentPos);
+            BlockEntity blockEntity = this.level.getBlockEntity(currentPos);
+
+            // Si encontramos un DropBox, lo usamos como contenedor de drop
+            if (blockEntity instanceof DropBoxBlockEntity) {
+                this.dropContainerPos = currentPos;
+                if (!currentPos.equals(oldDropContainerPos)) {
+                    this.setChanged();
+                    IndexerMod.LOGGER.info("Found DropBox through pipes at " + currentPos);
+                }
+                return;
+            }
+
+            // Explorar en todas las direcciones
+            for (Direction direction : Direction.values()) {
+                BlockPos nextPos = currentPos.relative(direction);
+                if (visited.contains(nextPos)) continue;
+
+                BlockState nextState = this.level.getBlockState(nextPos);
+                Block nextBlock = nextState.getBlock();
+
+                if (nextBlock instanceof IndexerPipeBlock) {
+                    // Verificar que la tubería esté conectada en ambas direcciones
+                    boolean currentPipeConnected = currentState.getBlock() instanceof IndexerPipeBlock && 
+                                                 currentState.getValue(IndexerPipeBlock.getPropertyForDirection(direction));
+                    boolean nextPipeConnected = nextState.getValue(IndexerPipeBlock.getPropertyForDirection(direction.getOpposite()));
+                    
+                    if (currentPipeConnected && nextPipeConnected) {
+                        queue.add(nextPos);
+                        visited.add(nextPos);
+                        IndexerMod.LOGGER.info("Following pipe connection from " + currentPos + " to " + nextPos);
+                    }
+                } else if (nextBlock instanceof DropBoxBlock) {
+                    // Verificar que la tubería actual esté conectada al DropBox
+                    boolean currentPipeConnected = currentState.getBlock() instanceof IndexerPipeBlock && 
+                                                 currentState.getValue(IndexerPipeBlock.getPropertyForDirection(direction));
+                    
+                    if (currentPipeConnected) {
+                        this.dropContainerPos = nextPos;
+                        if (!nextPos.equals(oldDropContainerPos)) {
+                            this.setChanged();
+                            IndexerMod.LOGGER.info("Found DropBox at end of pipe at " + nextPos);
+                        }
+                        return;
+                    }
+                }
             }
         }
     }
@@ -164,6 +248,22 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
 
         // Verificar conexiones y notificar cambios
         entity.checkConnectionStatus(level);
+        
+        // Actualizar periódicamente el contenedor de drop para detectar nuevas conexiones o desconexiones
+        // Solo actualizamos cada 40 ticks (2 segundos) para no sobrecargar el servidor
+        if (level.getGameTime() % 40 == 0) {
+            entity.updateDropContainer();
+            
+            // Verificar si el dropContainerPos sigue siendo válido
+            if (entity.dropContainerPos != null) {
+                BlockEntity blockEntity = level.getBlockEntity(entity.dropContainerPos);
+                if (!(blockEntity instanceof Container)) {
+                    // El contenedor ya no existe o no es válido
+                    entity.dropContainerPos = null;
+                    entity.setChanged();
+                }
+            }
+        }
 
         if (!entity.enabled) return;
 
@@ -201,8 +301,16 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         IndexerMod.LOGGER.info("Found " + connectors.size() + " connectors for controller at " + worldPosition);
         boolean transferred = false;
 
+        // Contador para limitar la cantidad de items transferidos por ciclo
+        int itemsTransferredThisCycle = 0;
+
         // Intentar transferir cada ítem del contenedor de drop a un conector apropiado
         for (int i = 0; i < dropContainer.getContainerSize(); i++) {
+            // Si ya transferimos el máximo de items por ciclo, salir del bucle
+            if (itemsTransferredThisCycle >= ITEMS_PER_TRANSFER) {
+                break;
+            }
+            
             ItemStack stack = dropContainer.getItem(i);
             if (stack.isEmpty()) continue;
 
@@ -233,51 +341,78 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
             // Intentar primero con los conectores que tienen filtro específico
             for (IndexerConnectorBlockEntity connector : connectorsWithFilter) {
                 IndexerMod.LOGGER.info("  Trying connector with filter at " + connector.getBlockPos());
-                remainder = connector.insertItem(remainder);
                 
-                if (remainder.getCount() < stack.getCount()) {
-                    IndexerMod.LOGGER.info("  Transferred " + (stack.getCount() - remainder.getCount()) + " items to filtered connector");
+                // Limitar la cantidad de items a transferir por ciclo
+                ItemStack transferStack = remainder.copy();
+                if (transferStack.getCount() > 1) {
+                    transferStack.setCount(1); // Transferir solo 1 item a la vez
+                }
+                
+                ItemStack newRemainder = connector.insertItem(transferStack);
+                
+                if (newRemainder.getCount() < transferStack.getCount()) {
+                    // Calcular cuántos items se transfirieron realmente
+                    int itemsTransferred = transferStack.getCount() - newRemainder.getCount();
+                    
+                    // Actualizar el stack original
+                    remainder.shrink(itemsTransferred);
                     dropContainer.setItem(i, remainder);
+                    
+                    IndexerMod.LOGGER.info("  Transferred " + itemsTransferred + " items to filtered connector");
                     transferred = true;
                     itemTransferred = true;
+                    itemsTransferredThisCycle++;
                     
                     if (remainder.isEmpty()) {
                         break;
                     }
                 }
+                
+                // Si ya transferimos el máximo de items por ciclo, salir del bucle
+                if (itemsTransferredThisCycle >= ITEMS_PER_TRANSFER) {
+                    break;
+                }
             }
             
-            // Si todavía quedan ítems, intentar con los conectores sin filtro
-            if (!remainder.isEmpty() && !connectorsWithoutFilter.isEmpty()) {
+            // Si todavía quedan ítems y no hemos alcanzado el límite, intentar con los conectores sin filtro
+            if (!remainder.isEmpty() && !connectorsWithoutFilter.isEmpty() && itemsTransferredThisCycle < ITEMS_PER_TRANSFER) {
                 for (IndexerConnectorBlockEntity connector : connectorsWithoutFilter) {
                     IndexerMod.LOGGER.info("  Trying connector without filter at " + connector.getBlockPos());
-                    ItemStack newRemainder = connector.insertItem(remainder);
                     
-                    if (newRemainder.getCount() < remainder.getCount()) {
-                        IndexerMod.LOGGER.info("  Transferred " + (remainder.getCount() - newRemainder.getCount()) + " items to non-filtered connector");
-                        dropContainer.setItem(i, newRemainder);
+                    // Limitar la cantidad de items a transferir por ciclo
+                    ItemStack transferStack = remainder.copy();
+                    if (transferStack.getCount() > 1) {
+                        transferStack.setCount(1); // Transferir solo 1 item a la vez
+                    }
+                    
+                    ItemStack newRemainder = connector.insertItem(transferStack);
+                    
+                    if (newRemainder.getCount() < transferStack.getCount()) {
+                        // Calcular cuántos items se transfirieron realmente
+                        int itemsTransferred = transferStack.getCount() - newRemainder.getCount();
+                        
+                        // Actualizar el stack original
+                        remainder.shrink(itemsTransferred);
+                        dropContainer.setItem(i, remainder);
+                        
+                        IndexerMod.LOGGER.info("  Transferred " + itemsTransferred + " items to non-filtered connector");
                         transferred = true;
                         itemTransferred = true;
-                        remainder = newRemainder;
+                        itemsTransferredThisCycle++;
                         
                         if (remainder.isEmpty()) {
                             break;
                         }
                     }
+                    
+                    // Si ya transferimos el máximo de items por ciclo, salir del bucle
+                    if (itemsTransferredThisCycle >= ITEMS_PER_TRANSFER) {
+                        break;
+                    }
                 }
             }
             
-            // Notificar a los jugadores cercanos sobre la transferencia
-            if (itemTransferred) {
-                List<Player> nearbyPlayers = level.getEntitiesOfClass(
-                    Player.class, 
-                    new net.minecraft.world.phys.AABB(worldPosition).inflate(32.0D)
-                );
-                
-                for (Player player : nearbyPlayers) {
-                    player.sendSystemMessage(Component.literal("Transferencia de items completada"));
-                }
-            }
+            // Ya no enviamos mensajes de notificación al chat para cada transferencia
         }
 
         return transferred;
@@ -334,32 +469,11 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         
         // Verificar si hay cambios en las conexiones
         if (currentConnectorCount != previousConnectorCount) {
-            // Buscar jugadores cercanos para notificar
-            List<Player> nearbyPlayers = level.getEntitiesOfClass(
-                Player.class, 
-                new net.minecraft.world.phys.AABB(worldPosition).inflate(32.0D)
-            );
-            
-            for (Player player : nearbyPlayers) {
-                if (currentConnectorCount > previousConnectorCount) {
-                    // Se agregaron nuevos conectores
-                    int newConnectors = currentConnectorCount - previousConnectorCount;
-                    for (int i = 0; i < newConnectors; i++) {
-                        player.sendSystemMessage(Component.literal("Conector activado"));
-                    }
-                    hasNotifiedConnection = true;
-                } else if (currentConnectorCount == 0 && hasNotifiedConnection) {
-                    // Notificar conexión perdida
-                    player.sendSystemMessage(Component.translatable("message.indexer.controller.disconnected"));
-                    hasNotifiedConnection = false;
-                } else if (currentConnectorCount < previousConnectorCount) {
-                    // Se perdieron conectores
-                    int lostConnectors = previousConnectorCount - currentConnectorCount;
-                    player.sendSystemMessage(Component.translatable("message.indexer.controller.connection_lost", lostConnectors));
-                    if (currentConnectorCount == 0) {
-                        hasNotifiedConnection = false;
-                    }
-                }
+            // Actualizar el estado de notificación sin enviar mensajes al chat
+            if (currentConnectorCount > previousConnectorCount) {
+                hasNotifiedConnection = true;
+            } else if (currentConnectorCount == 0) {
+                hasNotifiedConnection = false;
             }
             
             // Actualizar el contador previo

@@ -88,22 +88,7 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
         BlockPos previousContainerPos = entity.connectedContainerPos;
         entity.updateConnectedContainer();
         
-        // Notificar si se estableció una nueva conexión
-        if (previousContainerPos == null && entity.connectedContainerPos != null) {
-            // Se conectó un nuevo contenedor
-            List<net.minecraft.world.entity.player.Player> nearbyPlayers = level.getEntitiesOfClass(
-                net.minecraft.world.entity.player.Player.class, 
-                new net.minecraft.world.phys.AABB(pos).inflate(16.0D)
-            );
-            
-            // Obtener el nombre del bloque para el mensaje
-            String containerType = level.getBlockState(entity.connectedContainerPos).getBlock().getDescriptionId();
-            containerType = containerType.replace("block.", "");
-            
-            for (net.minecraft.world.entity.player.Player player : nearbyPlayers) {
-                player.sendSystemMessage(net.minecraft.network.chat.Component.literal("Conector conectado a " + containerType));
-            }
-        }
+        // Ya no enviamos mensajes de notificación al chat cuando se conecta un contenedor
     }
 
     public void updateConnectedContainer() {
@@ -240,18 +225,7 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
         if (inserted > 0) {
             com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " successfully inserted " + 
                                                            inserted + " items, " + remainder.getCount() + " items remaining");
-            
-            // Notificar a los jugadores cercanos sobre la inserción
-            List<net.minecraft.world.entity.player.Player> nearbyPlayers = level.getEntitiesOfClass(
-                net.minecraft.world.entity.player.Player.class, 
-                new net.minecraft.world.phys.AABB(this.worldPosition).inflate(16.0D)
-            );
-            
-            for (net.minecraft.world.entity.player.Player player : nearbyPlayers) {
-                player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-                    "Items transferidos al contenedor: " + inserted + " x " + stack.getItem().getDescriptionId()
-                ));
-            }
+            // Ya no enviamos mensajes de notificación al chat
         } else {
             com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " could not insert any items");
         }
