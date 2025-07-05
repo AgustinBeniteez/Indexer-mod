@@ -14,7 +14,7 @@ import net.minecraftforge.registries.RegistryObject;
 public class ModItems {
     public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, IndexerMod.MOD_ID);
 
-    // Ítems de bloque
+    // Block items
     public static final RegistryObject<Item> INDEXER_CONTROLLER_ITEM = ITEMS.register("indexer_controller",
             () -> new BlockItem(ModBlocks.INDEXER_CONTROLLER.get(), new Item.Properties()));
 
@@ -27,11 +27,11 @@ public class ModItems {
     public static final RegistryObject<Item> DROP_BOX_ITEM = ITEMS.register("drop_box",
             () -> new BlockItem(ModBlocks.DROP_BOX.get(), new Item.Properties()));
 
-    // Manual del Indexer
+    // Indexer Manual
     public static final RegistryObject<Item> INDEXER_MANUAL = ITEMS.register("indexer_manual",
             () -> new IndexerManualItem(new Item.Properties().stacksTo(1)));
             
-    // Mejoras de velocidad de transferencia
+    // Transfer speed upgrades
     public static final RegistryObject<Item> TRANSFER_SPEED_UPGRADE_BASIC = ITEMS.register("transfer_speed_upgrade_basic",
             () -> new TransferSpeedUpgradeItem(new Item.Properties().stacksTo(16), 1, 4));
             

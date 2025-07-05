@@ -36,8 +36,8 @@ public class IndexerConnectorScreen extends AbstractContainerScreen<IndexerConne
         // Renderizar etiqueta del inventario del jugador
         guiGraphics.drawString(this.font, this.playerInventoryTitle, 8, this.inventoryLabelY, 4210752, false);
         
-        // Renderizar texto "Filtro"
-        Component filterText = Component.literal("Filtro");
+        // Renderizar texto "Filter"
+        Component filterText = Component.literal("Filter");
         int textWidth = this.font.width(filterText);
         guiGraphics.drawString(this.font, filterText, (this.imageWidth - textWidth) / 2, 20, 4210752, false);
     }

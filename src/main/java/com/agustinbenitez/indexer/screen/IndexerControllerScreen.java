@@ -9,6 +9,7 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
+import java.text.DecimalFormat;
 
 public class IndexerControllerScreen extends AbstractContainerScreen<IndexerControllerMenu> {
     private static final ResourceLocation TEXTURE = new ResourceLocation("minecraft", "textures/gui/container/generic_54.png");
@@ -61,23 +62,38 @@ public class IndexerControllerScreen extends AbstractContainerScreen<IndexerCont
         guiGraphics.drawString(this.font, this.title, 8, 6, 4210752, false);
         
         // Renderizar información del estado
-        String statusText = "Estado: " + (this.menu.isEnabled() ? "Encendido" : "Apagado");
+        String statusText = "Status: " + (this.menu.isEnabled() ? "On" : "Off");
         guiGraphics.drawString(this.font, statusText, 60, 25, 4210752, false);
         
         // Renderizar información del DropBox
-        String dropBoxText = "DropBox: " + (this.menu.hasDropContainer() ? "Conectado" : "No conectado");
+        String dropBoxText = "DropBox: " + (this.menu.hasDropContainer() ? "Connected" : "Not connected");
         guiGraphics.drawString(this.font, dropBoxText, 8, 40, 4210752, false);
         
         // Renderizar información de contenedores conectados
-        String containersText = "Contenedores: " + this.menu.getConnectedContainersCount();
+        String containersText = "Containers: " + this.menu.getConnectedContainersCount();
         guiGraphics.drawString(this.font, containersText, 8, 52, 4210752, false);
         
-        // Renderizar espacios disponibles
-        String slotsText = "Espacios: " + this.menu.getTotalAvailableSlots();
+        // Renderizar espacios disponibles con formato condensado (K, M, etc.)
+        String slotsText = "Slots: " + formatNumber(this.menu.getTotalAvailableSlots());
         guiGraphics.drawString(this.font, slotsText, 100, 52, 4210752, false);
         
         // Renderizar velocidad de transferencia
-        String transferRateText = "Velocidad: " + this.menu.getItemsPerTransfer() + " ítems a la vez";
+        String transferRateText = "Speed: " + this.menu.getItemsPerTransfer() + " items at once";
         guiGraphics.drawString(this.font, transferRateText, 8, 64, 0x008800, false);
+    }
+    
+    /**
+     * Formats a number using condensed notation (K, M, etc.) for large values.
+     * @param number The number to format
+     * @return Formatted string representation of the number
+     */
+    private String formatNumber(int number) {
+        if (number < 1000) {
+            return String.valueOf(number);
+        } else if (number < 1000000) {
+            return String.format("%.1fK", number / 1000.0).replace(".0K", "K");
+        } else {
+            return String.format("%.1fM", number / 1000000.0).replace(".0M", "M");
+        }
     }
 }

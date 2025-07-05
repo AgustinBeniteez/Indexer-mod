@@ -8,16 +8,7 @@ version="1.0.0"
 displayName="Indexer"
 authors="AgustinBenitez"
 logoFile="assets/indexer/textures/gui/logo.png"
-description='''Indexer is an advanced system for automatically filtering and organizing the contents of your chest/containers  in Minecraft.
-
-Main features:
-• Indexer Controller: Central component where you deposit items to be distributed
-• Indexer Pipe: Connects the controller with connectors forming a distribution network
-• Indexer Connector: Placed next to containers and filters items according to configuration
-• Speed Upgrades: Increases item transfer efficiency
-• Range of up to 250 blocks between controller and connectors
-
-Organize your storage and automate item sorting with Indexer!'''
+description='''Indexer is an advanced system for automatically filtering and organizing the contents of your chest/containers  in Minecraft. Organize your storage and automate item sorting with Indexer!'''
 
 [[dependencies.indexer]]
 modId="forge"

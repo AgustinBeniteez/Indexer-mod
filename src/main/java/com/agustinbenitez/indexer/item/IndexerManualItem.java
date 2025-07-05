@@ -30,28 +30,28 @@ public class IndexerManualItem extends Item {
         ItemStack itemstack = player.getItemInHand(hand);
         
         if (!level.isClientSide()) {
-            // Mostrar instrucciones al jugador
+            // Show instructions to the player
             player.sendSystemMessage(Component.literal("===== Indexer Manual =====").withStyle(ChatFormatting.GOLD));
-            player.sendSystemMessage(Component.literal("El sistema Indexer te permite organizar automáticamente los ítems en tus cofres.").withStyle(ChatFormatting.WHITE));
+            player.sendSystemMessage(Component.literal("The Indexer system allows you to automatically organize items in your chests.").withStyle(ChatFormatting.WHITE));
             player.sendSystemMessage(Component.literal(""));
             
-            player.sendSystemMessage(Component.literal("Componentes:").withStyle(ChatFormatting.YELLOW));
-            player.sendSystemMessage(Component.literal("1. Controlador Indexer: El componente principal donde depositas los ítems.").withStyle(ChatFormatting.WHITE));
-            player.sendSystemMessage(Component.literal("2. Tubería Indexer: Conecta el controlador con los conectores.").withStyle(ChatFormatting.WHITE));
-            player.sendSystemMessage(Component.literal("3. Conector Indexer: Se coloca junto a un cofre y filtra los ítems.").withStyle(ChatFormatting.WHITE));
+            player.sendSystemMessage(Component.literal("Components:").withStyle(ChatFormatting.YELLOW));
+            player.sendSystemMessage(Component.literal("1. Indexer Controller: The main component where you deposit items.").withStyle(ChatFormatting.WHITE));
+            player.sendSystemMessage(Component.literal("2. Indexer Pipe: Connects the controller with connectors.").withStyle(ChatFormatting.WHITE));
+            player.sendSystemMessage(Component.literal("3. Indexer Connector: Placed next to a chest and filters items.").withStyle(ChatFormatting.WHITE));
             player.sendSystemMessage(Component.literal(""));
             
-            player.sendSystemMessage(Component.literal("Instrucciones:").withStyle(ChatFormatting.YELLOW));
-            player.sendSystemMessage(Component.literal("1. Coloca el Controlador Indexer en el centro de tu sistema.").withStyle(ChatFormatting.WHITE));
-            player.sendSystemMessage(Component.literal("2. Conecta Tuberías Indexer desde el controlador hacia los conectores.").withStyle(ChatFormatting.WHITE));
-            player.sendSystemMessage(Component.literal("3. Coloca Conectores Indexer junto a tus cofres.").withStyle(ChatFormatting.WHITE));
-            player.sendSystemMessage(Component.literal("4. Configura cada conector con el ítem que deseas filtrar.").withStyle(ChatFormatting.WHITE));
-            player.sendSystemMessage(Component.literal("5. Deposita ítems en el controlador y estos serán enviados a los cofres correspondientes.").withStyle(ChatFormatting.WHITE));
+            player.sendSystemMessage(Component.literal("Instructions:").withStyle(ChatFormatting.YELLOW));
+            player.sendSystemMessage(Component.literal("1. Place the Indexer Controller at the center of your system.").withStyle(ChatFormatting.WHITE));
+            player.sendSystemMessage(Component.literal("2. Connect Indexer Pipes from the controller to the connectors.").withStyle(ChatFormatting.WHITE));
+            player.sendSystemMessage(Component.literal("3. Place Indexer Connectors next to your chests.").withStyle(ChatFormatting.WHITE));
+            player.sendSystemMessage(Component.literal("4. Configure each connector with the item you want to filter.").withStyle(ChatFormatting.WHITE));
+            player.sendSystemMessage(Component.literal("5. Deposit items in the controller and they will be sent to the corresponding chests.").withStyle(ChatFormatting.WHITE));
             player.sendSystemMessage(Component.literal(""));
             
-            player.sendSystemMessage(Component.literal("Especificaciones técnicas:").withStyle(ChatFormatting.YELLOW));
-            player.sendSystemMessage(Component.literal("- El controlador puede detectar hasta 250 bloques de distancia.").withStyle(ChatFormatting.WHITE));
-            player.sendSystemMessage(Component.literal("- No hay límite en la cantidad de conectores que puedes usar.").withStyle(ChatFormatting.WHITE));
+            player.sendSystemMessage(Component.literal("Technical specifications:").withStyle(ChatFormatting.YELLOW));
+            player.sendSystemMessage(Component.literal("- The controller can detect up to 250 blocks away.").withStyle(ChatFormatting.WHITE));
+            player.sendSystemMessage(Component.literal("- There is no limit to the number of connectors you can use.").withStyle(ChatFormatting.WHITE));
         }
 
         return InteractionResultHolder.sidedSuccess(itemstack, level.isClientSide());

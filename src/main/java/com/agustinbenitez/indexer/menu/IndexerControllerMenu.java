@@ -16,7 +16,7 @@ public class IndexerControllerMenu extends AbstractContainerMenu {
     private final ContainerData data;
     private final IndexerControllerBlockEntity blockEntity;
     
-    // Índices de datos para sincronización
+    // Data indices for synchronization
     public static final int ENABLED_INDEX = 0;
     public static final int HAS_DROP_CONTAINER_INDEX = 1;
     public static final int CONNECTED_CONTAINERS_COUNT_INDEX = 2;

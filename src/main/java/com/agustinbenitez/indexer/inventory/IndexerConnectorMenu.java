@@ -18,7 +18,7 @@ public class IndexerConnectorMenu extends AbstractContainerMenu {
     private final IndexerConnectorBlockEntity blockEntity;
     private final ContainerLevelAccess access;
 
-    // Constantes para la posición del inventario del jugador
+    // Constants for player inventory position
     private static final int INVENTORY_START_X = 8;
     private static final int INVENTORY_START_Y = 84;
     private static final int HOTBAR_START_Y = 142;
@@ -30,7 +30,7 @@ public class IndexerConnectorMenu extends AbstractContainerMenu {
         this.blockEntity = blockEntity;
         this.access = blockEntity != null ? ContainerLevelAccess.create(blockEntity.getLevel(), blockEntity.getBlockPos()) : ContainerLevelAccess.NULL;
 
-        // Slot para el filtro en el centro
+        // Slot for the filter in the center
         this.addSlot(new Slot(container, 0, 80, 35) {
             @Override
             public boolean mayPlace(ItemStack stack) {

@@ -1,46 +1,46 @@
 # Indexer Mod
 
-## Descripción
-Indexer es un mod para Minecraft 1.20.1 que permite filtrar y organizar automáticamente el contenido de los contenedores. Con este sistema, podrás depositar ítems en un controlador central y estos serán distribuidos automáticamente a los contenedores conectados según los filtros configurados.
+## Description
+Indexer is a mod for Minecraft 1.20.1 that allows you to automatically filter and organize the contents of containers. With this system, you can deposit items in a central controller and they will be automatically distributed to connected containers according to the configured filters.
 
-## Desarrollador
+## Developer
 - AgustinBenitez
 
-## Características
-- **Controlador Indexador**: El componente principal donde depositas los ítems para ser distribuidos.
-- **Tubería Indexadora**: Conecta el controlador con los conectores para formar una red de distribución.
-- **Conector Indexador**: Se coloca junto a un contenedor y filtra los ítems según el filtro configurado.
-- **Manual del Indexador**: Proporciona instrucciones detalladas sobre cómo usar el sistema.
+## Features
+- **Indexer Controller**: The main component where you deposit items to be distributed.
+- **Indexer Pipe**: Connects the controller with connectors to form a distribution network.
+- **Indexer Connector**: Placed next to a container and filters items according to the configured filter.
+- **Indexer Manual**: Provides detailed instructions on how to use the system.
 
-## Especificaciones Técnicas
-- El controlador puede detectar conectores hasta 250 bloques de distancia.
-- No hay límite en la cantidad de conectores que puedes usar en tu sistema.
+## Technical Specifications
+- The controller can detect connectors up to 250 blocks away.
+- There is no limit to the number of connectors you can use in your system.
 
-## Cómo Usar
+## How to Use
 
-1. **Configuración Básica**:
-   - Coloca el Controlador Indexador en el centro de tu sistema.
-   - Conecta Tuberías Indexadoras desde el controlador hacia los conectores.
-   - Coloca Conectores Indexadores junto a tus contenedores.
+1. **Basic Setup**:
+   - Place the Indexer Controller at the center of your system.
+   - Connect Indexer Pipes from the controller to the connectors.
+   - Place Indexer Connectors next to your containers.
 
-2. **Configuración de Filtros**:
-   - Haz clic derecho en cada Conector Indexador para abrir su interfaz.
-   - Coloca el ítem que deseas filtrar en el slot disponible.
+2. **Filter Configuration**:
+   - Right-click on each Indexer Connector to open its interface.
+   - Place the item you want to filter in the available slot.
 
-3. **Uso**:
-   - Deposita ítems en el Controlador Indexador.
-   - Los ítems serán enviados automáticamente a los contenedores conectados según los filtros configurados.
-   - Si un ítem no coincide con ningún filtro, permanecerá en el controlador.
+3. **Usage**:
+   - Deposit items in the Indexer Controller.
+   - Items will be automatically sent to connected containers according to the configured filters.
+   - If an item does not match any filter, it will remain in the controller.
 
-## Requisitos
+## Requirements
 - Minecraft 1.20.1
-- Forge 47.1.0 o superior
+- Forge 47.1.0 or higher
 
-## Instalación
-1. Instala Minecraft Forge para la versión 1.20.1.
-2. Descarga el archivo .jar del mod.
-3. Coloca el archivo .jar en la carpeta "mods" de tu instalación de Minecraft.
-4. Inicia Minecraft con el perfil de Forge.
+## Installation
+1. Install Minecraft Forge for version 1.20.1.
+2. Download the mod's .jar file.
+3. Place the .jar file in the "mods" folder of your Minecraft installation.
+4. Start Minecraft with the Forge profile.
 
-## Licencia
-Todos los derechos reservados.
+## License
+All rights reserved.
