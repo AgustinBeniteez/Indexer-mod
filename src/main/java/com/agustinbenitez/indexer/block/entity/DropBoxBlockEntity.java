@@ -22,7 +22,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import javax.annotation.Nullable;
 
 public class DropBoxBlockEntity extends RandomizableContainerBlockEntity implements WorldlyContainer {
-    private static final int CONTAINER_SIZE = 54; // 6 filas de 9 slots = 54 slots (doble de un cofre normal)
+    private static final int CONTAINER_SIZE = 54; // 6 rows of 9 slots = 54 slots (double the size of a normal chest)
     private NonNullList<ItemStack> items = NonNullList.withSize(CONTAINER_SIZE, ItemStack.EMPTY);
     private static final int[] SLOTS = new int[CONTAINER_SIZE];
     
@@ -77,29 +77,29 @@ public class DropBoxBlockEntity extends RandomizableContainerBlockEntity impleme
     public void tick(Level level, BlockPos pos, BlockState state) {
         if (level.isClientSide()) return;
         
-        // Verificar si hay items nuevos para notificar a los controladores cercanos
+        // Check if there are new items to notify nearby controllers
         if (hasItems()) {
             notifyNearbyControllers(level, pos);
         }
     }
     
     private void notifyNearbyControllers(Level level, BlockPos pos) {
-        // Buscar controladores en las posiciones adyacentes
+        // Search for controllers in adjacent positions
         for (Direction direction : Direction.values()) {
             BlockPos adjacentPos = pos.relative(direction);
             BlockEntity blockEntity = level.getBlockEntity(adjacentPos);
             
             if (blockEntity instanceof IndexerControllerBlockEntity controller) {
-                // Si el controlador está habilitado, intentar transferir items inmediatamente
+                // If the controller is enabled, try to transfer items immediately
                 if (controller.isEnabled()) {
-                    // Forzar una transferencia inmediata
+                    // Force an immediate transfer
                     level.scheduleTick(adjacentPos, level.getBlockState(adjacentPos).getBlock(), 1);
                 }
             }
         }
     }
 
-    // Implementación de WorldlyContainer para permitir que hoppers y otros sistemas accedan
+    // Implementation of WorldlyContainer to allow hoppers and other systems to access
     @Override
     public int[] getSlotsForFace(Direction side) {
         return SLOTS;
@@ -107,20 +107,20 @@ public class DropBoxBlockEntity extends RandomizableContainerBlockEntity impleme
 
     @Override
     public boolean canPlaceItemThroughFace(int index, ItemStack itemStack, @Nullable Direction direction) {
-        return true; // Permite insertar items desde cualquier lado
+        return true; // Allows inserting items from any side
     }
 
     @Override
     public boolean canTakeItemThroughFace(int index, ItemStack stack, Direction direction) {
-        return true; // Permite extraer items desde cualquier lado
+        return true; // Allows extracting items from any side
     }
 
-    // Método para que el controlador pueda acceder fácilmente a los items
+    // Method for the controller to easily access items
     public NonNullList<ItemStack> getAllItems() {
         return this.items;
     }
 
-    // Método para verificar si el DropBox tiene items
+    // Method to check if the DropBox has items
     public boolean hasItems() {
         for (ItemStack item : this.items) {
             if (!item.isEmpty()) {
@@ -130,7 +130,7 @@ public class DropBoxBlockEntity extends RandomizableContainerBlockEntity impleme
         return false;
     }
 
-    // Método para obtener el primer item no vacío
+    // Method to get the first non-empty item
     public ItemStack getFirstNonEmptyItem() {
         for (int i = 0; i < this.items.size(); i++) {
             ItemStack item = this.items.get(i);
@@ -141,7 +141,7 @@ public class DropBoxBlockEntity extends RandomizableContainerBlockEntity impleme
         return ItemStack.EMPTY;
     }
 
-    // Método para remover un item específico del inventario
+    // Method to remove a specific item from the inventory
     public ItemStack removeItem(int slot, int amount) {
         ItemStack result = ContainerHelper.removeItem(this.items, slot, amount);
         if (!result.isEmpty()) {
@@ -150,7 +150,7 @@ public class DropBoxBlockEntity extends RandomizableContainerBlockEntity impleme
         return result;
     }
     
-    // Método para soltar el contenido cuando se rompe el bloque
+    // Method to drop contents when the block is broken
     public void dropContents() {
         if (this.level == null) return;
         

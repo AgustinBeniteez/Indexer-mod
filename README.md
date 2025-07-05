@@ -1,20 +1,45 @@
 # Indexer Mod
 
 ## Description
-Indexer is a mod for Minecraft 1.20.1 that allows you to automatically filter and organize the contents of containers. With this system, you can deposit items in a central controller and they will be automatically distributed to connected containers according to the configured filters.
+Indexer is a mod for Minecraft 1.20.1 that helps you organize and manage your items. This automation system allows you to filter and automatically distribute the contents of your Chests/Containers, eliminating the need to manually sort your resources.
+
+With Indexer, you can deposit all your items in a central point and the system will take care of distributing them to the appropriate containers according to the filters you have configured, saving you time and keeping your base perfectly organized!
 
 ## Developer
-- AgustinBenitez
+- [AgustinBenitez](https://github.com/Agustinbeniteez)
 
-## Features
-- **Indexer Controller**: The main component where you deposit items to be distributed.
-- **Indexer Pipe**: Connects the controller with connectors to form a distribution network.
-- **Indexer Connector**: Placed next to a container and filters items according to the configured filter.
-- **Indexer Manual**: Provides detailed instructions on how to use the system.
+## Main Components
 
-## Technical Specifications
-- The controller can detect connectors up to 250 blocks away.
-- There is no limit to the number of connectors you can use in your system.
+### Indexer Controller
+The brain of the entire system. Place this block at the center of your storage network and connect it to a DropBox (special container) where you'll deposit the items you want to sort. The Controller can detect connectors up to 250 blocks away, allowing you to create massive and complex storage systems.
+
+### Indexer Pipe
+These blocks connect the Indexer Controller with the Indexer Connectors, forming the distribution network. They are easy to craft and yield 10 units per recipe, allowing you to create extensive distribution systems with few resources.
+
+### Indexer Connector
+Place these blocks next to your chests, barrels, furnaces, or other containers. Each Connector can be configured with a specific filter to determine which items it will accept. Items that match the filter will be automatically sent from the Controller to the connected container.
+
+### DropBox
+A special container with 54 slots (double that of a normal chest) where you can deposit all the items you want to sort. The Indexer Controller will extract the items from here and distribute them according to the configured filters.
+
+### Speed Upgrades
+The mod includes two levels of speed upgrades:
+- **Basic Upgrade**: Allows the Controller to transfer up to 4 items at a time per cycle. Crafted with gold ingots in the corners, redstone dust in the remaining slots, and an Indexer Controller in the center.
+- **Advanced Upgrade**: Allows transferring up to 16 items at a time per cycle. Crafted by surrounding a Basic Upgrade with diamonds.
+
+## Special Features
+
+### Furnace Compatibility
+The system automatically detects furnaces and can refill fuel (coal or charcoal) without additional configuration.
+
+### Wide Range
+The Controller can detect and manage connectors up to 250 blocks away, allowing you to create storage systems that span your entire base.
+
+### No Limits
+There is no restriction on the number of connectors you can use in your system, allowing you to expand it as much as you need.
+
+### Intuitive Interface
+Easily configure your connector filters with a simple and straightforward interface. Just place the item you want to filter in the available slot.
 
 ## How to Use
 

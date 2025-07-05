@@ -32,9 +32,9 @@ public class TransferSpeedUpgradeItem extends Item {
     @Override
     public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("item.indexer.transfer_speed_upgrade.tooltip").withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.literal("Transfiere hasta " + transferRate + " ítems a la vez").withStyle(ChatFormatting.GOLD));
-        tooltip.add(Component.literal("Usar con click derecho en un DropBox").withStyle(ChatFormatting.AQUA));
-        tooltip.add(Component.literal("¡Objeto de un solo uso!").withStyle(ChatFormatting.RED));
+        tooltip.add(Component.literal("Transfers up to " + transferRate + " items at once").withStyle(ChatFormatting.GOLD));
+        tooltip.add(Component.literal("Use with right click on a DropBox").withStyle(ChatFormatting.AQUA));
+        tooltip.add(Component.literal("Single use item!").withStyle(ChatFormatting.RED));
         super.appendHoverText(stack, level, tooltip, flag);
     }
 
@@ -51,9 +51,9 @@ public class TransferSpeedUpgradeItem extends Item {
 
         BlockEntity blockEntity = level.getBlockEntity(pos);
         
-        // Verificar si el bloque es un DropBox
+        // Check if the block is a DropBox
         if (blockEntity instanceof DropBoxBlockEntity) {
-            // Buscar el controlador conectado
+            // Search for the connected controller
             BlockEntity controllerEntity = null;
             for (int x = -5; x <= 5; x++) {
                 for (int y = -5; y <= 5; y++) {
@@ -71,12 +71,12 @@ public class TransferSpeedUpgradeItem extends Item {
             }
             
             if (controllerEntity instanceof IndexerControllerBlockEntity controller) {
-                // Aplicar la mejora
+                // Apply the upgrade
                 try {
-                    // Establecer la velocidad de transferencia
+                    // Set the transfer speed
                     controller.setItemsPerTransfer(this.transferRate);
                     
-                    // Reiniciar el cooldown para que comience a transferir inmediatamente
+                    // Reset the cooldown so it starts transferring immediately
                     java.lang.reflect.Field cooldownField = IndexerControllerBlockEntity.class.getDeclaredField("transferCooldown");
                     cooldownField.setAccessible(true);
                     cooldownField.setInt(controller, 0);
@@ -88,19 +88,19 @@ public class TransferSpeedUpgradeItem extends Item {
                     return InteractionResult.FAIL;
                 }
                 
-                // Notificar al jugador
-                player.sendSystemMessage(Component.literal("¡Mejora aplicada! Ahora se transferirán hasta " + 
-                        this.transferRate + " ítems a la vez en cada ciclo").withStyle(ChatFormatting.GREEN));
-                player.sendSystemMessage(Component.literal("La transferencia comenzará inmediatamente").withStyle(ChatFormatting.AQUA));
+                // Notify the player
+                player.sendSystemMessage(Component.literal("Upgrade applied! Now up to " + 
+                        this.transferRate + " items will be transferred at once in each cycle").withStyle(ChatFormatting.GREEN));
+                player.sendSystemMessage(Component.literal("The transfer will begin immediately").withStyle(ChatFormatting.AQUA));
                 
-                // Consumir el ítem
+                // Consume the item
                 if (!player.getAbilities().instabuild) {
                     itemstack.shrink(1);
                 }
                 
                 return InteractionResult.CONSUME;
             } else {
-                player.sendSystemMessage(Component.literal("No se encontró un controlador Indexer cercano").withStyle(ChatFormatting.RED));
+                player.sendSystemMessage(Component.literal("No nearby Indexer controller found").withStyle(ChatFormatting.RED));
                 return InteractionResult.FAIL;
             }
         }
