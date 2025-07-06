@@ -8,7 +8,7 @@ version="1.0.1"
 displayName="Indexer"
 authors="AgustinBenitez"
 logoFile="assets/indexer/textures/gui/logo.png"
-description='''Indexer is an advanced system for automatically filtering and organizing the contents of your chest/containers  in Minecraft. Organize your storage and automate item sorting with Indexer!'''
+description='''Indexer is an advanced system for automatically filtering and organizing the contents of your chest/containers in Minecraft. Organize your storage and automate item sorting with Indexer! Visit our GitHub repository: https://github.com/AgustinBeniteez/Indexer-mod'''
 
 [[dependencies.indexer]]
 modId="forge"
