@@ -35,6 +35,11 @@ public class IndexerControllerMenu extends AbstractContainerMenu {
         
         // Añadir datos para sincronización
         addDataSlots(data);
+        
+        // Marcar el controlador como en uso
+        if (entity != null) {
+            entity.setBeingUsed(true);
+        }
     }
     
     // Constructor para el lado del cliente
@@ -53,6 +58,15 @@ public class IndexerControllerMenu extends AbstractContainerMenu {
     @Override
     public boolean stillValid(Player player) {
         return this.blockEntity != null && this.blockEntity.stillValid(player);
+    }
+    
+    @Override
+    public void removed(Player player) {
+        super.removed(player);
+        // Marcar el controlador como no en uso cuando se cierra la interfaz
+        if (this.blockEntity != null) {
+            this.blockEntity.setBeingUsed(false);
+        }
     }
     
     @Override

@@ -12,7 +12,7 @@ apply plugin: 'eclipse'
 apply plugin: 'maven-publish'
 apply plugin: 'net.minecraftforge.gradle'
 
-version = '1.0.0'
+version = '1.0.1'
 group = 'com.agustinbenitez.indexer'
 archivesBaseName = 'indexer-1.20.1-v'
 

@@ -1,5 +1,6 @@
 package com.agustinbenitez.indexer.block;
 
+import com.agustinbenitez.indexer.block.entity.IndexerControllerBlockEntity;
 import com.agustinbenitez.indexer.init.ModBlocks;
 
 import net.minecraft.core.BlockPos;
@@ -8,6 +9,7 @@ import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
@@ -59,6 +61,30 @@ public class IndexerPipeBlock extends Block {
         BlockState newState = getConnectionState(level, pos);
         if (!newState.equals(state)) {
             level.setBlock(pos, newState, 3);
+        }
+        
+        // Notificar a los controladores cercanos sobre el cambio
+        notifyNearbyControllers(level, pos);
+    }
+    
+    private void notifyNearbyControllers(Level level, BlockPos pos) {
+        if (level.isClientSide()) return;
+        
+        // Buscar controladores en un radio de 16 bloques
+        int searchRadius = 16;
+        for (int x = -searchRadius; x <= searchRadius; x++) {
+            for (int y = -searchRadius; y <= searchRadius; y++) {
+                for (int z = -searchRadius; z <= searchRadius; z++) {
+                    BlockPos checkPos = pos.offset(x, y, z);
+                    BlockEntity blockEntity = level.getBlockEntity(checkPos);
+                    
+                    if (blockEntity instanceof IndexerControllerBlockEntity controller) {
+                        controller.markNetworkChanged();
+                        // Solo necesitamos notificar a un controlador, ya que cada uno gestionará su propia red
+                        return;
+                    }
+                }
+            }
         }
     }
 

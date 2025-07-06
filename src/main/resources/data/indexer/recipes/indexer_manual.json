@@ -5,7 +5,10 @@
       "item": "minecraft:book"
     },
     {
-      "item": "indexer:indexer_controller"
+      "item": "minecraft:chest"
+    },
+    {
+      "item": "indexer:indexer_pipe"
     }
   ],
   "result": {

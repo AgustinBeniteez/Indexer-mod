@@ -4,7 +4,7 @@ license="All Rights Reserved"
 
 [[mods]]
 modId="indexer"
-version="1.0.0"
+version="1.0.1"
 displayName="Indexer"
 authors="AgustinBenitez"
 logoFile="assets/indexer/textures/gui/logo.png"

@@ -66,6 +66,8 @@ public class DropBoxBlockEntity extends RandomizableContainerBlockEntity impleme
         super.load(tag);
         this.items = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
         ContainerHelper.loadAllItems(tag, this.items);
+        // Initialize the hadItemsLastTick variable based on current inventory state
+        this.hadItemsLastTick = hasItems();
     }
 
     @Override
@@ -73,27 +75,84 @@ public class DropBoxBlockEntity extends RandomizableContainerBlockEntity impleme
         super.saveAdditional(tag);
         ContainerHelper.saveAllItems(tag, this.items);
     }
+    
+    @Override
+    public void setItem(int slot, ItemStack stack) {
+        ItemStack oldStack = this.items.get(slot);
+        this.items.set(slot, stack);
+        if (stack.getCount() > this.getMaxStackSize()) {
+            stack.setCount(this.getMaxStackSize());
+        }
+        this.setChanged();
+        
+        // Notificar a los controladores si se añadió un ítem (antes vacío, ahora no)
+        if (this.level != null && !this.level.isClientSide() && 
+            (oldStack.isEmpty() && !stack.isEmpty()) || (!oldStack.isEmpty() && stack.isEmpty())) {
+            notifyNearbyControllers(this.level, this.worldPosition);
+        }
+    }
 
+    // Variable para rastrear si había ítems en el tick anterior
+    private boolean hadItemsLastTick = false;
+    
     public void tick(Level level, BlockPos pos, BlockState state) {
         if (level.isClientSide()) return;
         
-        // Check if there are new items to notify nearby controllers
-        if (hasItems()) {
+        // Verificar si el estado de los ítems ha cambiado
+        boolean hasItemsNow = hasItems();
+        
+        // Si el estado cambió de tener ítems a no tenerlos, notificar a los controladores
+        if (hadItemsLastTick && !hasItemsNow) {
             notifyNearbyControllers(level, pos);
         }
+        // Si hay ítems nuevos, notificar a los controladores
+        else if (!hadItemsLastTick && hasItemsNow) {
+            notifyNearbyControllers(level, pos);
+        }
+        
+        // Actualizar el estado para el próximo tick
+        hadItemsLastTick = hasItemsNow;
     }
     
     private void notifyNearbyControllers(Level level, BlockPos pos) {
-        // Search for controllers in adjacent positions
+        if (level == null) return;
+        
+        // Primero, buscar controladores en posiciones adyacentes para una respuesta rápida
         for (Direction direction : Direction.values()) {
             BlockPos adjacentPos = pos.relative(direction);
             BlockEntity blockEntity = level.getBlockEntity(adjacentPos);
             
             if (blockEntity instanceof IndexerControllerBlockEntity controller) {
-                // If the controller is enabled, try to transfer items immediately
+                // Marcar que la red ha cambiado
+                controller.markNetworkChanged();
+                
+                // Si el controlador está habilitado, programar una transferencia inmediata
                 if (controller.isEnabled()) {
-                    // Force an immediate transfer
                     level.scheduleTick(adjacentPos, level.getBlockState(adjacentPos).getBlock(), 1);
+                }
+                
+                // Ya encontramos un controlador adyacente, no necesitamos buscar más
+                return;
+            }
+        }
+        
+        // Si no encontramos controladores adyacentes, buscar en un radio más amplio
+        int searchRadius = 16;
+        for (int x = -searchRadius; x <= searchRadius; x++) {
+            for (int y = -searchRadius; y <= searchRadius; y++) {
+                for (int z = -searchRadius; z <= searchRadius; z++) {
+                    // Saltar la posición central que ya verificamos
+                    if (x == 0 && y == 0 && z == 0) continue;
+                    
+                    BlockPos checkPos = pos.offset(x, y, z);
+                    BlockEntity blockEntity = level.getBlockEntity(checkPos);
+                    
+                    if (blockEntity instanceof IndexerControllerBlockEntity controller) {
+                        // Marcar que la red ha cambiado
+                        controller.markNetworkChanged();
+                        // Solo necesitamos notificar a un controlador, ya que cada uno gestionará su propia red
+                        return;
+                    }
                 }
             }
         }
@@ -142,10 +201,15 @@ public class DropBoxBlockEntity extends RandomizableContainerBlockEntity impleme
     }
 
     // Method to remove a specific item from the inventory
+    @Override
     public ItemStack removeItem(int slot, int amount) {
         ItemStack result = ContainerHelper.removeItem(this.items, slot, amount);
         if (!result.isEmpty()) {
             this.setChanged();
+            // Notify controllers when items are removed
+            if (this.level != null && !this.level.isClientSide()) {
+                notifyNearbyControllers(this.level, this.worldPosition);
+            }
         }
         return result;
     }

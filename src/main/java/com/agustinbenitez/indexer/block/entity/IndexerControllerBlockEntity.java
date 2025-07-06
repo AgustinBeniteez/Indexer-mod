@@ -160,7 +160,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         // Verificar si la posición existe y si realmente hay un contenedor allí
         if (this.dropContainerPos != null && this.level != null) {
             BlockEntity blockEntity = this.level.getBlockEntity(this.dropContainerPos);
-            return blockEntity instanceof Container;
+            return blockEntity instanceof Container && !(blockEntity instanceof IndexerConnectorBlockEntity);
         }
         
         return false;
@@ -176,12 +176,14 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         for (Direction direction : Direction.values()) {
             BlockPos adjacentPos = this.worldPosition.relative(direction);
             BlockEntity blockEntity = this.level.getBlockEntity(adjacentPos);
-            // Detectar cualquier tipo de contenedor
-            if (blockEntity instanceof Container) {
+            // Detectar cualquier tipo de contenedor, pero excluir conectores
+            if (blockEntity instanceof Container && !(blockEntity instanceof IndexerConnectorBlockEntity)) {
                 this.dropContainerPos = adjacentPos;
                 if (!adjacentPos.equals(oldDropContainerPos)) {
                     this.setChanged();
-                    IndexerMod.LOGGER.info("Found adjacent container at " + adjacentPos);
+                    if (isBeingUsed) {
+                        IndexerMod.LOGGER.info("Found adjacent container at " + adjacentPos);
+                    }
                 }
                 return;
             }
@@ -200,7 +202,9 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                 if (adjacentState.getValue(IndexerPipeBlock.getPropertyForDirection(direction.getOpposite()))) {
                     queue.add(adjacentPos);
                     visited.add(adjacentPos);
-                    IndexerMod.LOGGER.info("Pipe connected in direction " + direction + " at " + adjacentPos);
+                    if (isBeingUsed) {
+                        IndexerMod.LOGGER.info("Pipe connected in direction " + direction + " at " + adjacentPos);
+                    }
                 }
             }
         }
@@ -216,7 +220,9 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                 this.dropContainerPos = currentPos;
                 if (!currentPos.equals(oldDropContainerPos)) {
                     this.setChanged();
-                    IndexerMod.LOGGER.info("Found DropBox through pipes at " + currentPos);
+                    if (isBeingUsed) {
+                        IndexerMod.LOGGER.info("Found DropBox through pipes at " + currentPos);
+                    }
                 }
                 return;
             }
@@ -238,7 +244,9 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                     if (currentPipeConnected && nextPipeConnected) {
                         queue.add(nextPos);
                         visited.add(nextPos);
-                        IndexerMod.LOGGER.info("Following pipe connection from " + currentPos + " to " + nextPos);
+                        if (isBeingUsed) {
+                            IndexerMod.LOGGER.info("Following pipe connection from " + currentPos + " to " + nextPos);
+                        }
                     }
                 } else if (nextBlock instanceof DropBoxBlock) {
                     // Verificar que la tubería actual esté conectada al DropBox
@@ -249,7 +257,9 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                         this.dropContainerPos = nextPos;
                         if (!nextPos.equals(oldDropContainerPos)) {
                             this.setChanged();
-                            IndexerMod.LOGGER.info("Found DropBox at end of pipe at " + nextPos);
+                            if (isBeingUsed) {
+                                IndexerMod.LOGGER.info("Found DropBox at end of pipe at " + nextPos);
+                            }
                         }
                         return;
                     }
@@ -263,26 +273,61 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         this.setChanged();
     }
 
+    // Variable para rastrear si hay jugadores interactuando con el controlador
+    private boolean isBeingUsed = false;
+    // Variable para rastrear si la red de tuberías ha cambiado
+    private boolean networkChanged = true;
+    // Variable para rastrear si el DropBox tiene ítems
+    private boolean dropBoxHasItems = false;
+    
+    public void setBeingUsed(boolean beingUsed) {
+        this.isBeingUsed = beingUsed;
+        // Si se abre la interfaz, forzamos una actualización
+        if (beingUsed) {
+            networkChanged = true;
+        }
+    }
+    
+    public void markNetworkChanged() {
+        this.networkChanged = true;
+        // Invalidar los caches cuando la red cambia
+        this.connectorCache = null;
+        this.uniqueContainersCache = null;
+        this.totalAvailableSlotsCache = -1;
+    }
+    
     public static void tick(Level level, BlockPos pos, BlockState state, IndexerControllerBlockEntity entity) {
         if (level.isClientSide()) return;
 
-        // Verificar conexiones y notificar cambios
-        entity.checkConnectionStatus(level);
+        // Verificar si hay cambios en la red solo cuando es necesario
+        boolean checkNetwork = false;
         
-        // Actualizar periódicamente el contenedor de drop para detectar nuevas conexiones o desconexiones
-        // Solo actualizamos cada 40 ticks (2 segundos) para no sobrecargar el servidor
-        if (level.getGameTime() % 40 == 0) {
+        // Actualizar periódicamente solo si:
+        // 1. El controlador está siendo usado por un jugador, o
+        // 2. La red ha cambiado, o
+        // 3. Cada 200 ticks (10 segundos) para verificaciones de mantenimiento
+        if (entity.isBeingUsed || entity.networkChanged || level.getGameTime() % 200 == 0) {
+            checkNetwork = true;
+            entity.checkConnectionStatus(level);
+            
+            // Actualizar el contenedor de drop
             entity.updateDropContainer();
             
             // Verificar si el dropContainerPos sigue siendo válido
             if (entity.dropContainerPos != null) {
                 BlockEntity blockEntity = level.getBlockEntity(entity.dropContainerPos);
-                if (!(blockEntity instanceof Container)) {
-                    // El contenedor ya no existe o no es válido
+                if (!(blockEntity instanceof Container) || blockEntity instanceof IndexerConnectorBlockEntity) {
+                    // El contenedor ya no existe, no es válido, o es un conector
                     entity.dropContainerPos = null;
                     entity.setChanged();
+                } else if (blockEntity instanceof DropBoxBlockEntity dropBox) {
+                    // Verificar si el DropBox tiene ítems
+                    entity.dropBoxHasItems = dropBox.hasItems();
                 }
             }
+            
+            // Resetear la bandera de cambio en la red después de verificar
+            entity.networkChanged = false;
         }
 
         if (!entity.enabled) return;
@@ -292,12 +337,16 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
             return;
         }
 
-        // Intentar transferir ítems desde el contenedor de drop
-        boolean didTransfer = entity.transferItemsFromDropContainer();
+        // Solo intentar transferir ítems si:
+        // 1. El DropBox tiene ítems, o
+        // 2. Acabamos de verificar la red (para asegurarnos de que no nos perdemos nada)
+        if (entity.dropBoxHasItems || checkNetwork) {
+            boolean didTransfer = entity.transferItemsFromDropContainer();
 
-        if (didTransfer) {
-            entity.transferCooldown = TRANSFER_COOLDOWN_MAX;
-            entity.setChanged();
+            if (didTransfer) {
+                entity.transferCooldown = TRANSFER_COOLDOWN_MAX;
+                entity.setChanged();
+            }
         }
     }
 
@@ -310,18 +359,22 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         }
 
         this.dropContainerEntity = this.level.getBlockEntity(this.dropContainerPos);
-        if (!(this.dropContainerEntity instanceof Container dropContainer)) {
+        if (!(this.dropContainerEntity instanceof Container dropContainer) || this.dropContainerEntity instanceof IndexerConnectorBlockEntity) {
             return false;
         }
 
         // Buscar conectores en el rango
         List<IndexerConnectorBlockEntity> connectors = findConnectors();
         if (connectors.isEmpty()) {
-            IndexerMod.LOGGER.info("No connectors found for controller at " + worldPosition);
+            if (isBeingUsed) {
+                IndexerMod.LOGGER.info("No connectors found for controller at " + worldPosition);
+            }
             return false;
         }
 
-        IndexerMod.LOGGER.info("Found " + connectors.size() + " connectors for controller at " + worldPosition);
+        if (isBeingUsed) {
+            IndexerMod.LOGGER.info("Found " + connectors.size() + " connectors for controller at " + worldPosition);
+        }
         boolean transferred = false;
         
         // Primero, verificar si hay hornos que necesiten rellenar su combustible
@@ -340,7 +393,9 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
             ItemStack stack = dropContainer.getItem(i);
             if (stack.isEmpty()) continue;
 
-            IndexerMod.LOGGER.info("Trying to transfer item: " + stack.getItem().getDescriptionId() + " x" + stack.getCount());
+            if (isBeingUsed) {
+                IndexerMod.LOGGER.info("Trying to transfer item: " + stack.getItem().getDescriptionId() + " x" + stack.getCount());
+            }
             
             // Separar conectores en dos grupos: los que tienen filtro específico y los que no tienen filtro
             List<IndexerConnectorBlockEntity> connectorsWithFilter = new ArrayList<>();
@@ -357,8 +412,10 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                 }
             }
             
-            IndexerMod.LOGGER.info("  Found " + connectorsWithFilter.size() + " connectors with specific filter and " + 
-                                 connectorsWithoutFilter.size() + " connectors without filter for this item");
+            if (isBeingUsed) {
+                IndexerMod.LOGGER.info("  Found " + connectorsWithFilter.size() + " connectors with specific filter and " + 
+                                     connectorsWithoutFilter.size() + " connectors without filter for this item");
+            }
             
             // Primero intentar con conectores que tienen filtro específico
             boolean itemTransferred = false;
@@ -366,7 +423,9 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
             
             // Intentar primero con los conectores que tienen filtro específico
             for (IndexerConnectorBlockEntity connector : connectorsWithFilter) {
-                IndexerMod.LOGGER.info("  Trying connector with filter at " + connector.getBlockPos());
+                if (isBeingUsed) {
+                    IndexerMod.LOGGER.info("  Trying connector with filter at " + connector.getBlockPos());
+                }
                 
                 // Transferir múltiples ítems a la vez según la velocidad configurada
                 ItemStack transferStack = remainder.copy();
@@ -384,7 +443,9 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                     remainder.shrink(itemsTransferred);
                     dropContainer.setItem(i, remainder);
                     
-                    IndexerMod.LOGGER.info("  Transferred " + itemsTransferred + " items to filtered connector");
+                    if (isBeingUsed) {
+                        IndexerMod.LOGGER.info("  Transferred " + itemsTransferred + " items to filtered connector");
+                    }
                     transferred = true;
                     itemTransferred = true;
                     itemsTransferredThisCycle += itemsTransferred;
@@ -403,7 +464,9 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
             // Si todavía quedan ítems y no hemos alcanzado el límite, intentar con los conectores sin filtro
             if (!remainder.isEmpty() && !connectorsWithoutFilter.isEmpty() && itemsTransferredThisCycle < this.itemsPerTransfer) {
                 for (IndexerConnectorBlockEntity connector : connectorsWithoutFilter) {
-                    IndexerMod.LOGGER.info("  Trying connector without filter at " + connector.getBlockPos());
+                    if (isBeingUsed) {
+                        IndexerMod.LOGGER.info("  Trying connector without filter at " + connector.getBlockPos());
+                    }
                     
                     // Transferir múltiples ítems a la vez según la velocidad configurada
                     ItemStack transferStack = remainder.copy();
@@ -421,7 +484,9 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                         remainder.shrink(itemsTransferred);
                         dropContainer.setItem(i, remainder);
                         
-                        IndexerMod.LOGGER.info("  Transferred " + itemsTransferred + " items to non-filtered connector");
+                        if (isBeingUsed) {
+                            IndexerMod.LOGGER.info("  Transferred " + itemsTransferred + " items to non-filtered connector");
+                        }
                         transferred = true;
                         itemTransferred = true;
                         itemsTransferredThisCycle += itemsTransferred;
@@ -437,28 +502,44 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                     }
                 }
             }
-            
-            // Ya no enviamos mensajes de notificación al chat para cada transferencia
+        }
+
+        // Actualizar el estado de dropBoxHasItems después de la transferencia
+        if (transferred && this.dropContainerEntity instanceof DropBoxBlockEntity) {
+            // Verificar si el DropBox todavía tiene ítems
+            this.dropBoxHasItems = ((DropBoxBlockEntity) this.dropContainerEntity).hasItems();
         }
 
         return transferred;
     }
     
+    // Cache para los contenedores conectados y slots disponibles
+    private Set<BlockPos> uniqueContainersCache = null;
+    private int totalAvailableSlotsCache = -1;
+    
     public int getConnectedContainersCount() {
-        List<IndexerConnectorBlockEntity> connectors = findConnectors();
-        Set<BlockPos> uniqueContainers = new HashSet<>();
-        
-        for (IndexerConnectorBlockEntity connector : connectors) {
-            BlockPos containerPos = connector.getConnectedContainerPos();
-            if (containerPos != null) {
-                uniqueContainers.add(containerPos);
-            }
+        // Usar el cache si está disponible y la red no ha cambiado
+        if (!networkChanged && uniqueContainersCache != null) {
+            return uniqueContainersCache.size();
         }
         
-        return uniqueContainers.size();
+        // Si necesitamos recalcular, actualizar el cache
+        updateContainerCache();
+        return uniqueContainersCache.size();
     }
     
     public int getTotalAvailableSlots() {
+        // Usar el cache si está disponible y la red no ha cambiado
+        if (!networkChanged && totalAvailableSlotsCache >= 0) {
+            return totalAvailableSlotsCache;
+        }
+        
+        // Si necesitamos recalcular, actualizar el cache
+        updateContainerCache();
+        return totalAvailableSlotsCache;
+    }
+    
+    private void updateContainerCache() {
         List<IndexerConnectorBlockEntity> connectors = findConnectors();
         Set<BlockPos> uniqueContainers = new HashSet<>();
         int totalSlots = 0;
@@ -479,7 +560,9 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
             }
         }
         
-        return totalSlots;
+        // Actualizar los caches
+        uniqueContainersCache = uniqueContainers;
+        totalAvailableSlotsCache = totalSlots;
     }
 
     /**
@@ -516,7 +599,9 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                                          fuelSlotStack.getCount() < 64;
                     
                     if (needsRefill) {
-                        IndexerMod.LOGGER.info("Furnace at " + containerPos + " needs fuel refill");
+                        if (isBeingUsed) {
+                            IndexerMod.LOGGER.info("Furnace at " + containerPos + " needs fuel refill");
+                        }
                         
                         // Buscar carbón o carbón vegetal en el DropBox
                         for (int i = 0; i < dropContainer.getContainerSize(); i++) {
@@ -559,7 +644,9 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                                         ((BlockEntity) dropContainerEntity).setChanged();
                                     }
                                     
-                                    IndexerMod.LOGGER.info("Refilled furnace at " + containerPos + " with " + toTransfer + " coal/charcoal");
+                                    if (isBeingUsed) {
+                                        IndexerMod.LOGGER.info("Refilled furnace at " + containerPos + " with " + toTransfer + " coal/charcoal");
+                                    }
                                     transferred = true;
                                     break; // Salir del bucle de ítems del DropBox
                                 }
@@ -570,6 +657,12 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
             }
         }
         
+        // Actualizar el estado de dropBoxHasItems después de la transferencia
+        if (transferred && this.dropContainerEntity instanceof DropBoxBlockEntity) {
+            // Verificar si el DropBox todavía tiene ítems
+            this.dropBoxHasItems = ((DropBoxBlockEntity) this.dropContainerEntity).hasItems();
+        }
+        
         return transferred;
     }
     
@@ -578,10 +671,12 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         List<IndexerConnectorBlockEntity> connectors = findConnectors();
         int currentConnectorCount = connectors.size();
         
-        // Imprimir información de depuración en el registro del servidor
-        IndexerMod.LOGGER.info("Controller at " + worldPosition + " found " + currentConnectorCount + " connectors");
-        for (IndexerConnectorBlockEntity connector : connectors) {
-            IndexerMod.LOGGER.info("  - Connector at " + connector.getBlockPos() + ", connected container: " + connector.getConnectedContainerPos());
+        // Imprimir información de depuración solo si el controlador está siendo usado
+        if (isBeingUsed) {
+            IndexerMod.LOGGER.info("Controller at " + worldPosition + " found " + currentConnectorCount + " connectors");
+            for (IndexerConnectorBlockEntity connector : connectors) {
+                IndexerMod.LOGGER.info("  - Connector at " + connector.getBlockPos() + ", connected container: " + connector.getConnectedContainerPos());
+            }
         }
         
         // Verificar si hay cambios en las conexiones
@@ -596,15 +691,29 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
             // Actualizar el contador previo
             previousConnectorCount = currentConnectorCount;
             setChanged();
+            
+            // Marcar que la red ha cambiado para forzar una actualización completa
+            networkChanged = true;
         }
     }
     
+    // Cache de conectores para evitar búsquedas repetidas
+    private List<IndexerConnectorBlockEntity> connectorCache = null;
+    
     private List<IndexerConnectorBlockEntity> findConnectors() {
+        // Si la red no ha cambiado y tenemos un cache válido, devolver el cache
+        if (!networkChanged && connectorCache != null) {
+            return connectorCache;
+        }
+        
         List<IndexerConnectorBlockEntity> connectors = new ArrayList<>();
         Set<BlockPos> visited = new HashSet<>();
         Queue<BlockPos> queue = new LinkedList<>();
         
-        IndexerMod.LOGGER.info("Starting connector search from controller at " + worldPosition);
+        // Reducir la verbosidad de los logs para mejorar el rendimiento
+        if (isBeingUsed) {
+            IndexerMod.LOGGER.info("Starting connector search from controller at " + worldPosition);
+        }
 
         // Comenzar la búsqueda desde las posiciones adyacentes
         for (Direction direction : Direction.values()) {
@@ -615,22 +724,23 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                 if (adjacentState.getValue(IndexerPipeBlock.getPropertyForDirection(direction.getOpposite()))) {
                     queue.add(adjacentPos);
                     visited.add(adjacentPos);
-                    IndexerMod.LOGGER.info("Pipe connected in direction " + direction + " at " + adjacentPos);
-                } else {
-                    IndexerMod.LOGGER.info("Pipe NOT connected in direction " + direction + " at " + adjacentPos);
+                    if (isBeingUsed) {
+                        IndexerMod.LOGGER.info("Pipe connected in direction " + direction + " at " + adjacentPos);
+                    }
                 }
             } else if (adjacentState.getBlock() instanceof IndexerConnectorBlock) {
                 // Si hay un conector directamente adyacente, agregarlo
                 BlockEntity blockEntity = this.level.getBlockEntity(adjacentPos);
                 if (blockEntity instanceof IndexerConnectorBlockEntity) {
                     connectors.add((IndexerConnectorBlockEntity) blockEntity);
-                    IndexerMod.LOGGER.info("Found adjacent connector at " + adjacentPos);
+                    if (isBeingUsed) {
+                        IndexerMod.LOGGER.info("Found adjacent connector at " + adjacentPos);
+                    }
                 }
             }
         }
 
         // BFS para encontrar conectores a través de tuberías
-        // Eliminamos la limitación de SEARCH_RANGE para permitir encontrar todos los conectores
         while (!queue.isEmpty()) {
             BlockPos currentPos = queue.poll();
             BlockState currentState = this.level.getBlockState(currentPos);
@@ -638,7 +748,9 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
 
             if (blockEntity instanceof IndexerConnectorBlockEntity) {
                 connectors.add((IndexerConnectorBlockEntity) blockEntity);
-                IndexerMod.LOGGER.info("Found connector through pipes at " + currentPos);
+                if (isBeingUsed) {
+                    IndexerMod.LOGGER.info("Found connector through pipes at " + currentPos);
+                }
                 continue;
             }
 
@@ -659,9 +771,9 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                     if (currentPipeConnected && nextPipeConnected) {
                         queue.add(nextPos);
                         visited.add(nextPos);
-                        IndexerMod.LOGGER.info("Following pipe connection from " + currentPos + " to " + nextPos);
-                    } else {
-                        IndexerMod.LOGGER.info("Pipe connection broken between " + currentPos + " and " + nextPos);
+                        if (isBeingUsed) {
+                            IndexerMod.LOGGER.info("Following pipe connection from " + currentPos + " to " + nextPos);
+                        }
                     }
                 } else if (nextBlock instanceof IndexerConnectorBlock) {
                     // Verificar que la tubería actual esté conectada al conector
@@ -673,14 +785,21 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                         if (nextEntity instanceof IndexerConnectorBlockEntity) {
                             connectors.add((IndexerConnectorBlockEntity) nextEntity);
                             visited.add(nextPos);
-                            IndexerMod.LOGGER.info("Found connector at end of pipe at " + nextPos);
+                            if (isBeingUsed) {
+                                IndexerMod.LOGGER.info("Found connector at end of pipe at " + nextPos);
+                            }
                         }
                     }
                 }
             }
         }
 
-        IndexerMod.LOGGER.info("Connector search completed. Found " + connectors.size() + " connectors. Visited " + visited.size() + " blocks.");
+        if (isBeingUsed) {
+            IndexerMod.LOGGER.info("Connector search completed. Found " + connectors.size() + " connectors. Visited " + visited.size() + " blocks.");
+        }
+        
+        // Actualizar el cache
+        connectorCache = connectors;
         return connectors;
     }
 

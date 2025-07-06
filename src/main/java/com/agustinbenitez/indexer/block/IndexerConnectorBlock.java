@@ -86,12 +86,36 @@ public class IndexerConnectorBlock extends BaseEntityBlock {
         BlockEntity entity = level.getBlockEntity(pos);
         if (entity instanceof IndexerConnectorBlockEntity) {
             ((IndexerConnectorBlockEntity) entity).updateConnectedContainer();
+            
+            // Notificar a los controladores cercanos sobre el cambio
+            notifyNearbyControllers(level, pos);
         }
         
         // Actualizar el estado de conexión con el controlador
         boolean isConnected = isConnectedToController(level, pos);
         if (state.getValue(CONNECTED) != isConnected) {
             level.setBlock(pos, state.setValue(CONNECTED, isConnected), Block.UPDATE_ALL);
+        }
+    }
+    
+    private void notifyNearbyControllers(Level level, BlockPos pos) {
+        if (level.isClientSide()) return;
+        
+        // Buscar controladores en un radio de 16 bloques
+        int searchRadius = 16;
+        for (int x = -searchRadius; x <= searchRadius; x++) {
+            for (int y = -searchRadius; y <= searchRadius; y++) {
+                for (int z = -searchRadius; z <= searchRadius; z++) {
+                    BlockPos checkPos = pos.offset(x, y, z);
+                    BlockEntity blockEntity = level.getBlockEntity(checkPos);
+                    
+                    if (blockEntity instanceof IndexerControllerBlockEntity controller) {
+                        controller.markNetworkChanged();
+                        // Solo necesitamos notificar a un controlador, ya que cada uno gestionará su propia red
+                        return;
+                    }
+                }
+            }
         }
     }
 
@@ -124,7 +148,9 @@ public class IndexerConnectorBlock extends BaseEntityBlock {
         for (Direction direction : Direction.values()) {
             BlockPos adjacentPos = pos.relative(direction);
             BlockEntity adjacentEntity = level.getBlockEntity(adjacentPos);
-            if (adjacentEntity instanceof net.minecraft.world.Container) {
+            // Verificar si es un contenedor pero NO un conector
+            if (adjacentEntity instanceof net.minecraft.world.Container && 
+                !(adjacentEntity instanceof IndexerConnectorBlockEntity)) {
                 return true;
             }
         }

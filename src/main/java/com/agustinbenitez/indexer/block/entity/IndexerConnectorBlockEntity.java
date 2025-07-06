@@ -103,7 +103,8 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
             BlockEntity adjacentEntity = this.level.getBlockEntity(adjacentPos);
             
             // Verificar si es cualquier tipo de contenedor (barril, horno, etc.)
-            if (adjacentEntity instanceof Container) {
+            // Pero excluir específicamente otros conectores
+            if (adjacentEntity instanceof Container && !(adjacentEntity instanceof IndexerConnectorBlockEntity)) {
                 this.connectedContainerPos = adjacentPos;
                 this.setChanged();
                 
@@ -142,9 +143,9 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
         }
         
         BlockEntity containerEntity = this.level.getBlockEntity(this.connectedContainerPos);
-        if (!(containerEntity instanceof Container)) {
-            com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " cannot accept items: container not accessible");
-            this.connectedContainerPos = null; // Resetear la conexión si el contenedor ya no existe
+        if (!(containerEntity instanceof Container) || containerEntity instanceof IndexerConnectorBlockEntity) {
+            com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " cannot accept items: container not accessible or is another connector");
+            this.connectedContainerPos = null; // Resetear la conexión si el contenedor ya no existe o es otro conector
             return false;
         }
 
@@ -180,8 +181,8 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
         }
 
         BlockEntity containerEntity = this.level.getBlockEntity(this.connectedContainerPos);
-        if (!(containerEntity instanceof Container)) {
-            com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " cannot insert item: block is not a container");
+        if (!(containerEntity instanceof Container) || containerEntity instanceof IndexerConnectorBlockEntity) {
+            com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " cannot insert item: block is not a container or is another connector");
             return stack;
         }
 
