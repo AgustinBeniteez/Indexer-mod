@@ -67,5 +67,8 @@ Easily configure your connector filters with a simple and straightforward interf
 3. Place the .jar file in the "mods" folder of your Minecraft installation.
 4. Start Minecraft with the Forge profile.
 
+## Download New Versions
+Download the latest versions of the mod at: `https://www.curseforge.com/minecraft/mc-mods/indexer`
+
 ## License
 All rights reserved.

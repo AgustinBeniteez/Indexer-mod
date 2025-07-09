@@ -142,6 +142,26 @@ public class IndexerConnectorBlock extends BaseEntityBlock {
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
         return createTickerHelper(type, ModBlockEntities.INDEXER_CONNECTOR.get(), IndexerConnectorBlockEntity::tick);
     }
+    
+    @Override
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
+        if (state.getBlock() != newState.getBlock()) {
+            BlockEntity blockEntity = level.getBlockEntity(pos);
+            if (blockEntity instanceof IndexerConnectorBlockEntity) {
+                // Dropear el filtro si existe
+                IndexerConnectorBlockEntity connectorEntity = (IndexerConnectorBlockEntity) blockEntity;
+                net.minecraft.world.item.ItemStack filterItem = connectorEntity.getFilterItem();
+                if (!filterItem.isEmpty()) {
+                    net.minecraft.world.Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), filterItem);
+                }
+            }
+            
+            // Dropear el ítem del conector
+            net.minecraft.world.item.ItemStack itemStack = new net.minecraft.world.item.ItemStack(this);
+            net.minecraft.world.Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), itemStack);
+        }
+        super.onRemove(state, level, pos, newState, isMoving);
+    }
 
     // Método para verificar si hay un contenedor adyacente
     public static boolean hasAdjacentContainer(Level level, BlockPos pos) {

@@ -58,7 +58,11 @@ public class IndexerControllerBlock extends BaseEntityBlock {
 
     @Override
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
-        // El controlador ya no tiene inventario interno, no necesita dropear contenidos
+        if (state.getBlock() != newState.getBlock()) {
+            // Dropear el ítem del controlador cuando se rompe el bloque
+            net.minecraft.world.item.ItemStack itemStack = new net.minecraft.world.item.ItemStack(this);
+            net.minecraft.world.Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), itemStack);
+        }
         super.onRemove(state, level, pos, newState, isMoving);
     }
 

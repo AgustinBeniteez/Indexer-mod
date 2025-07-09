@@ -152,4 +152,14 @@ public class IndexerPipeBlock extends Block {
 
         return shape;
     }
+    
+    @Override
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
+        if (state.getBlock() != newState.getBlock()) {
+            // Dropear el ítem de la tubería cuando se rompe el bloque
+            net.minecraft.world.item.ItemStack itemStack = new net.minecraft.world.item.ItemStack(this);
+            net.minecraft.world.Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), itemStack);
+        }
+        super.onRemove(state, level, pos, newState, isMoving);
+    }
 }

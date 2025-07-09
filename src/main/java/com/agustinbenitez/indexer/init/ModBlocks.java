@@ -26,7 +26,7 @@ public class ModBlocks {
                     .mapColor(MapColor.METAL)
                     .instrument(NoteBlockInstrument.IRON_XYLOPHONE)
                     .requiresCorrectToolForDrops()
-                    .strength(3.5f)
+                    .strength(0.5f, 0.4f) // Reducida la resistencia para que se rompa más rápido
                     .sound(SoundType.METAL)));
 
     // Registra el bloque de tubería para conectar componentes
@@ -35,7 +35,7 @@ public class ModBlocks {
                     .mapColor(MapColor.METAL)
                     .instrument(NoteBlockInstrument.IRON_XYLOPHONE)
                     .requiresCorrectToolForDrops()
-                    .strength(2.0f)
+                    .strength(0.2f, 0.1f) // Resistencia extremadamente baja para que se rompa instantáneamente
                     .sound(SoundType.METAL)));
 
     // Registra el bloque conector que se coloca en los cofres
@@ -44,7 +44,7 @@ public class ModBlocks {
                     .mapColor(MapColor.METAL)
                     .instrument(NoteBlockInstrument.IRON_XYLOPHONE)
                     .requiresCorrectToolForDrops()
-                    .strength(2.0f)
+                    .strength(0.5f, 0.4f) // Reducida la resistencia para que se rompa muy rápido
                     .sound(SoundType.METAL)));
                     
     // Registra el bloque DropBox que funciona como un cofre con más capacidad
@@ -53,7 +53,7 @@ public class ModBlocks {
                     .mapColor(MapColor.METAL)
                     .instrument(NoteBlockInstrument.IRON_XYLOPHONE)
                     .requiresCorrectToolForDrops()
-                    .strength(3.0f)
+                    .strength(0.5f, 0.4f) // Reducida la resistencia para que se rompa más rápido
                     .sound(SoundType.METAL)));
 
     public static void register(IEventBus eventBus) {

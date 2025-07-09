@@ -76,6 +76,10 @@ public class DropBoxBlock extends BaseEntityBlock {
             if (blockEntity instanceof DropBoxBlockEntity) {
                 ((DropBoxBlockEntity) blockEntity).dropContents();
             }
+            
+            // Dropear el ítem del bloque DropBox
+            net.minecraft.world.item.ItemStack itemStack = new net.minecraft.world.item.ItemStack(this);
+            net.minecraft.world.Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), itemStack);
         }
         super.onRemove(state, level, pos, newState, isMoving);
     }
