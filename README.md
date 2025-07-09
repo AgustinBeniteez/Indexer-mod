@@ -71,4 +71,65 @@ Easily configure your connector filters with a simple and straightforward interf
 Download the latest versions of the mod at: `https://www.curseforge.com/minecraft/mc-mods/indexer`
 
 ## License
-All rights reserved.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+The MIT License is a permissive license that allows you to do almost anything with this project, like making and distributing closed source versions, as long as you include the original copyright and license notice.
+
+## Issues
+
+If you find any problem or have a suggestion to improve the mod, please create an issue in the GitHub repository by following these steps:
+
+1. Go to the [project repository](https://github.com/Agustinbeniteez/Indexer-mod) on GitHub.
+2. Click on the "Issues" tab.
+3. Click on the "New Issue" button.
+4. Provide a descriptive title for the issue.
+5. Describe the problem or suggestion in detail. Include:
+   - Version of the mod you are using
+   - Minecraft and Forge version
+   - Steps to reproduce the problem (if it's a bug)
+   - Screenshots or logs if possible
+6. Click on "Submit new issue".
+
+Your feedback is very important to improve the mod. Thank you for contributing!
+
+## Contributing
+
+Contributions to the Indexer Mod are welcome! If you'd like to contribute to the project, here's how you can do it:
+
+1. **Fork the Repository**: Click the "Fork" button at the top right of the [project repository](https://github.com/Agustinbeniteez/Indexer-mod) to create your own copy.
+
+2. **Clone Your Fork**: Clone your forked repository to your local machine.
+   ```
+   git clone https://github.com/YOUR-USERNAME/Indexer-mod.git
+   ```
+
+3. **Create a Branch**: Create a new branch for your feature or bugfix.
+   ```
+   git checkout -b feature/your-feature-name
+   ```
+
+4. **Make Changes**: Implement your changes, following the existing code style.
+
+5. **Test Your Changes**: Make sure your changes work correctly and don't break existing functionality.
+
+6. **Commit Your Changes**: Commit your changes with a clear and descriptive commit message.
+   ```
+   git commit -m "v1.0.#"
+   ```
+
+7. **Push to Your Fork**: Push your changes to your forked repository.
+   ```
+   git push origin feature/your-feature-name
+   ```
+
+8. **Create a Pull Request**: Go to the original repository and click on "New Pull Request". Select your fork and the branch you created, then submit the pull request with a clear description of your changes.
+
+### Contribution Guidelines
+
+- Follow the existing code style and conventions
+- Write clear, descriptive commit messages
+- Include comments in your code when necessary
+- Update documentation if needed
+- Make sure your code works with Minecraft 1.20.1 and Forge 47.1.0+
+
+Thank you for helping improve the Indexer Mod!
