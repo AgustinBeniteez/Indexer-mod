@@ -6,11 +6,14 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 
 /**
  * Pantalla GUI para el manual del Indexer.
  * Muestra instrucciones paso a paso con imágenes y permite navegar entre páginas.
  */
+@OnlyIn(Dist.CLIENT)
 public class IndexerManualScreen extends Screen {
     // Constantes para la pantalla
     private static final int SCREEN_WIDTH = 271;
