@@ -108,21 +108,13 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
                 this.connectedContainerPos = adjacentPos;
                 this.setChanged();
                 
-                // Obtener el nombre del bloque para los logs
-                String blockName = this.level.getBlockState(adjacentPos).getBlock().getDescriptionId();
-                
-                // Imprimir información de depuración
-                com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " connected to container (" + blockName + ") at " + adjacentPos);
                 return;
             }
         }
         
         // Si se perdió la conexión, marcar como cambiado
         if (oldContainerPos != null && this.connectedContainerPos == null) {
-            com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " lost connection to container at " + oldContainerPos);
             this.setChanged();
-        } else if (this.connectedContainerPos == null) {
-            com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " could not find any container to connect to");
         }
     }
 
@@ -131,20 +123,17 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
         if (this.connectedContainerPos == null) {
             updateConnectedContainer(); // Intentar encontrar un contenedor
             if (this.connectedContainerPos == null) {
-                com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " cannot accept items: no container connected");
                 return false; // No hay contenedor conectado
             }
         }
         
         // Verificar que el contenedor exista y sea accesible
         if (this.level == null) {
-            com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " cannot accept items: level is null");
             return false;
         }
         
         BlockEntity containerEntity = this.level.getBlockEntity(this.connectedContainerPos);
         if (!(containerEntity instanceof Container) || containerEntity instanceof IndexerConnectorBlockEntity) {
-            com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " cannot accept items: container not accessible or is another connector");
             this.connectedContainerPos = null; // Resetear la conexión si el contenedor ya no existe o es otro conector
             return false;
         }
@@ -156,46 +145,31 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
         
         // Si es carbón/carbón vegetal y el contenedor es un horno, permitir siempre
         if (isCoalOrCharcoal && isFurnace) {
-            com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " accepting coal/charcoal for furnace regardless of filter");
             return true;
         }
 
         // Si no hay filtro configurado, acepta cualquier ítem
         if (this.filterItem.isEmpty()) {
-            com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " can accept any item (no filter)");
             return true;
         }
 
         // Verificar si el ítem coincide con el filtro
-        boolean matches = this.filterItem.getItem() == stack.getItem();
-        com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " filter check: " + 
-                                                       (matches ? "accepted" : "rejected") + " item " + 
-                                                       stack.getItem().getDescriptionId());
-        return matches;
+        return this.filterItem.getItem() == stack.getItem();
     }
 
     public ItemStack insertItem(ItemStack stack) {
         if (!canAcceptItem(stack) || this.level == null) {
-            com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " cannot insert item: item not accepted or level is null");
             return stack;
         }
 
         BlockEntity containerEntity = this.level.getBlockEntity(this.connectedContainerPos);
         if (!(containerEntity instanceof Container) || containerEntity instanceof IndexerConnectorBlockEntity) {
-            com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " cannot insert item: block is not a container or is another connector");
             return stack;
         }
 
-        // Obtener el nombre del bloque para los logs
-        String containerType = this.level.getBlockState(this.connectedContainerPos).getBlock().getDescriptionId();
-        
         Container container = (Container) containerEntity;
         ItemStack remainder = stack.copy();
         int initialCount = remainder.getCount();
-        
-        com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " attempting to insert " + 
-                                                       initialCount + " x " + stack.getItem().getDescriptionId() + 
-                                                       " into container (" + containerType + ") at " + this.connectedContainerPos);
 
         // Verificar si es un horno y el ítem es carbón o carbón vegetal
         boolean isCoalOrCharcoal = stack.getItem().getDescriptionId().equals("item.minecraft.coal") || 
@@ -221,7 +195,7 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
                     container.setItem(FURNACE_FUEL_SLOT, newStack);
                     
                     remainder.shrink(toInsert);
-                    com.agustinbenitez.indexer.IndexerMod.LOGGER.info("  Inserted " + toInsert + " coal/charcoal into furnace fuel slot");
+
                     
                     if (remainder.isEmpty()) {
                         if (containerEntity instanceof BlockEntity) {
@@ -239,7 +213,7 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
                         fuelSlotStack.grow(toInsert);
                         remainder.shrink(toInsert);
                         
-                        com.agustinbenitez.indexer.IndexerMod.LOGGER.info("  Added " + toInsert + " coal/charcoal to existing stack in furnace fuel slot");
+
                         
                         if (remainder.isEmpty()) {
                             if (containerEntity instanceof BlockEntity) {
@@ -253,7 +227,7 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
                 // Si llegamos aquí, significa que no pudimos insertar todo el carbón en este horno
                 // porque el slot de combustible está lleno o casi lleno
                 if (!remainder.isEmpty()) {
-                    com.agustinbenitez.indexer.IndexerMod.LOGGER.info("  Fuel slot is full or nearly full, cannot insert more coal/charcoal");
+
                     // No continuamos con el comportamiento normal para este horno
                     // Devolvemos el remainder para que el controlador intente con otro conector
                     if (containerEntity instanceof BlockEntity) {
@@ -285,7 +259,7 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
                 container.setItem(i, newStack);
                 
                 remainder.shrink(toInsert);
-                com.agustinbenitez.indexer.IndexerMod.LOGGER.info("  Inserted " + toInsert + " items into empty slot " + i);
+
                 
                 if (remainder.isEmpty()) {
                     break;
@@ -300,7 +274,7 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
                     slotStack.grow(toInsert);
                     remainder.shrink(toInsert);
                     
-                    com.agustinbenitez.indexer.IndexerMod.LOGGER.info("  Added " + toInsert + " items to existing stack in slot " + i);
+
                     
                     if (remainder.isEmpty()) {
                         break;
@@ -315,11 +289,10 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
         
         int inserted = initialCount - remainder.getCount();
         if (inserted > 0) {
-            com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " successfully inserted " + 
-                                                           inserted + " items, " + remainder.getCount() + " items remaining");
+
             // Ya no enviamos mensajes de notificación al chat
         } else {
-            com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Connector at " + this.worldPosition + " could not insert any items");
+
         }
 
         return remainder;

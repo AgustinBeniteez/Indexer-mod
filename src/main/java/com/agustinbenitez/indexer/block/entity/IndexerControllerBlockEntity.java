@@ -182,7 +182,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                 if (!adjacentPos.equals(oldDropContainerPos)) {
                     this.setChanged();
                     if (isBeingUsed) {
-                        IndexerMod.LOGGER.info("Found adjacent container at " + adjacentPos);
+
                     }
                 }
                 return;
@@ -203,7 +203,6 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                     queue.add(adjacentPos);
                     visited.add(adjacentPos);
                     if (isBeingUsed) {
-                        IndexerMod.LOGGER.info("Pipe connected in direction " + direction + " at " + adjacentPos);
                     }
                 }
             }
@@ -221,7 +220,6 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                 if (!currentPos.equals(oldDropContainerPos)) {
                     this.setChanged();
                     if (isBeingUsed) {
-                        IndexerMod.LOGGER.info("Found DropBox through pipes at " + currentPos);
                     }
                 }
                 return;
@@ -244,9 +242,6 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                     if (currentPipeConnected && nextPipeConnected) {
                         queue.add(nextPos);
                         visited.add(nextPos);
-                        if (isBeingUsed) {
-                            IndexerMod.LOGGER.info("Following pipe connection from " + currentPos + " to " + nextPos);
-                        }
                     }
                 } else if (nextBlock instanceof DropBoxBlock) {
                     // Verificar que la tubería actual esté conectada al DropBox
@@ -258,7 +253,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                         if (!nextPos.equals(oldDropContainerPos)) {
                             this.setChanged();
                             if (isBeingUsed) {
-                                IndexerMod.LOGGER.info("Found DropBox at end of pipe at " + nextPos);
+
                             }
                         }
                         return;
@@ -367,13 +362,11 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         List<IndexerConnectorBlockEntity> connectors = findConnectors();
         if (connectors.isEmpty()) {
             if (isBeingUsed) {
-                IndexerMod.LOGGER.info("No connectors found for controller at " + worldPosition);
             }
             return false;
         }
 
         if (isBeingUsed) {
-            IndexerMod.LOGGER.info("Found " + connectors.size() + " connectors for controller at " + worldPosition);
         }
         boolean transferred = false;
         
@@ -394,7 +387,6 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
             if (stack.isEmpty()) continue;
 
             if (isBeingUsed) {
-                IndexerMod.LOGGER.info("Trying to transfer item: " + stack.getItem().getDescriptionId() + " x" + stack.getCount());
             }
             
             // Separar conectores en dos grupos: los que tienen filtro específico y los que no tienen filtro
@@ -413,8 +405,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
             }
             
             if (isBeingUsed) {
-                IndexerMod.LOGGER.info("  Found " + connectorsWithFilter.size() + " connectors with specific filter and " + 
-                                     connectorsWithoutFilter.size() + " connectors without filter for this item");
+
             }
             
             // Primero intentar con conectores que tienen filtro específico
@@ -424,7 +415,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
             // Intentar primero con los conectores que tienen filtro específico
             for (IndexerConnectorBlockEntity connector : connectorsWithFilter) {
                 if (isBeingUsed) {
-                    IndexerMod.LOGGER.info("  Trying connector with filter at " + connector.getBlockPos());
+
                 }
                 
                 // Transferir múltiples ítems a la vez según la velocidad configurada
@@ -444,7 +435,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                     dropContainer.setItem(i, remainder);
                     
                     if (isBeingUsed) {
-                        IndexerMod.LOGGER.info("  Transferred " + itemsTransferred + " items to filtered connector");
+
                     }
                     transferred = true;
                     itemTransferred = true;
@@ -465,7 +456,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
             if (!remainder.isEmpty() && !connectorsWithoutFilter.isEmpty() && itemsTransferredThisCycle < this.itemsPerTransfer) {
                 for (IndexerConnectorBlockEntity connector : connectorsWithoutFilter) {
                     if (isBeingUsed) {
-                        IndexerMod.LOGGER.info("  Trying connector without filter at " + connector.getBlockPos());
+
                     }
                     
                     // Transferir múltiples ítems a la vez según la velocidad configurada
@@ -485,7 +476,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                         dropContainer.setItem(i, remainder);
                         
                         if (isBeingUsed) {
-                            IndexerMod.LOGGER.info("  Transferred " + itemsTransferred + " items to non-filtered connector");
+
                         }
                         transferred = true;
                         itemTransferred = true;
@@ -600,7 +591,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                     
                     if (needsRefill) {
                         if (isBeingUsed) {
-                            IndexerMod.LOGGER.info("Furnace at " + containerPos + " needs fuel refill");
+
                         }
                         
                         // Buscar carbón o carbón vegetal en el DropBox
@@ -645,7 +636,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                                     }
                                     
                                     if (isBeingUsed) {
-                                        IndexerMod.LOGGER.info("Refilled furnace at " + containerPos + " with " + toTransfer + " coal/charcoal");
+
                                     }
                                     transferred = true;
                                     break; // Salir del bucle de ítems del DropBox
@@ -671,14 +662,6 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         List<IndexerConnectorBlockEntity> connectors = findConnectors();
         int currentConnectorCount = connectors.size();
         
-        // Imprimir información de depuración solo si el controlador está siendo usado
-        if (isBeingUsed) {
-            IndexerMod.LOGGER.info("Controller at " + worldPosition + " found " + currentConnectorCount + " connectors");
-            for (IndexerConnectorBlockEntity connector : connectors) {
-                IndexerMod.LOGGER.info("  - Connector at " + connector.getBlockPos() + ", connected container: " + connector.getConnectedContainerPos());
-            }
-        }
-        
         // Verificar si hay cambios en las conexiones
         if (currentConnectorCount != previousConnectorCount) {
             // Actualizar el estado de notificación sin enviar mensajes al chat
@@ -694,6 +677,11 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
             
             // Marcar que la red ha cambiado para forzar una actualización completa
             networkChanged = true;
+            
+            // Solo registrar cambios significativos en la red
+            if (isBeingUsed) {
+
+            }
         }
     }
     
@@ -710,11 +698,6 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         Set<BlockPos> visited = new HashSet<>();
         Queue<BlockPos> queue = new LinkedList<>();
         
-        // Reducir la verbosidad de los logs para mejorar el rendimiento
-        if (isBeingUsed) {
-            IndexerMod.LOGGER.info("Starting connector search from controller at " + worldPosition);
-        }
-
         // Comenzar la búsqueda desde las posiciones adyacentes
         for (Direction direction : Direction.values()) {
             BlockPos adjacentPos = this.worldPosition.relative(direction);
@@ -724,18 +707,12 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                 if (adjacentState.getValue(IndexerPipeBlock.getPropertyForDirection(direction.getOpposite()))) {
                     queue.add(adjacentPos);
                     visited.add(adjacentPos);
-                    if (isBeingUsed) {
-                        IndexerMod.LOGGER.info("Pipe connected in direction " + direction + " at " + adjacentPos);
-                    }
                 }
             } else if (adjacentState.getBlock() instanceof IndexerConnectorBlock) {
                 // Si hay un conector directamente adyacente, agregarlo
                 BlockEntity blockEntity = this.level.getBlockEntity(adjacentPos);
                 if (blockEntity instanceof IndexerConnectorBlockEntity) {
                     connectors.add((IndexerConnectorBlockEntity) blockEntity);
-                    if (isBeingUsed) {
-                        IndexerMod.LOGGER.info("Found adjacent connector at " + adjacentPos);
-                    }
                 }
             }
         }
@@ -748,9 +725,6 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
 
             if (blockEntity instanceof IndexerConnectorBlockEntity) {
                 connectors.add((IndexerConnectorBlockEntity) blockEntity);
-                if (isBeingUsed) {
-                    IndexerMod.LOGGER.info("Found connector through pipes at " + currentPos);
-                }
                 continue;
             }
 
@@ -772,7 +746,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                         queue.add(nextPos);
                         visited.add(nextPos);
                         if (isBeingUsed) {
-                            IndexerMod.LOGGER.info("Following pipe connection from " + currentPos + " to " + nextPos);
+
                         }
                     }
                 } else if (nextBlock instanceof IndexerConnectorBlock) {
@@ -785,19 +759,12 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                         if (nextEntity instanceof IndexerConnectorBlockEntity) {
                             connectors.add((IndexerConnectorBlockEntity) nextEntity);
                             visited.add(nextPos);
-                            if (isBeingUsed) {
-                                IndexerMod.LOGGER.info("Found connector at end of pipe at " + nextPos);
-                            }
                         }
                     }
                 }
             }
         }
 
-        if (isBeingUsed) {
-            IndexerMod.LOGGER.info("Connector search completed. Found " + connectors.size() + " connectors. Visited " + visited.size() + " blocks.");
-        }
-        
         // Actualizar el cache
         connectorCache = connectors;
         return connectors;
