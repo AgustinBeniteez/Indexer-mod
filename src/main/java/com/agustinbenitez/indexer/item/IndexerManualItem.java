@@ -33,11 +33,10 @@ public class IndexerManualItem extends Item {
         ItemStack itemstack = player.getItemInHand(hand);
         
         if (level.isClientSide()) {
-            // Usar DistExecutor para asegurarse de que el código del cliente solo se ejecute en el cliente
-            DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> () -> openManualScreen());
+            openManualScreen();
         }
 
-        return InteractionResultHolder.sidedSuccess(itemstack, level.isClientSide());
+        return InteractionResultHolder.success(itemstack);
     }
     
     @OnlyIn(Dist.CLIENT)
