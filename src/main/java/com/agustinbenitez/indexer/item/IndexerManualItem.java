@@ -9,6 +9,9 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraftforge.fml.DistExecutor;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -30,10 +33,14 @@ public class IndexerManualItem extends Item {
         ItemStack itemstack = player.getItemInHand(hand);
         
         if (level.isClientSide()) {
-            // Abrir la pantalla GUI del manual en el cliente
-            net.minecraft.client.Minecraft.getInstance().setScreen(new com.agustinbenitez.indexer.screen.IndexerManualScreen());
+            openManualScreen();
         }
 
-        return InteractionResultHolder.sidedSuccess(itemstack, level.isClientSide());
+        return InteractionResultHolder.success(itemstack);
+    }
+    
+    @OnlyIn(Dist.CLIENT)
+    private static void openManualScreen() {
+        net.minecraft.client.Minecraft.getInstance().setScreen(new com.agustinbenitez.indexer.screen.IndexerManualScreen());
     }
 }
