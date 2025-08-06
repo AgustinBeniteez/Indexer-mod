@@ -2,6 +2,7 @@ package com.agustinbenitez.indexer.init;
 
 import com.agustinbenitez.indexer.IndexerMod;
 import com.agustinbenitez.indexer.block.DropBoxBlock;
+import com.agustinbenitez.indexer.block.ExtractorBlock;
 import com.agustinbenitez.indexer.block.IndexerControllerBlock;
 import com.agustinbenitez.indexer.block.IndexerPipeBlock;
 import com.agustinbenitez.indexer.block.IndexerConnectorBlock;
@@ -50,6 +51,15 @@ public class ModBlocks {
     // Registra el bloque DropBox que funciona como un cofre con más capacidad
     public static final RegistryObject<Block> DROP_BOX = BLOCKS.register("drop_box",
             () -> new DropBoxBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.METAL)
+                    .instrument(NoteBlockInstrument.IRON_XYLOPHONE)
+                    .requiresCorrectToolForDrops()
+                    .strength(0.5f, 0.4f) // Reducida la resistencia para que se rompa más rápido
+                    .sound(SoundType.METAL)));
+                    
+    // Registra el bloque Extractor que extrae items de contenedores
+    public static final RegistryObject<Block> EXTRACTOR = BLOCKS.register("extractor",
+            () -> new ExtractorBlock(BlockBehaviour.Properties.of()
                     .mapColor(MapColor.METAL)
                     .instrument(NoteBlockInstrument.IRON_XYLOPHONE)
                     .requiresCorrectToolForDrops()

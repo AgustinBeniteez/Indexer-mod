@@ -1,0 +1,12 @@
+{
+  "parent": "block/cube",
+  "textures": {
+    "down": "indexer:block/extractor_up_down",
+    "up": "indexer:block/extractor_up_down",
+    "north": "indexer:block/extractor_side",
+    "south": "indexer:block/extractor_side",
+    "west": "indexer:block/extractor_side",
+    "east": "indexer:block/extractor_side",
+    "particle": "indexer:block/extractor_side"
+  }
+}

@@ -1,6 +1,7 @@
 package com.agustinbenitez.indexer.init;
 
 import com.agustinbenitez.indexer.IndexerMod;
+import com.agustinbenitez.indexer.item.ExtractorItem;
 import com.agustinbenitez.indexer.item.IndexerManualItem;
 import com.agustinbenitez.indexer.item.TransferSpeedUpgradeItem;
 
@@ -26,6 +27,9 @@ public class ModItems {
             
     public static final RegistryObject<Item> DROP_BOX_ITEM = ITEMS.register("drop_box",
             () -> new BlockItem(ModBlocks.DROP_BOX.get(), new Item.Properties()));
+            
+    public static final RegistryObject<Item> EXTRACTOR_ITEM = ITEMS.register("extractor",
+            () -> new ExtractorItem(ModBlocks.EXTRACTOR.get(), new Item.Properties()));
 
     // Indexer Manual
     public static final RegistryObject<Item> INDEXER_MANUAL = ITEMS.register("indexer_manual",

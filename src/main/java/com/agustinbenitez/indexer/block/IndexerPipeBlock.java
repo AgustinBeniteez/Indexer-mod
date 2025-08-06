@@ -113,7 +113,8 @@ public class IndexerPipeBlock extends Block {
         return neighborBlock == this ||
                neighborBlock == ModBlocks.INDEXER_CONTROLLER.get() ||
                neighborBlock == ModBlocks.INDEXER_CONNECTOR.get() ||
-               neighborBlock == ModBlocks.DROP_BOX.get();
+               neighborBlock == ModBlocks.DROP_BOX.get() ||
+               neighborBlock == ModBlocks.EXTRACTOR.get();
     }
     
     public static BooleanProperty getPropertyForDirection(Direction direction) {

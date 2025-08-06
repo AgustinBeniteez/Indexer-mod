@@ -174,9 +174,10 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
         // Verificar si es un horno y el ítem es carbón o carbón vegetal
         boolean isCoalOrCharcoal = stack.getItem().getDescriptionId().equals("item.minecraft.coal") || 
                                   stack.getItem().getDescriptionId().equals("item.minecraft.charcoal");
+        boolean isFurnace = containerEntity.getClass().getName().contains("FurnaceBlockEntity");
         
         // Si es un horno (AbstractFurnaceBlockEntity) y el ítem es carbón/carbón vegetal
-        if (containerEntity.getClass().getName().contains("FurnaceBlockEntity") && isCoalOrCharcoal) {
+        if (isFurnace && isCoalOrCharcoal) {
             com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Detected furnace and coal/charcoal, attempting to insert into fuel slot");
             
             // El slot de combustible en AbstractFurnaceBlockEntity es 1
@@ -244,9 +245,68 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
             }
             return remainder;
         }
+        
+        // Si es un horno pero NO es carbón, solo permitir inserción en el slot superior (ingredientes)
+        if (isFurnace && !isCoalOrCharcoal) {
+            com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Detected furnace and non-fuel item, attempting to insert into input slot");
+            
+            // El slot de ingredientes en AbstractFurnaceBlockEntity es 0
+            final int FURNACE_INPUT_SLOT = 0;
+            
+            if (FURNACE_INPUT_SLOT < container.getContainerSize()) {
+                ItemStack inputSlotStack = container.getItem(FURNACE_INPUT_SLOT);
+                
+                if (inputSlotStack.isEmpty()) {
+                    // Slot de ingredientes vacío, insertar todo lo que podamos
+                    int maxStackSize = Math.min(container.getMaxStackSize(), remainder.getMaxStackSize());
+                    int toInsert = Math.min(remainder.getCount(), maxStackSize);
+                    
+                    ItemStack newStack = remainder.copy();
+                    newStack.setCount(toInsert);
+                    container.setItem(FURNACE_INPUT_SLOT, newStack);
+                    
+                    remainder.shrink(toInsert);
+                    
+                    if (remainder.isEmpty()) {
+                        if (containerEntity instanceof BlockEntity) {
+                            ((BlockEntity) containerEntity).setChanged();
+                        }
+                        return ItemStack.EMPTY;
+                    }
+                } else if (ItemStack.isSameItemSameTags(inputSlotStack, remainder)) {
+                    // Mismo ítem en el slot de ingredientes, intentar apilar
+                    int maxStackSize = Math.min(container.getMaxStackSize(), inputSlotStack.getMaxStackSize());
+                    int space = maxStackSize - inputSlotStack.getCount();
+                    
+                    if (space > 0) {
+                        int toInsert = Math.min(remainder.getCount(), space);
+                        inputSlotStack.grow(toInsert);
+                        remainder.shrink(toInsert);
+                        
+                        if (remainder.isEmpty()) {
+                            if (containerEntity instanceof BlockEntity) {
+                                ((BlockEntity) containerEntity).setChanged();
+                            }
+                            return ItemStack.EMPTY;
+                        }
+                    }
+                }
+                
+                // Si llegamos aquí, no pudimos insertar todo en el slot de ingredientes
+                if (containerEntity instanceof BlockEntity) {
+                    ((BlockEntity) containerEntity).setChanged();
+                }
+                return remainder;
+            }
+        }
 
         // Comportamiento normal para otros contenedores o si no se pudo insertar todo en el slot de combustible
         for (int i = 0; i < container.getContainerSize(); i++) {
+            // Si es un horno, no permitir inserción en el slot de salida (slot 2)
+            if (isFurnace && i == 2) {
+                continue; // Saltar el slot de salida del horno
+            }
+            
             ItemStack slotStack = container.getItem(i);
             
             if (slotStack.isEmpty()) {

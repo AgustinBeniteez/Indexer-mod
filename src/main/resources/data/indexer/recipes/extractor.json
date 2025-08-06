@@ -1,0 +1,28 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "IHI",
+    "RCR",
+    "IPI"
+  ],
+  "key": {
+    "I": {
+      "tag": "forge:ingots/iron"
+    },
+    "H": {
+      "item": "minecraft:hopper"
+    },
+    "R": {
+      "item": "minecraft:redstone"
+    },
+    "C": {
+      "item": "minecraft:chest"
+    },
+    "P": {
+      "item": "minecraft:piston"
+    }
+  },
+  "result": {
+    "item": "indexer:extractor"
+  }
+}

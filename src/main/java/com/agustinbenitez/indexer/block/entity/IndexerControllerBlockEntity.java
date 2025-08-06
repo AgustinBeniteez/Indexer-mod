@@ -558,6 +558,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
 
     /**
      * Verifica si hay hornos conectados que necesiten rellenar su combustible y los rellena con carbón del DropBox
+     * o de cofres conectados al sistema
      * @param connectors Lista de conectores encontrados
      * @param dropContainer El contenedor de origen (DropBox)
      * @return true si se transfirió algún ítem, false en caso contrario
@@ -594,7 +595,8 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
 
                         }
                         
-                        // Buscar carbón o carbón vegetal en el DropBox
+                        // Primero intentar buscar carbón en el DropBox
+                        boolean foundCoalInDropBox = false;
                         for (int i = 0; i < dropContainer.getContainerSize(); i++) {
                             ItemStack stack = dropContainer.getItem(i);
                             if (stack.isEmpty()) continue;
@@ -639,7 +641,75 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
 
                                     }
                                     transferred = true;
+                                    foundCoalInDropBox = true;
                                     break; // Salir del bucle de ítems del DropBox
+                                }
+                            }
+                        }
+                        
+                        // Si no se encontró carbón en el DropBox, buscar en cofres conectados
+                        if (!foundCoalInDropBox) {
+                            // Buscar conectores que estén conectados a cofres
+                            for (IndexerConnectorBlockEntity chestConnector : connectors) {
+                                BlockPos chestPos = chestConnector.getConnectedContainerPos();
+                                if (chestPos == null) continue;
+                                
+                                BlockEntity chestEntity = this.level.getBlockEntity(chestPos);
+                                if (chestEntity == null) continue;
+                                
+                                // Verificar si es un cofre u otro contenedor (no horno)
+                                if (chestEntity instanceof Container chest && 
+                                    !chestEntity.getClass().getName().contains("FurnaceBlockEntity")) {
+                                    
+                                    // Buscar carbón o carbón vegetal en el cofre
+                                    for (int i = 0; i < chest.getContainerSize(); i++) {
+                                        ItemStack stack = chest.getItem(i);
+                                        if (stack.isEmpty()) continue;
+                                        
+                                        boolean isCoalOrCharcoal = stack.getItem().getDescriptionId().equals("item.minecraft.coal") || 
+                                                                 stack.getItem().getDescriptionId().equals("item.minecraft.charcoal");
+                                        
+                                        if (isCoalOrCharcoal) {
+                                            // Calcular cuánto carbón necesitamos transferir
+                                            int spaceInFurnace = fuelSlotStack.isEmpty() ? 64 : 64 - fuelSlotStack.getCount();
+                                            int toTransfer = Math.min(stack.getCount(), spaceInFurnace);
+                                            
+                                            if (toTransfer > 0) {
+                                                // Transferir el carbón al horno
+                                                if (fuelSlotStack.isEmpty()) {
+                                                    // Slot vacío, crear nuevo stack
+                                                    ItemStack newStack = stack.copy();
+                                                    newStack.setCount(toTransfer);
+                                                    furnace.setItem(FURNACE_FUEL_SLOT, newStack);
+                                                } else {
+                                                    // Añadir al stack existente
+                                                    fuelSlotStack.grow(toTransfer);
+                                                }
+                                                
+                                                // Actualizar el stack en el cofre
+                                                stack.shrink(toTransfer);
+                                                if (stack.isEmpty()) {
+                                                    chest.setItem(i, ItemStack.EMPTY);
+                                                } else {
+                                                    chest.setItem(i, stack);
+                                                }
+                                                
+                                                // Marcar como cambiados
+                                                if (containerEntity instanceof BlockEntity) {
+                                                    ((BlockEntity) containerEntity).setChanged();
+                                                }
+                                                if (chestEntity instanceof BlockEntity) {
+                                                    ((BlockEntity) chestEntity).setChanged();
+                                                }
+                                                
+                                                if (isBeingUsed) {
+
+                                                }
+                                                transferred = true;
+                                                return transferred; // Salir del método ya que encontramos y transferimos carbón
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }

@@ -86,7 +86,7 @@ public class DropBoxBlockEntity extends RandomizableContainerBlockEntity impleme
         this.setChanged();
         
         // Notificar a los controladores si se añadió un ítem (antes vacío, ahora no)
-        if (this.level != null && !this.level.isClientSide() && 
+        if (this.level != null && !this.level.isClientSide() &&
             (oldStack.isEmpty() && !stack.isEmpty()) || (!oldStack.isEmpty() && stack.isEmpty())) {
             notifyNearbyControllers(this.level, this.worldPosition);
         }
