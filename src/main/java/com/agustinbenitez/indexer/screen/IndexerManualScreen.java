@@ -94,8 +94,14 @@ public class IndexerManualScreen extends Screen {
         String pageText = (currentPage + 1) + "/" + totalPages;
         guiGraphics.drawString(this.font, pageText, centerX - (this.font.width(pageText) / 2), topPos + SCREEN_HEIGHT - 15, 0xFFFFFF, false);
         
-        // Renderizar imagen de la página actual
-        guiGraphics.blit(pageImages[currentPage], leftPos + 28, topPos + 30, 0, 0, 200, 120, 200, 120);
+        try {
+            // Renderizar imagen de la página actual con manejo de errores
+            guiGraphics.blit(pageImages[currentPage], leftPos + 28, topPos + 30, 0, 0, 200, 120, 200, 120);
+        } catch (Exception e) {
+            // Si hay un error al renderizar la imagen webp, mostrar un mensaje de error
+            guiGraphics.drawString(this.font, "Error loading image", leftPos + 28, topPos + 70, 0xFF0000, false);
+            IndexerMod.LOGGER.error("Error rendering manual image: " + e.getMessage());
+        }
         
         // Renderizar botones y otros elementos
         super.render(guiGraphics, mouseX, mouseY, partialTick);
