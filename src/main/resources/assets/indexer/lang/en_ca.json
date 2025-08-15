@@ -45,6 +45,7 @@
   "gui.indexer.controller.containers": "Containers",
   "gui.indexer.controller.capacity_info": "Capacity Info:",
   "gui.indexer.controller.slots": "Slots",
+  "gui.indexer.controller.stacks": "Stacks",
   "gui.indexer.controller.speed": "Speed",
   "gui.indexer.controller.items_at_once": "items at once",
   "itemGroup.indexer": "Indexer"

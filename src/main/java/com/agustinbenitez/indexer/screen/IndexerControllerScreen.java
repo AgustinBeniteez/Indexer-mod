@@ -58,12 +58,22 @@ public class IndexerControllerScreen extends AbstractContainerScreen<IndexerCont
         // Columna derecha - Información de capacidad
         guiGraphics.drawString(this.font, Component.translatable("gui.indexer.controller.capacity_info"), 125, 20, 0x555555, false);
         
-        String slotsText = Component.translatable("gui.indexer.controller.slots").getString() + ": " + formatNumber(this.menu.getTotalAvailableSlots());
-        guiGraphics.drawString(this.font, slotsText, 125, 32, 4210752, false);
+        int totalCapacity = this.menu.getTotalCapacity();
+        int occupiedSlots = this.menu.getOccupiedSlots();
+        
+        // Mostrar la capacidad total y la capacidad ocupada en items totales (multiplicando por 64 que es el tamaño de un stack)
+        String capacityText = Component.translatable("gui.indexer.controller.slots").getString() + ": " + 
+                              formatNumber(occupiedSlots * 64) + "/" + formatNumber(totalCapacity * 64);
+        guiGraphics.drawString(this.font, capacityText, 125, 32, 4210752, false);
+        
+        // Mostrar la capacidad en términos de slots (sin multiplicar)
+        String stacksText = Component.translatable("gui.indexer.controller.stacks").getString() + ": " + 
+                            formatNumber(occupiedSlots) + "/" + formatNumber(totalCapacity);
+        guiGraphics.drawString(this.font, stacksText, 125, 44, 4210752, false);
         
         // Información de velocidad
         String transferRateText = Component.translatable("gui.indexer.controller.speed").getString() + ": " + this.menu.getItemsPerTransfer() + " " + Component.translatable("gui.indexer.controller.items_at_once").getString();
-        guiGraphics.drawString(this.font, transferRateText, 125, 44, 0x00AA00, false);
+        guiGraphics.drawString(this.font, transferRateText, 125, 56, 0x00AA00, false);
     }
     
     /**

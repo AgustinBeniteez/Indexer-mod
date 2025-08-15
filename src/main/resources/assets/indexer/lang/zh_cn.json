@@ -45,6 +45,7 @@
   "gui.indexer.controller.containers": "容器",
   "gui.indexer.controller.capacity_info": "容量信息：",
   "gui.indexer.controller.slots": "槽位",
+  "gui.indexer.controller.stacks": "组",
   "gui.indexer.controller.speed": "速度",
   "gui.indexer.controller.items_at_once": "个物品同时传输",
   "itemGroup.indexer": "索引器"
