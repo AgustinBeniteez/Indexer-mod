@@ -35,6 +35,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
     private static final int SEARCH_RANGE = 250; // Aumentado de 10 a 50 para permitir más conectores
     
     private int itemsPerTransfer = DEFAULT_ITEMS_PER_TRANSFER; // Número de items a transferir por ciclo
+    private int currentUpgradeLevel = 0; // Nivel actual de mejora (0=sin mejora, 1=básica, 2=avanzada, 3=élite)
     
     private boolean enabled = true;
     private int transferCooldown = 0;
@@ -109,6 +110,13 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
             this.itemsPerTransfer = DEFAULT_ITEMS_PER_TRANSFER;
         }
         
+        // Cargar el nivel de mejora actual
+        if (tag.contains("CurrentUpgradeLevel")) {
+            this.currentUpgradeLevel = tag.getInt("CurrentUpgradeLevel");
+        } else {
+            this.currentUpgradeLevel = 0;
+        }
+        
         if (tag.contains("DropContainerX")) {
             this.dropContainerPos = new BlockPos(
                     tag.getInt("DropContainerX"),
@@ -126,6 +134,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         tag.putInt("PreviousConnectorCount", this.previousConnectorCount);
         tag.putBoolean("HasNotifiedConnection", this.hasNotifiedConnection);
         tag.putInt("ItemsPerTransfer", this.itemsPerTransfer);
+        tag.putInt("CurrentUpgradeLevel", this.currentUpgradeLevel);
         
         if (this.dropContainerPos != null) {
             tag.putInt("DropContainerX", this.dropContainerPos.getX());
@@ -149,6 +158,15 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
     
     public void setItemsPerTransfer(int value) {
         this.itemsPerTransfer = Math.max(1, value); // Asegurar que sea al menos 1
+        this.setChanged();
+    }
+    
+    public int getCurrentUpgradeLevel() {
+        return this.currentUpgradeLevel;
+    }
+    
+    public void setCurrentUpgradeLevel(int level) {
+        this.currentUpgradeLevel = Math.max(0, Math.min(3, level)); // Asegurar que esté entre 0 y 3
         this.setChanged();
     }
     
