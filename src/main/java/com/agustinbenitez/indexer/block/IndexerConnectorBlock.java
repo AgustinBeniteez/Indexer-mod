@@ -150,7 +150,7 @@ public class IndexerConnectorBlock extends BaseEntityBlock {
             if (blockEntity instanceof IndexerConnectorBlockEntity) {
                 // Dropear el filtro si existe
                 IndexerConnectorBlockEntity connectorEntity = (IndexerConnectorBlockEntity) blockEntity;
-                net.minecraft.world.item.ItemStack filterItem = connectorEntity.getFilterItem();
+                net.minecraft.world.item.ItemStack filterItem = connectorEntity.getFilterItem(0);
                 if (!filterItem.isEmpty()) {
                     net.minecraft.world.Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), filterItem);
                 }

@@ -396,7 +396,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
             for (IndexerConnectorBlockEntity connector : connectors) {
                 if (connector.canAcceptItem(stack)) {
                     // Verificar si el conector tiene un filtro específico para este ítem
-                    if (!connector.getFilterItem().isEmpty() && connector.getFilterItem().getItem() == stack.getItem()) {
+                    if (!connector.getFilterItem(0).isEmpty() && connector.getFilterItem(0).getItem() == stack.getItem()) {
                         connectorsWithFilter.add(connector);
                     } else {
                         connectorsWithoutFilter.add(connector);

@@ -24,16 +24,22 @@ import net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import java.util.List;
+import java.util.ArrayList;
 
 import javax.annotation.Nullable;
 
 public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntity {
-    private ItemStack filterItem = ItemStack.EMPTY;
+    private static final int FILTER_SLOTS = 9; // 3x3 grid of filter slots
+    private List<ItemStack> filterItems = new ArrayList<>();
     private BlockPos connectedContainerPos = null;
-    private net.minecraft.core.NonNullList<ItemStack> items = net.minecraft.core.NonNullList.withSize(1, ItemStack.EMPTY);
+    private net.minecraft.core.NonNullList<ItemStack> items = net.minecraft.core.NonNullList.withSize(FILTER_SLOTS, ItemStack.EMPTY);
 
     public IndexerConnectorBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.INDEXER_CONNECTOR.get(), pos, state);
+        // Initialize filter items list with empty stacks
+        for (int i = 0; i < FILTER_SLOTS; i++) {
+            filterItems.add(ItemStack.EMPTY);
+        }
     }
 
     @Override
@@ -48,15 +54,32 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
 
     @Override
     public int getContainerSize() {
-        return 1; // Solo un slot para el filtro
+        return FILTER_SLOTS; // Multiple slots for filters
     }
 
     @Override
     public void load(CompoundTag tag) {
         super.load(tag);
-        if (tag.contains("FilterItem")) {
-            this.filterItem = ItemStack.of(tag.getCompound("FilterItem"));
+        
+        // Load filter items
+        this.filterItems.clear();
+        if (tag.contains("FilterItems")) {
+            CompoundTag filterItemsTag = tag.getCompound("FilterItems");
+            for (int i = 0; i < FILTER_SLOTS; i++) {
+                if (filterItemsTag.contains("Item" + i)) {
+                    this.filterItems.add(ItemStack.of(filterItemsTag.getCompound("Item" + i)));
+                } else {
+                    this.filterItems.add(ItemStack.EMPTY);
+                }
+            }
+        } else {
+            // Initialize with empty stacks if no data
+            for (int i = 0; i < FILTER_SLOTS; i++) {
+                this.filterItems.add(ItemStack.EMPTY);
+            }
         }
+        
+        // Load connected container position
         if (tag.contains("ContainerX") && tag.contains("ContainerY") && tag.contains("ContainerZ")) {
             this.connectedContainerPos = new BlockPos(
                     tag.getInt("ContainerX"),
@@ -69,11 +92,20 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
     @Override
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
-        if (!this.filterItem.isEmpty()) {
-            CompoundTag itemTag = new CompoundTag();
-            this.filterItem.save(itemTag);
-            tag.put("FilterItem", itemTag);
+        
+        // Save filter items
+        CompoundTag filterItemsTag = new CompoundTag();
+        for (int i = 0; i < this.filterItems.size() && i < FILTER_SLOTS; i++) {
+            ItemStack filterItem = this.filterItems.get(i);
+            if (!filterItem.isEmpty()) {
+                CompoundTag itemTag = new CompoundTag();
+                filterItem.save(itemTag);
+                filterItemsTag.put("Item" + i, itemTag);
+            }
         }
+        tag.put("FilterItems", filterItemsTag);
+        
+        // Save connected container position
         if (this.connectedContainerPos != null) {
             tag.putInt("ContainerX", this.connectedContainerPos.getX());
             tag.putInt("ContainerY", this.connectedContainerPos.getY());
@@ -148,13 +180,27 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
             return true;
         }
 
-        // Si no hay filtro configurado, acepta cualquier ítem
-        if (this.filterItem.isEmpty()) {
+        // Si no hay filtros configurados, acepta cualquier ítem
+        boolean hasAnyFilter = false;
+        for (ItemStack filterItem : this.filterItems) {
+            if (!filterItem.isEmpty()) {
+                hasAnyFilter = true;
+                break;
+            }
+        }
+        
+        if (!hasAnyFilter) {
             return true;
         }
 
-        // Verificar si el ítem coincide con el filtro
-        return this.filterItem.getItem() == stack.getItem();
+        // Verificar si el ítem coincide con alguno de los filtros
+        for (ItemStack filterItem : this.filterItems) {
+            if (!filterItem.isEmpty() && filterItem.getItem() == stack.getItem()) {
+                return true;
+            }
+        }
+        
+        return false;
     }
 
     public ItemStack insertItem(ItemStack stack) {
@@ -358,14 +404,28 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
         return remainder;
     }
 
-    public ItemStack getFilterItem() {
-        return this.filterItem;
+    public List<ItemStack> getFilterItems() {
+        return this.filterItems;
+    }
+    
+    public ItemStack getFilterItem(int slot) {
+        if (slot >= 0 && slot < this.filterItems.size()) {
+            return this.filterItems.get(slot);
+        }
+        return ItemStack.EMPTY;
     }
 
-    public void setFilterItem(ItemStack stack) {
-        this.filterItem = stack.copy();
-        this.filterItem.setCount(1); // Solo guardamos 1 para el filtro
-        this.setChanged();
+    public void setFilterItem(int slot, ItemStack stack) {
+        if (slot >= 0 && slot < FILTER_SLOTS) {
+            while (this.filterItems.size() <= slot) {
+                this.filterItems.add(ItemStack.EMPTY);
+            }
+            this.filterItems.set(slot, stack.isEmpty() ? ItemStack.EMPTY : stack.copy());
+            if (!this.filterItems.get(slot).isEmpty()) {
+                this.filterItems.get(slot).setCount(1); // Solo guardamos 1 para el filtro
+            }
+            this.setChanged();
+        }
     }
 
     public void setConnectedContainerPos(BlockPos pos) {
@@ -379,14 +439,17 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
 
     @Override
     public ItemStack getItem(int slot) {
-        return slot == 0 ? this.filterItem : ItemStack.EMPTY;
+        if (slot >= 0 && slot < FILTER_SLOTS && slot < this.filterItems.size()) {
+            return this.filterItems.get(slot);
+        }
+        return ItemStack.EMPTY;
     }
 
     @Override
     public ItemStack removeItem(int slot, int amount) {
-        if (slot == 0 && !this.filterItem.isEmpty()) {
-            ItemStack result = this.filterItem.copy();
-            this.filterItem = ItemStack.EMPTY;
+        if (slot >= 0 && slot < FILTER_SLOTS && slot < this.filterItems.size() && !this.filterItems.get(slot).isEmpty()) {
+            ItemStack result = this.filterItems.get(slot).copy();
+            this.filterItems.set(slot, ItemStack.EMPTY);
             this.setChanged();
             return result;
         }
@@ -395,9 +458,9 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
 
     @Override
     public ItemStack removeItemNoUpdate(int slot) {
-        if (slot == 0) {
-            ItemStack result = this.filterItem;
-            this.filterItem = ItemStack.EMPTY;
+        if (slot >= 0 && slot < FILTER_SLOTS && slot < this.filterItems.size()) {
+            ItemStack result = this.filterItems.get(slot);
+            this.filterItems.set(slot, ItemStack.EMPTY);
             return result;
         }
         return ItemStack.EMPTY;
@@ -405,10 +468,13 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
 
     @Override
     public void setItem(int slot, ItemStack stack) {
-        if (slot == 0) {
-            this.filterItem = stack.isEmpty() ? ItemStack.EMPTY : stack.copy();
-            if (!this.filterItem.isEmpty()) {
-                this.filterItem.setCount(1);
+        if (slot >= 0 && slot < FILTER_SLOTS) {
+            while (this.filterItems.size() <= slot) {
+                this.filterItems.add(ItemStack.EMPTY);
+            }
+            this.filterItems.set(slot, stack.isEmpty() ? ItemStack.EMPTY : stack.copy());
+            if (!this.filterItems.get(slot).isEmpty()) {
+                this.filterItems.get(slot).setCount(1);
             }
             this.setChanged();
         }
@@ -425,7 +491,10 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
 
     @Override
     public void clearContent() {
-        this.filterItem = ItemStack.EMPTY;
+        this.filterItems.clear();
+        for (int i = 0; i < FILTER_SLOTS; i++) {
+            this.filterItems.add(ItemStack.EMPTY);
+        }
         this.items.clear();
     }
     
@@ -437,10 +506,6 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
     @Override
     protected void setItems(net.minecraft.core.NonNullList<ItemStack> items) {
         this.items = items;
-        if (!items.isEmpty()) {
-            this.filterItem = items.get(0);
-        } else {
-            this.filterItem = ItemStack.EMPTY;
-        }
+        // Los filtros se manejan por separado, no necesitamos actualizar filterItems aquí
     }
 }

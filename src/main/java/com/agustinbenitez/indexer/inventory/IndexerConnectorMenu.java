@@ -18,6 +18,11 @@ public class IndexerConnectorMenu extends AbstractContainerMenu {
     private final IndexerConnectorBlockEntity blockEntity;
     private final ContainerLevelAccess access;
 
+    // Constants for filter slots (3x3 grid)
+    private static final int FILTER_SLOTS = 9;
+    private static final int FILTER_START_X = 44;
+    private static final int FILTER_START_Y = 18;
+    
     // Constants for player inventory position
     private static final int INVENTORY_START_X = 8;
     private static final int INVENTORY_START_Y = 84;
@@ -30,19 +35,26 @@ public class IndexerConnectorMenu extends AbstractContainerMenu {
         this.blockEntity = blockEntity;
         this.access = blockEntity != null ? ContainerLevelAccess.create(blockEntity.getLevel(), blockEntity.getBlockPos()) : ContainerLevelAccess.NULL;
 
-        // Slot for the filter in the center
-        this.addSlot(new Slot(container, 0, 80, 35) {
-            @Override
-            public boolean mayPlace(ItemStack stack) {
-                // Permitir colocar cualquier ítem como filtro
-                return true;
+        // Slots para los filtros en una cuadrícula 3x3
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < 3; col++) {
+                int slotIndex = col + row * 3;
+                this.addSlot(new Slot(container, slotIndex, 
+                        FILTER_START_X + col * SLOT_SIZE, 
+                        FILTER_START_Y + row * SLOT_SIZE) {
+                    @Override
+                    public boolean mayPlace(ItemStack stack) {
+                        // Permitir colocar cualquier ítem como filtro
+                        return true;
+                    }
+                    
+                    @Override
+                    public int getMaxStackSize() {
+                        return 1; // Solo permitir un ítem como filtro
+                    }
+                });
             }
-            
-            @Override
-            public int getMaxStackSize() {
-                return 1; // Solo permitir un ítem como filtro
-            }
-        });
+        }
         
         // Añadir slots del inventario del jugador (3 filas x 9 columnas)
         for (int row = 0; row < 3; row++) {
@@ -62,7 +74,7 @@ public class IndexerConnectorMenu extends AbstractContainerMenu {
     }
 
     public IndexerConnectorMenu(int id, Inventory playerInventory) {
-        this(id, playerInventory, new SimpleContainer(1), null);
+        this(id, playerInventory, new SimpleContainer(FILTER_SLOTS), null);
     }
 
     @Override
@@ -74,14 +86,14 @@ public class IndexerConnectorMenu extends AbstractContainerMenu {
             ItemStack slotStack = slot.getItem();
             itemstack = slotStack.copy();
             
-            if (index == 0) {
-                // Si es el slot del filtro, mover al inventario del jugador
-                if (!this.moveItemStackTo(slotStack, 1, this.slots.size(), true)) {
+            if (index < FILTER_SLOTS) {
+                // Si es un slot de filtro, mover al inventario del jugador
+                if (!this.moveItemStackTo(slotStack, FILTER_SLOTS, this.slots.size(), true)) {
                     return ItemStack.EMPTY;
                 }
             } else {
-                // Si es un slot del inventario del jugador, mover al slot del filtro
-                if (!this.moveItemStackTo(slotStack, 0, 1, false)) {
+                // Si es un slot del inventario del jugador, intentar mover a los slots de filtro
+                if (!this.moveItemStackTo(slotStack, 0, FILTER_SLOTS, false)) {
                     return ItemStack.EMPTY;
                 }
             }
@@ -107,16 +119,5 @@ public class IndexerConnectorMenu extends AbstractContainerMenu {
     @Override
     public void removed(Player player) {
         super.removed(player);
-        
-        // Mostrar mensaje en el chat cuando se cierre el menú
-        if (!player.level().isClientSide && this.blockEntity != null) {
-            ItemStack filterItem = this.blockEntity.getFilterItem();
-            if (!filterItem.isEmpty()) {
-                Component itemName = filterItem.getDisplayName();
-                player.sendSystemMessage(Component.translatable("message.indexer.connector.filter_set", itemName));
-            } else {
-                player.sendSystemMessage(Component.translatable("message.indexer.connector.filter_cleared"));
-            }
-        }
     }
 }
