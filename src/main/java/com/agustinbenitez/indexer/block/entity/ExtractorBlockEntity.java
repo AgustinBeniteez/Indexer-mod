@@ -107,6 +107,15 @@ public class ExtractorBlockEntity extends BlockEntity {
             return; // No extraer si no está conectado a la red
         }
         
+        // Obtener el controlador conectado para determinar la cantidad de ítems a extraer
+        IndexerControllerBlockEntity controller = findConnectedController(level, extractorPos);
+        if (controller == null) {
+            return; // No hay controlador conectado
+        }
+        
+        // Obtener la cantidad de ítems a extraer según la mejora aplicada al controlador
+        int itemsToExtract = controller.getItemsPerTransfer();
+        
         BlockEntity containerEntity = this.level.getBlockEntity(this.connectedContainerPos);
         if (!(containerEntity instanceof Container)) {
             this.connectedContainerPos = null;
@@ -128,21 +137,21 @@ public class ExtractorBlockEntity extends BlockEntity {
                 ItemStack stackInSlot = container.getItem(FURNACE_RESULT_SLOT);
                 
                 if (!stackInSlot.isEmpty()) {
-                    // Extraer solo 1 item del slot de resultado
+                    // Extraer la cantidad de ítems según la mejora aplicada
                     ItemStack extractedStack = stackInSlot.copy();
-                    extractedStack.setCount(Math.min(ITEMS_PER_EXTRACTION, stackInSlot.getCount()));
+                    extractedStack.setCount(Math.min(itemsToExtract, stackInSlot.getCount()));
                     
-                    // Remover el item del contenedor
+                    // Remover los ítems del contenedor
                     stackInSlot.shrink(extractedStack.getCount());
                     container.setItem(FURNACE_RESULT_SLOT, stackInSlot);
                     
-                    // Intentar enviar el item al sistema de tuberías
+                    // Intentar enviar los ítems al sistema de tuberías
                     if (sendItemToPipeSystem(extractedStack, level, extractorPos)) {
-                        // Item enviado exitosamente
+                        // Ítems enviados exitosamente
                         this.setChanged();
                         return;
                     } else {
-                        // Si no se pudo enviar, devolver el item al contenedor
+                        // Si no se pudieron enviar, devolver los ítems al contenedor
                         ItemStack remainingStack = container.getItem(FURNACE_RESULT_SLOT);
                         if (remainingStack.isEmpty()) {
                             container.setItem(FURNACE_RESULT_SLOT, extractedStack);
@@ -160,21 +169,21 @@ public class ExtractorBlockEntity extends BlockEntity {
                 ItemStack stackInSlot = container.getItem(slot);
                 
                 if (!stackInSlot.isEmpty()) {
-                    // Extraer solo 1 item
+                    // Extraer la cantidad de ítems según la mejora aplicada
                     ItemStack extractedStack = stackInSlot.copy();
-                    extractedStack.setCount(Math.min(ITEMS_PER_EXTRACTION, stackInSlot.getCount()));
+                    extractedStack.setCount(Math.min(itemsToExtract, stackInSlot.getCount()));
                     
-                    // Remover el item del contenedor
+                    // Remover los ítems del contenedor
                     stackInSlot.shrink(extractedStack.getCount());
                     container.setItem(slot, stackInSlot);
                     
-                    // Intentar enviar el item al sistema de tuberías
+                    // Intentar enviar los ítems al sistema de tuberías
                     if (sendItemToPipeSystem(extractedStack, level, extractorPos)) {
-                        // Item enviado exitosamente
+                        // Ítems enviados exitosamente
                         this.setChanged();
                         return;
                     } else {
-                        // Si no se pudo enviar, devolver el item al contenedor
+                        // Si no se pudieron enviar, devolver los ítems al contenedor
                         ItemStack remainingStack = container.getItem(slot);
                         if (remainingStack.isEmpty()) {
                             container.setItem(slot, extractedStack);
@@ -231,17 +240,13 @@ public class ExtractorBlockEntity extends BlockEntity {
         IndexerControllerBlockEntity controller = findConnectedController(level, pos);
         if (controller != null) {
             int itemsPerTransfer = controller.getItemsPerTransfer();
-            // Mapear la velocidad del controller al intervalo de extracción
+            // Usar la misma velocidad que la mejora aplicada en el controller
             // Sin mejora (1 item): 40 ticks
-            // Mejora básica (4 items): 4 ticks  
-            // Mejora avanzada (10 items): 10 ticks
-            // Mejora elite (20 items): 20 ticks
-            if (itemsPerTransfer >= 20) {
-                return 20; // Elite upgrade
-            } else if (itemsPerTransfer >= 10) {
-                return 10; // Advanced upgrade
-            } else if (itemsPerTransfer >= 4) {
-                return 4; // Basic upgrade
+            // Mejora básica (5 items): 5 ticks  
+            // Mejora avanzada (20 items): 20 ticks
+            // Mejora elite (64 items): 64 ticks
+            if (itemsPerTransfer > 1) {
+                return itemsPerTransfer; // Usar la misma velocidad que la mejora
             }
         }
         return DEFAULT_EXTRACTION_INTERVAL; // Sin mejoras o sin controller

@@ -1,7 +1,7 @@
 package com.agustinbenitez.indexer.item;
 
 import com.agustinbenitez.indexer.IndexerMod;
-import com.agustinbenitez.indexer.block.entity.DropBoxBlockEntity;
+
 import com.agustinbenitez.indexer.block.entity.IndexerControllerBlockEntity;
 
 import net.minecraft.ChatFormatting;
@@ -32,9 +32,9 @@ public class TransferSpeedUpgradeItem extends Item {
     @Override
     public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("item.indexer.transfer_speed_upgrade.tooltip").withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.literal("Transfers up to " + transferRate + " items at once").withStyle(ChatFormatting.GOLD));
-        tooltip.add(Component.literal("Use with right click on a DropBox").withStyle(ChatFormatting.AQUA));
-        tooltip.add(Component.literal("Single use item!").withStyle(ChatFormatting.RED));
+        tooltip.add(Component.translatable("item.indexer.transfer_speed_upgrade.transfers_info", transferRate).withStyle(ChatFormatting.GOLD));
+        tooltip.add(Component.translatable("item.indexer.transfer_speed_upgrade.usage").withStyle(ChatFormatting.AQUA));
+        tooltip.add(Component.translatable("item.indexer.transfer_speed_upgrade.single_use").withStyle(ChatFormatting.RED));
         super.appendHoverText(stack, level, tooltip, flag);
     }
 
@@ -51,30 +51,62 @@ public class TransferSpeedUpgradeItem extends Item {
 
         BlockEntity blockEntity = level.getBlockEntity(pos);
         
-        // Check if the block is a DropBox
-        if (blockEntity instanceof DropBoxBlockEntity) {
-            // Search for the connected controller
-            BlockEntity controllerEntity = null;
-            for (int x = -5; x <= 5; x++) {
-                for (int y = -5; y <= 5; y++) {
-                    for (int z = -5; z <= 5; z++) {
-                        BlockPos checkPos = pos.offset(x, y, z);
-                        BlockEntity checkEntity = level.getBlockEntity(checkPos);
-                        if (checkEntity instanceof IndexerControllerBlockEntity) {
-                            controllerEntity = checkEntity;
+        // Check if the block is an Indexer Controller
+        if (blockEntity instanceof IndexerControllerBlockEntity controller) {
+                // Validar que se aplique la mejora en el orden correcto
+                int currentLevel = controller.getCurrentUpgradeLevel();
+                int requiredLevel = this.upgradeLevel - 1; // El nivel requerido es el anterior al que queremos aplicar
+                
+                if (currentLevel != requiredLevel) {
+                    // Mostrar mensaje de error indicando qué mejora necesita
+                    Component requiredUpgradeName;
+                    switch (requiredLevel) {
+                        case 0:
+                            requiredUpgradeName = Component.translatable("upgrade.indexer.none");
                             break;
-                        }
+                        case 1:
+                            requiredUpgradeName = Component.translatable("upgrade.indexer.basic");
+                            break;
+                        case 2:
+                            requiredUpgradeName = Component.translatable("upgrade.indexer.advanced");
+                            break;
+                        default:
+                            requiredUpgradeName = Component.literal("nivel " + requiredLevel);
+                            break;
                     }
-                    if (controllerEntity != null) break;
+                    
+                    Component currentUpgradeName;
+                    switch (this.upgradeLevel) {
+                        case 1:
+                            currentUpgradeName = Component.translatable("upgrade.indexer.basic");
+                            break;
+                        case 2:
+                            currentUpgradeName = Component.translatable("upgrade.indexer.advanced");
+                            break;
+                        case 3:
+                            currentUpgradeName = Component.translatable("upgrade.indexer.elite");
+                            break;
+                        default:
+                            currentUpgradeName = Component.literal("nivel " + this.upgradeLevel);
+                            break;
+                    }
+                    
+                    if (currentLevel < requiredLevel) {
+                        player.sendSystemMessage(Component.translatable("message.indexer.upgrade.prerequisite_required", 
+                                currentUpgradeName, requiredUpgradeName).withStyle(ChatFormatting.RED));
+                    } else {
+                        player.sendSystemMessage(Component.translatable("message.indexer.upgrade.already_applied").withStyle(ChatFormatting.YELLOW));
+                    }
+                    return InteractionResult.FAIL;
                 }
-                if (controllerEntity != null) break;
-            }
-            
-            if (controllerEntity instanceof IndexerControllerBlockEntity controller) {
+                
                 // Apply the upgrade
                 try {
                     // Set the transfer speed
                     controller.setItemsPerTransfer(this.transferRate);
+                    
+                    // Actualizar el nivel de mejora
+                    controller.setCurrentUpgradeLevel(this.upgradeLevel);
                     
                     // Reset the cooldown so it starts transferring immediately
                     java.lang.reflect.Field cooldownField = IndexerControllerBlockEntity.class.getDeclaredField("transferCooldown");
@@ -84,14 +116,14 @@ public class TransferSpeedUpgradeItem extends Item {
                     controller.setChanged();
                 } catch (NoSuchFieldException | IllegalAccessException e) {
                     IndexerMod.LOGGER.error("Error al aplicar mejora de velocidad: " + e.getMessage());
-                    player.sendSystemMessage(Component.literal("Error al aplicar la mejora").withStyle(ChatFormatting.RED));
+                    player.sendSystemMessage(Component.translatable("message.indexer.upgrade.error").withStyle(ChatFormatting.RED));
                     return InteractionResult.FAIL;
                 }
                 
                 // Notify the player
-                player.sendSystemMessage(Component.literal("Upgrade applied! Now up to " + 
-                        this.transferRate + " items will be transferred at once in each cycle").withStyle(ChatFormatting.GREEN));
-                player.sendSystemMessage(Component.literal("The transfer will begin immediately").withStyle(ChatFormatting.AQUA));
+                player.sendSystemMessage(Component.translatable("message.indexer.upgrade.success", 
+                        this.transferRate).withStyle(ChatFormatting.GREEN));
+                player.sendSystemMessage(Component.translatable("message.indexer.upgrade.transfer_starts").withStyle(ChatFormatting.AQUA));
                 
                 // Consume the item
                 if (!player.getAbilities().instabuild) {
@@ -99,12 +131,9 @@ public class TransferSpeedUpgradeItem extends Item {
                 }
                 
                 return InteractionResult.CONSUME;
-            } else {
-                player.sendSystemMessage(Component.literal("No nearby Indexer controller found").withStyle(ChatFormatting.RED));
-                return InteractionResult.FAIL;
-            }
+        } else {
+            player.sendSystemMessage(Component.translatable("message.indexer.upgrade.controller_only").withStyle(ChatFormatting.RED));
+            return InteractionResult.FAIL;
         }
-        
-        return InteractionResult.PASS;
     }
 }

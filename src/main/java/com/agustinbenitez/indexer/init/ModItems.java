@@ -37,13 +37,13 @@ public class ModItems {
             
     // Transfer speed upgrades
     public static final RegistryObject<Item> TRANSFER_SPEED_UPGRADE_BASIC = ITEMS.register("transfer_speed_upgrade_basic",
-            () -> new TransferSpeedUpgradeItem(new Item.Properties().stacksTo(16), 1, 4));
+            () -> new TransferSpeedUpgradeItem(new Item.Properties().stacksTo(16), 1, 5));
             
     public static final RegistryObject<Item> TRANSFER_SPEED_UPGRADE_ADVANCED = ITEMS.register("transfer_speed_upgrade_advanced",
-            () -> new TransferSpeedUpgradeItem(new Item.Properties().stacksTo(16), 2, 10));
+            () -> new TransferSpeedUpgradeItem(new Item.Properties().stacksTo(16), 2, 20));
             
     public static final RegistryObject<Item> TRANSFER_SPEED_UPGRADE_ELITE = ITEMS.register("transfer_speed_upgrade_elite",
-            () -> new TransferSpeedUpgradeItem(new Item.Properties().stacksTo(16), 3, 20));
+            () -> new TransferSpeedUpgradeItem(new Item.Properties().stacksTo(16), 3, 64));
 
 
 

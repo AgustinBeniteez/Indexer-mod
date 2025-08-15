@@ -35,6 +35,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
     private static final int SEARCH_RANGE = 250; // Aumentado de 10 a 50 para permitir más conectores
     
     private int itemsPerTransfer = DEFAULT_ITEMS_PER_TRANSFER; // Número de items a transferir por ciclo
+    private int currentUpgradeLevel = 0; // Nivel actual de mejora (0=sin mejora, 1=básica, 2=avanzada, 3=élite)
     
     private boolean enabled = true;
     private int transferCooldown = 0;
@@ -57,6 +58,8 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                     case 2 -> IndexerControllerBlockEntity.this.getConnectedContainersCount();
                     case 3 -> IndexerControllerBlockEntity.this.getTotalAvailableSlots();
                     case 4 -> IndexerControllerBlockEntity.this.getItemsPerTransfer();
+                    case 5 -> IndexerControllerBlockEntity.this.getTotalCapacity();
+                    case 6 -> IndexerControllerBlockEntity.this.getOccupiedSlots();
                     default -> 0;
                 };
             }
@@ -71,7 +74,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
 
             @Override
             public int getCount() {
-                return 5;
+                return 7;
             }
         };
     }
@@ -109,6 +112,13 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
             this.itemsPerTransfer = DEFAULT_ITEMS_PER_TRANSFER;
         }
         
+        // Cargar el nivel de mejora actual
+        if (tag.contains("CurrentUpgradeLevel")) {
+            this.currentUpgradeLevel = tag.getInt("CurrentUpgradeLevel");
+        } else {
+            this.currentUpgradeLevel = 0;
+        }
+        
         if (tag.contains("DropContainerX")) {
             this.dropContainerPos = new BlockPos(
                     tag.getInt("DropContainerX"),
@@ -126,6 +136,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         tag.putInt("PreviousConnectorCount", this.previousConnectorCount);
         tag.putBoolean("HasNotifiedConnection", this.hasNotifiedConnection);
         tag.putInt("ItemsPerTransfer", this.itemsPerTransfer);
+        tag.putInt("CurrentUpgradeLevel", this.currentUpgradeLevel);
         
         if (this.dropContainerPos != null) {
             tag.putInt("DropContainerX", this.dropContainerPos.getX());
@@ -149,6 +160,15 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
     
     public void setItemsPerTransfer(int value) {
         this.itemsPerTransfer = Math.max(1, value); // Asegurar que sea al menos 1
+        this.setChanged();
+    }
+    
+    public int getCurrentUpgradeLevel() {
+        return this.currentUpgradeLevel;
+    }
+    
+    public void setCurrentUpgradeLevel(int level) {
+        this.currentUpgradeLevel = Math.max(0, Math.min(3, level)); // Asegurar que esté entre 0 y 3
         this.setChanged();
     }
     
@@ -396,7 +416,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
             for (IndexerConnectorBlockEntity connector : connectors) {
                 if (connector.canAcceptItem(stack)) {
                     // Verificar si el conector tiene un filtro específico para este ítem
-                    if (!connector.getFilterItem().isEmpty() && connector.getFilterItem().getItem() == stack.getItem()) {
+                    if (!connector.getFilterItem(0).isEmpty() && connector.getFilterItem(0).getItem() == stack.getItem()) {
                         connectorsWithFilter.add(connector);
                     } else {
                         connectorsWithoutFilter.add(connector);
@@ -507,6 +527,8 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
     // Cache para los contenedores conectados y slots disponibles
     private Set<BlockPos> uniqueContainersCache = null;
     private int totalAvailableSlotsCache = -1;
+    private int totalCapacityCache = -1;
+    private int occupiedSlotsCache = -1;
     
     public int getConnectedContainersCount() {
         // Usar el cache si está disponible y la red no ha cambiado
@@ -530,10 +552,34 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         return totalAvailableSlotsCache;
     }
     
+    public int getTotalCapacity() {
+        // Usar el cache si está disponible y la red no ha cambiado
+        if (!networkChanged && totalCapacityCache >= 0) {
+            return totalCapacityCache;
+        }
+        
+        // Si necesitamos recalcular, actualizar el cache
+        updateContainerCache();
+        return totalCapacityCache;
+    }
+    
+    public int getOccupiedSlots() {
+        // Usar el cache si está disponible y la red no ha cambiado
+        if (!networkChanged && occupiedSlotsCache >= 0) {
+            return occupiedSlotsCache;
+        }
+        
+        // Si necesitamos recalcular, actualizar el cache
+        updateContainerCache();
+        return occupiedSlotsCache;
+    }
+    
     private void updateContainerCache() {
         List<IndexerConnectorBlockEntity> connectors = findConnectors();
         Set<BlockPos> uniqueContainers = new HashSet<>();
         int totalSlots = 0;
+        int totalCapacity = 0;
+        int occupiedSlots = 0;
         
         for (IndexerConnectorBlockEntity connector : connectors) {
             BlockPos containerPos = connector.getConnectedContainerPos();
@@ -541,10 +587,15 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                 uniqueContainers.add(containerPos);
                 BlockEntity containerEntity = this.level.getBlockEntity(containerPos);
                 if (containerEntity instanceof Container container) {
-                    // Contar slots vacíos
-                    for (int i = 0; i < container.getContainerSize(); i++) {
+                    // Contar slots totales y ocupados
+                    int containerSize = container.getContainerSize();
+                    totalCapacity += containerSize;
+                    
+                    for (int i = 0; i < containerSize; i++) {
                         if (container.getItem(i).isEmpty()) {
                             totalSlots++;
+                        } else {
+                            occupiedSlots++;
                         }
                     }
                 }
@@ -554,6 +605,8 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         // Actualizar los caches
         uniqueContainersCache = uniqueContainers;
         totalAvailableSlotsCache = totalSlots;
+        totalCapacityCache = totalCapacity;
+        occupiedSlotsCache = occupiedSlots;
     }
 
     /**

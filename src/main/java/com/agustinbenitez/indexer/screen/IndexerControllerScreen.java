@@ -1,10 +1,7 @@
 package com.agustinbenitez.indexer.screen;
 
 import com.agustinbenitez.indexer.menu.IndexerControllerMenu;
-import com.agustinbenitez.indexer.network.ModNetworking;
-import com.agustinbenitez.indexer.network.ToggleControllerPacket;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -15,74 +12,68 @@ import java.text.DecimalFormat;
 
 @OnlyIn(Dist.CLIENT)
 public class IndexerControllerScreen extends AbstractContainerScreen<IndexerControllerMenu> {
-    private static final ResourceLocation TEXTURE = new ResourceLocation("minecraft", "textures/gui/container/generic_54.png");
+    private static final ResourceLocation TEXTURE = new ResourceLocation("indexer", "textures/gui/indexer_controller_gui.png");
     
-    private Button toggleButton;
+
     
     public IndexerControllerScreen(IndexerControllerMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
-        this.imageHeight = 80;
+        this.imageWidth = 250;
+        this.imageHeight = 120;
         this.inventoryLabelY = this.imageHeight - 10;
     }
     
     @Override
     protected void init() {
         super.init();
-        
-        // Crear botón de encendido/apagado
-        this.toggleButton = Button.builder(
-            Component.literal(this.menu.isEnabled() ? "ON" : "OFF"),
-            button -> {
-                // Enviar paquete al servidor para alternar el estado
-                ModNetworking.sendToServer(new ToggleControllerPacket());
-            }
-        ).bounds(this.leftPos + 10, this.topPos + 20, 40, 20).build();
-        
-        this.addRenderableWidget(this.toggleButton);
     }
     
-    @Override
-    protected void containerTick() {
-        super.containerTick();
-        
-        // Actualizar el texto del botón basado en el estado actual
-        this.toggleButton.setMessage(Component.literal(this.menu.isEnabled() ? "ON" : "OFF"));
-    }
+
     
     @Override
     protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
         int x = (this.width - this.imageWidth) / 2;
         int y = (this.height - this.imageHeight) / 2;
         
-        // Renderizar fondo personalizado para la información del controlador
-        guiGraphics.fill(x, y, x + this.imageWidth, y + 80, 0xFFC6C6C6);
-        guiGraphics.fill(x + 1, y + 1, x + this.imageWidth - 1, y + 79, 0xFF8B8B8B);
+        // Renderizar la textura personalizada del GUI
+        guiGraphics.blit(TEXTURE, x, y, 0, 0, this.imageWidth, this.imageHeight);
     }
     
     @Override
     protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        // Renderizar título
-        guiGraphics.drawString(this.font, this.title, 8, 6, 4210752, false);
+        // Renderizar título centrado en la parte superior
+        int titleWidth = this.font.width(this.title);
+        int titleX = (this.imageWidth - titleWidth) / 2;
+        guiGraphics.drawString(this.font, this.title, titleX, 6, 4210752, false);
         
-        // Renderizar información del estado
-        String statusText = "Status: " + (this.menu.isEnabled() ? "On" : "Off");
-        guiGraphics.drawString(this.font, statusText, 60, 25, 4210752, false);
+        // Columna izquierda - Información de conexión
+        guiGraphics.drawString(this.font, Component.translatable("gui.indexer.controller.connection_info"), 15, 20, 0x555555, false);
         
-        // Renderizar información del DropBox
-        String dropBoxText = "DropBox: " + (this.menu.hasDropContainer() ? "Connected" : "Not connected");
-        guiGraphics.drawString(this.font, dropBoxText, 8, 40, 4210752, false);
+        String dropBoxText = Component.translatable("gui.indexer.controller.dropbox").getString() + ": " + (this.menu.hasDropContainer() ? Component.translatable("gui.indexer.controller.connected").getString() : "None");
+        guiGraphics.drawString(this.font, dropBoxText, 15, 32, 4210752, false);
         
-        // Renderizar información de contenedores conectados
-        String containersText = "Containers: " + this.menu.getConnectedContainersCount();
-        guiGraphics.drawString(this.font, containersText, 8, 52, 4210752, false);
+        String containersText = Component.translatable("gui.indexer.controller.containers").getString() + ": " + this.menu.getConnectedContainersCount();
+        guiGraphics.drawString(this.font, containersText, 15, 44, 4210752, false);
         
-        // Renderizar espacios disponibles con formato condensado (K, M, etc.)
-        String slotsText = "Slots: " + formatNumber(this.menu.getTotalAvailableSlots());
-        guiGraphics.drawString(this.font, slotsText, 100, 52, 4210752, false);
+        // Columna derecha - Información de capacidad
+        guiGraphics.drawString(this.font, Component.translatable("gui.indexer.controller.capacity_info"), 125, 20, 0x555555, false);
         
-        // Renderizar velocidad de transferencia
-        String transferRateText = "Speed: " + this.menu.getItemsPerTransfer() + " items at once";
-        guiGraphics.drawString(this.font, transferRateText, 8, 64, 0x008800, false);
+        int totalCapacity = this.menu.getTotalCapacity();
+        int occupiedSlots = this.menu.getOccupiedSlots();
+        
+        // Mostrar la capacidad total y la capacidad ocupada en items totales (multiplicando por 64 que es el tamaño de un stack)
+        String capacityText = Component.translatable("gui.indexer.controller.slots").getString() + ": " + 
+                              formatNumber(occupiedSlots * 64) + "/" + formatNumber(totalCapacity * 64);
+        guiGraphics.drawString(this.font, capacityText, 125, 32, 4210752, false);
+        
+        // Mostrar la capacidad en términos de slots (sin multiplicar)
+        String stacksText = Component.translatable("gui.indexer.controller.stacks").getString() + ": " + 
+                            formatNumber(occupiedSlots) + "/" + formatNumber(totalCapacity);
+        guiGraphics.drawString(this.font, stacksText, 125, 44, 4210752, false);
+        
+        // Información de velocidad
+        String transferRateText = Component.translatable("gui.indexer.controller.speed").getString() + ": " + this.menu.getItemsPerTransfer() + " " + Component.translatable("gui.indexer.controller.items_at_once").getString();
+        guiGraphics.drawString(this.font, transferRateText, 125, 56, 0x00AA00, false);
     }
     
     /**

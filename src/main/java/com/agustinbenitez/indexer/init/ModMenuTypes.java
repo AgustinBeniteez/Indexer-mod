@@ -19,7 +19,7 @@ public class ModMenuTypes {
     public static final RegistryObject<MenuType<IndexerConnectorMenu>> INDEXER_CONNECTOR_MENU = 
             MENUS.register("indexer_connector_menu", 
                     () -> IForgeMenuType.create((id, inventory, data) -> 
-                            new IndexerConnectorMenu(id, inventory, new net.minecraft.world.SimpleContainer(1), null)));
+                            new IndexerConnectorMenu(id, inventory, new net.minecraft.world.SimpleContainer(9), null)));
 
     public static final RegistryObject<MenuType<IndexerControllerMenu>> INDEXER_CONTROLLER_MENU = 
             MENUS.register("indexer_controller_menu", 
