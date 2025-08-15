@@ -20,11 +20,16 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraft.world.Container;
 import net.minecraft.core.Direction;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
 
 public class ExtractorBlock extends BaseEntityBlock {
     private static final VoxelShape SHAPE = Block.box(0, 0, 0, 16, 16, 16);
+    
+    // Mapa para rastrear si un bloque fue roto en modo creativo
+    private static final Map<BlockPos, Boolean> creativeModeBreaks = new ConcurrentHashMap<>();
 
     public ExtractorBlock(Properties properties) {
         super(properties);
@@ -75,11 +80,25 @@ public class ExtractorBlock extends BaseEntityBlock {
     }
 
     @Override
+    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+        // Registrar si el jugador está en modo creativo
+        creativeModeBreaks.put(pos, player.getAbilities().instabuild);
+        super.playerWillDestroy(level, pos, state, player);
+    }
+    
+    @Override
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
         if (state.getBlock() != newState.getBlock()) {
-            // Dropear el ítem del bloque Extractor
-            net.minecraft.world.item.ItemStack itemStack = new net.minecraft.world.item.ItemStack(this);
-            net.minecraft.world.Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), itemStack);
+            // Verificar si el bloque fue roto en modo creativo
+            Boolean wasCreativeBreak = creativeModeBreaks.remove(pos);
+            boolean isCreativeBreak = wasCreativeBreak != null && wasCreativeBreak;
+            
+            // Solo dropear items si NO fue roto en modo creativo
+            if (!isCreativeBreak) {
+                // Dropear el ítem del bloque Extractor
+                net.minecraft.world.item.ItemStack itemStack = new net.minecraft.world.item.ItemStack(this);
+                net.minecraft.world.Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), itemStack);
+            }
         }
         super.onRemove(state, level, pos, newState, isMoving);
     }

@@ -22,9 +22,14 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraftforge.network.NetworkHooks;
 
 import javax.annotation.Nullable;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class DropBoxBlock extends BaseEntityBlock {
     private static final VoxelShape SHAPE = Block.box(0, 0, 0, 16, 16, 16);
+    
+    // Mapa para rastrear si un bloque fue roto en modo creativo
+    private static final Map<BlockPos, Boolean> creativeModeBreaks = new ConcurrentHashMap<>();
 
     public DropBoxBlock(Properties properties) {
         super(properties);
@@ -70,16 +75,30 @@ public class DropBoxBlock extends BaseEntityBlock {
     }
 
     @Override
+    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+        // Registrar si el jugador está en modo creativo
+        creativeModeBreaks.put(pos, player.getAbilities().instabuild);
+        super.playerWillDestroy(level, pos, state, player);
+    }
+    
+    @Override
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
         if (state.getBlock() != newState.getBlock()) {
-            BlockEntity blockEntity = level.getBlockEntity(pos);
-            if (blockEntity instanceof DropBoxBlockEntity) {
-                ((DropBoxBlockEntity) blockEntity).dropContents();
-            }
+            // Verificar si el bloque fue roto en modo creativo
+            Boolean wasCreativeBreak = creativeModeBreaks.remove(pos);
+            boolean isCreativeBreak = wasCreativeBreak != null && wasCreativeBreak;
             
-            // Dropear el ítem del bloque DropBox
-            net.minecraft.world.item.ItemStack itemStack = new net.minecraft.world.item.ItemStack(this);
-            net.minecraft.world.Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), itemStack);
+            // Solo dropear items si NO fue roto en modo creativo
+            if (!isCreativeBreak) {
+                BlockEntity blockEntity = level.getBlockEntity(pos);
+                if (blockEntity instanceof DropBoxBlockEntity) {
+                    ((DropBoxBlockEntity) blockEntity).dropContents();
+                }
+                
+                // Dropear el ítem del bloque DropBox
+                net.minecraft.world.item.ItemStack itemStack = new net.minecraft.world.item.ItemStack(this);
+                net.minecraft.world.Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), itemStack);
+            }
         }
         super.onRemove(state, level, pos, newState, isMoving);
     }

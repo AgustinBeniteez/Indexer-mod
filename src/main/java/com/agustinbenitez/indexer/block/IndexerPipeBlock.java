@@ -16,6 +16,9 @@ import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import net.minecraft.world.entity.player.Player;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class IndexerPipeBlock extends Block {
     // Propiedades para las conexiones en cada dirección
@@ -25,6 +28,9 @@ public class IndexerPipeBlock extends Block {
     public static final BooleanProperty WEST = BooleanProperty.create("west");
     public static final BooleanProperty UP = BooleanProperty.create("up");
     public static final BooleanProperty DOWN = BooleanProperty.create("down");
+    
+    // Mapa para rastrear si un bloque fue roto en modo creativo
+    private static final Map<BlockPos, Boolean> creativeModeBreaks = new ConcurrentHashMap<>();
 
     // Formas para cada segmento de la tubería
     private static final VoxelShape CORE_SHAPE = Block.box(6, 6, 6, 10, 10, 10);
@@ -154,12 +160,25 @@ public class IndexerPipeBlock extends Block {
         return shape;
     }
     
+    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+        // Registrar si el jugador está en modo creativo
+        creativeModeBreaks.put(pos, player.getAbilities().instabuild);
+        super.playerWillDestroy(level, pos, state, player);
+    }
+    
     @Override
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
         if (state.getBlock() != newState.getBlock()) {
-            // Dropear el ítem de la tubería cuando se rompe el bloque
-            net.minecraft.world.item.ItemStack itemStack = new net.minecraft.world.item.ItemStack(this);
-            net.minecraft.world.Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), itemStack);
+            // Verificar si el bloque fue roto en modo creativo
+            Boolean wasCreativeBreak = creativeModeBreaks.remove(pos);
+            boolean isCreativeBreak = wasCreativeBreak != null && wasCreativeBreak;
+            
+            // Solo dropear items si NO fue roto en modo creativo
+            if (!isCreativeBreak) {
+                // Dropear el ítem de la tubería cuando se rompe el bloque
+                net.minecraft.world.item.ItemStack itemStack = new net.minecraft.world.item.ItemStack(this);
+                net.minecraft.world.Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), itemStack);
+            }
         }
         super.onRemove(state, level, pos, newState, isMoving);
     }
