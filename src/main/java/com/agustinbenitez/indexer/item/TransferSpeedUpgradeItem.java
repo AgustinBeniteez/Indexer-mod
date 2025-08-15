@@ -32,9 +32,9 @@ public class TransferSpeedUpgradeItem extends Item {
     @Override
     public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("item.indexer.transfer_speed_upgrade.tooltip").withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.literal("Transfers up to " + transferRate + " items at once").withStyle(ChatFormatting.GOLD));
-        tooltip.add(Component.literal("Use with right click on an Indexer Controller").withStyle(ChatFormatting.AQUA));
-        tooltip.add(Component.literal("Single use item!").withStyle(ChatFormatting.RED));
+        tooltip.add(Component.translatable("item.indexer.transfer_speed_upgrade.transfers_info", transferRate).withStyle(ChatFormatting.GOLD));
+        tooltip.add(Component.translatable("item.indexer.transfer_speed_upgrade.usage").withStyle(ChatFormatting.AQUA));
+        tooltip.add(Component.translatable("item.indexer.transfer_speed_upgrade.single_use").withStyle(ChatFormatting.RED));
         super.appendHoverText(stack, level, tooltip, flag);
     }
 
@@ -59,43 +59,43 @@ public class TransferSpeedUpgradeItem extends Item {
                 
                 if (currentLevel != requiredLevel) {
                     // Mostrar mensaje de error indicando qué mejora necesita
-                    String requiredUpgradeName;
+                    Component requiredUpgradeName;
                     switch (requiredLevel) {
                         case 0:
-                            requiredUpgradeName = "ninguna mejora previa";
+                            requiredUpgradeName = Component.translatable("upgrade.indexer.none");
                             break;
                         case 1:
-                            requiredUpgradeName = "mejora Básica";
+                            requiredUpgradeName = Component.translatable("upgrade.indexer.basic");
                             break;
                         case 2:
-                            requiredUpgradeName = "mejora Avanzada";
+                            requiredUpgradeName = Component.translatable("upgrade.indexer.advanced");
                             break;
                         default:
-                            requiredUpgradeName = "mejora de nivel " + requiredLevel;
+                            requiredUpgradeName = Component.literal("nivel " + requiredLevel);
                             break;
                     }
                     
-                    String currentUpgradeName;
+                    Component currentUpgradeName;
                     switch (this.upgradeLevel) {
                         case 1:
-                            currentUpgradeName = "Básica";
+                            currentUpgradeName = Component.translatable("upgrade.indexer.basic");
                             break;
                         case 2:
-                            currentUpgradeName = "Avanzada";
+                            currentUpgradeName = Component.translatable("upgrade.indexer.advanced");
                             break;
                         case 3:
-                            currentUpgradeName = "Élite";
+                            currentUpgradeName = Component.translatable("upgrade.indexer.elite");
                             break;
                         default:
-                            currentUpgradeName = "nivel " + this.upgradeLevel;
+                            currentUpgradeName = Component.literal("nivel " + this.upgradeLevel);
                             break;
                     }
                     
                     if (currentLevel < requiredLevel) {
-                        player.sendSystemMessage(Component.literal("No puedes aplicar la mejora " + currentUpgradeName + 
-                                " sin haber aplicado primero: " + requiredUpgradeName).withStyle(ChatFormatting.RED));
+                        player.sendSystemMessage(Component.translatable("message.indexer.upgrade.prerequisite_required", 
+                                currentUpgradeName, requiredUpgradeName).withStyle(ChatFormatting.RED));
                     } else {
-                        player.sendSystemMessage(Component.literal("Esta mejora ya ha sido aplicada o superada").withStyle(ChatFormatting.YELLOW));
+                        player.sendSystemMessage(Component.translatable("message.indexer.upgrade.already_applied").withStyle(ChatFormatting.YELLOW));
                     }
                     return InteractionResult.FAIL;
                 }
@@ -116,14 +116,14 @@ public class TransferSpeedUpgradeItem extends Item {
                     controller.setChanged();
                 } catch (NoSuchFieldException | IllegalAccessException e) {
                     IndexerMod.LOGGER.error("Error al aplicar mejora de velocidad: " + e.getMessage());
-                    player.sendSystemMessage(Component.literal("Error al aplicar la mejora").withStyle(ChatFormatting.RED));
+                    player.sendSystemMessage(Component.translatable("message.indexer.upgrade.error").withStyle(ChatFormatting.RED));
                     return InteractionResult.FAIL;
                 }
                 
                 // Notify the player
-                player.sendSystemMessage(Component.literal("¡Mejora aplicada! Ahora se transferirán hasta " + 
-                        this.transferRate + " objetos a la vez en cada ciclo").withStyle(ChatFormatting.GREEN));
-                player.sendSystemMessage(Component.literal("La transferencia comenzará inmediatamente").withStyle(ChatFormatting.AQUA));
+                player.sendSystemMessage(Component.translatable("message.indexer.upgrade.success", 
+                        this.transferRate).withStyle(ChatFormatting.GREEN));
+                player.sendSystemMessage(Component.translatable("message.indexer.upgrade.transfer_starts").withStyle(ChatFormatting.AQUA));
                 
                 // Consume the item
                 if (!player.getAbilities().instabuild) {
@@ -132,7 +132,7 @@ public class TransferSpeedUpgradeItem extends Item {
                 
                 return InteractionResult.CONSUME;
         } else {
-            player.sendSystemMessage(Component.literal("This upgrade can only be applied to an Indexer Controller").withStyle(ChatFormatting.RED));
+            player.sendSystemMessage(Component.translatable("message.indexer.upgrade.controller_only").withStyle(ChatFormatting.RED));
             return InteractionResult.FAIL;
         }
     }

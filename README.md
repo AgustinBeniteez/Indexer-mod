@@ -41,6 +41,17 @@ There is no restriction on the number of connectors you can use in your system, 
 ### Intuitive Interface
 Easily configure your connector filters with a simple and straightforward interface. Just place the item you want to filter in the available slot.
 
+## Language Support
+
+The Indexer Mod includes full translation support for multiple languages and regional variants:
+
+### Supported Languages:
+- **Spanish**: es_es, es_ar, es_mx, es_cl, es_co, es_pe, es_ve, es_uy, es_an
+- **English**: en_us, en_gb, en_ca, en_au
+- **Chinese**: zh_cn
+
+All interface elements, item names, tooltips, and system messages are fully translated. The mod automatically detects your Minecraft language settings and displays the appropriate translations.
+
 ## How to Use
 
 1. **Basic Setup**:

@@ -47,22 +47,22 @@ public class IndexerControllerScreen extends AbstractContainerScreen<IndexerCont
         guiGraphics.drawString(this.font, this.title, titleX, 6, 4210752, false);
         
         // Columna izquierda - Información de conexión
-        guiGraphics.drawString(this.font, "Connection Info:", 15, 20, 0x555555, false);
+        guiGraphics.drawString(this.font, Component.translatable("gui.indexer.controller.connection_info"), 15, 20, 0x555555, false);
         
-        String dropBoxText = "DropBox: " + (this.menu.hasDropContainer() ? "Connected" : "None");
+        String dropBoxText = Component.translatable("gui.indexer.controller.dropbox").getString() + ": " + (this.menu.hasDropContainer() ? Component.translatable("gui.indexer.controller.connected").getString() : "None");
         guiGraphics.drawString(this.font, dropBoxText, 15, 32, 4210752, false);
         
-        String containersText = "Containers: " + this.menu.getConnectedContainersCount();
+        String containersText = Component.translatable("gui.indexer.controller.containers").getString() + ": " + this.menu.getConnectedContainersCount();
         guiGraphics.drawString(this.font, containersText, 15, 44, 4210752, false);
         
         // Columna derecha - Información de capacidad
-        guiGraphics.drawString(this.font, "Capacity Info:", 125, 20, 0x555555, false);
+        guiGraphics.drawString(this.font, Component.translatable("gui.indexer.controller.capacity_info"), 125, 20, 0x555555, false);
         
-        String slotsText = "Slots: " + formatNumber(this.menu.getTotalAvailableSlots());
+        String slotsText = Component.translatable("gui.indexer.controller.slots").getString() + ": " + formatNumber(this.menu.getTotalAvailableSlots());
         guiGraphics.drawString(this.font, slotsText, 125, 32, 4210752, false);
         
         // Información de velocidad
-        String transferRateText = "Speed: " + this.menu.getItemsPerTransfer() + " items at once";
+        String transferRateText = Component.translatable("gui.indexer.controller.speed").getString() + ": " + this.menu.getItemsPerTransfer() + " " + Component.translatable("gui.indexer.controller.items_at_once").getString();
         guiGraphics.drawString(this.font, transferRateText, 125, 44, 0x00AA00, false);
     }
     
