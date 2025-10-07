@@ -25,6 +25,7 @@ public class DropBoxBlockEntity extends RandomizableContainerBlockEntity impleme
     private static final int CONTAINER_SIZE = 54; // 6 rows of 9 slots = 54 slots (double the size of a normal chest)
     private NonNullList<ItemStack> items = NonNullList.withSize(CONTAINER_SIZE, ItemStack.EMPTY);
     private static final int[] SLOTS = new int[CONTAINER_SIZE];
+    private boolean disabledByDuplication = false;
     
     static {
         for (int i = 0; i < CONTAINER_SIZE; i++) {
@@ -66,6 +67,7 @@ public class DropBoxBlockEntity extends RandomizableContainerBlockEntity impleme
         super.load(tag);
         this.items = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
         ContainerHelper.loadAllItems(tag, this.items);
+        this.disabledByDuplication = tag.getBoolean("disabledByDuplication");
         // Initialize the hadItemsLastTick variable based on current inventory state
         this.hadItemsLastTick = hasItems();
     }
@@ -74,6 +76,7 @@ public class DropBoxBlockEntity extends RandomizableContainerBlockEntity impleme
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
         ContainerHelper.saveAllItems(tag, this.items);
+        tag.putBoolean("disabledByDuplication", this.disabledByDuplication);
     }
     
     @Override
@@ -97,6 +100,9 @@ public class DropBoxBlockEntity extends RandomizableContainerBlockEntity impleme
     
     public void tick(Level level, BlockPos pos, BlockState state) {
         if (level.isClientSide()) return;
+        
+        // Si está deshabilitado por duplicación, no hacer nada
+        if (disabledByDuplication) return;
         
         // Verificar si el estado de los ítems ha cambiado
         boolean hasItemsNow = hasItems();
@@ -166,11 +172,15 @@ public class DropBoxBlockEntity extends RandomizableContainerBlockEntity impleme
 
     @Override
     public boolean canPlaceItemThroughFace(int index, ItemStack itemStack, @Nullable Direction direction) {
+        // Si está deshabilitado por duplicación, no permitir insertar ítems
+        if (disabledByDuplication) return false;
         return true; // Allows inserting items from any side
     }
 
     @Override
     public boolean canTakeItemThroughFace(int index, ItemStack stack, Direction direction) {
+        // Si está deshabilitado por duplicación, no permitir extraer ítems
+        if (disabledByDuplication) return false;
         return true; // Allows extracting items from any side
     }
 
@@ -224,5 +234,87 @@ public class DropBoxBlockEntity extends RandomizableContainerBlockEntity impleme
                 net.minecraft.world.Containers.dropItemStack(this.level, this.worldPosition.getX(), this.worldPosition.getY(), this.worldPosition.getZ(), itemStack);
             }
         }
+    }
+    
+    // Método para verificar si hay controladores duplicados en la red
+    public boolean findOtherControllers() {
+        if (this.level == null) return false;
+        
+        java.util.Set<BlockPos> visited = new java.util.HashSet<>();
+        java.util.Queue<BlockPos> queue = new java.util.LinkedList<>();
+        
+        // Comenzar desde bloques adyacentes
+        for (Direction direction : Direction.values()) {
+            BlockPos adjacentPos = this.worldPosition.relative(direction);
+            if (visited.contains(adjacentPos)) continue;
+            
+            BlockState adjacentState = this.level.getBlockState(adjacentPos);
+            
+            // Si encontramos un controlador directamente adyacente
+            if (this.level.getBlockEntity(adjacentPos) instanceof IndexerControllerBlockEntity) {
+                return true;
+            }
+            
+            // Si encontramos una tubería, la agregamos a la cola para BFS
+            if (adjacentState.getBlock() instanceof com.agustinbenitez.indexer.block.IndexerPipeBlock) {
+                // Verificar que la tubería esté conectada en esta dirección
+                if (adjacentState.getValue(com.agustinbenitez.indexer.block.IndexerPipeBlock.getPropertyForDirection(direction.getOpposite()))) {
+                    queue.add(adjacentPos);
+                    visited.add(adjacentPos);
+                }
+            }
+        }
+        
+        // BFS para encontrar controladores a través de tuberías
+        while (!queue.isEmpty()) {
+            BlockPos currentPos = queue.poll();
+            BlockState currentState = this.level.getBlockState(currentPos);
+            BlockEntity blockEntity = this.level.getBlockEntity(currentPos);
+
+            // Si encontramos un controlador, hay duplicación
+            if (blockEntity instanceof IndexerControllerBlockEntity) {
+                return true;
+            }
+
+            // Explorar en todas las direcciones
+            for (Direction direction : Direction.values()) {
+                BlockPos nextPos = currentPos.relative(direction);
+                if (visited.contains(nextPos)) continue;
+
+                BlockState nextState = this.level.getBlockState(nextPos);
+                net.minecraft.world.level.block.Block nextBlock = nextState.getBlock();
+
+                if (nextBlock instanceof com.agustinbenitez.indexer.block.IndexerPipeBlock) {
+                    // Verificar que la tubería esté conectada en ambas direcciones
+                    boolean currentPipeConnected = currentState.getBlock() instanceof com.agustinbenitez.indexer.block.IndexerPipeBlock && 
+                                                 currentState.getValue(com.agustinbenitez.indexer.block.IndexerPipeBlock.getPropertyForDirection(direction));
+                    boolean nextPipeConnected = nextState.getValue(com.agustinbenitez.indexer.block.IndexerPipeBlock.getPropertyForDirection(direction.getOpposite()));
+                    
+                    if (currentPipeConnected && nextPipeConnected) {
+                        queue.add(nextPos);
+                        visited.add(nextPos);
+                    }
+                } else if (nextBlock instanceof com.agustinbenitez.indexer.block.IndexerControllerBlock) {
+                    // Verificar que la tubería actual esté conectada al controlador
+                    boolean currentPipeConnected = currentState.getBlock() instanceof com.agustinbenitez.indexer.block.IndexerPipeBlock && 
+                                                 currentState.getValue(com.agustinbenitez.indexer.block.IndexerPipeBlock.getPropertyForDirection(direction));
+                    
+                    if (currentPipeConnected) {
+                        return true;
+                    }
+                }
+            }
+        }
+        
+        return false;
+    }
+    
+    public boolean isDisabledByDuplication() {
+        return this.disabledByDuplication;
+    }
+    
+    public void setDisabledByDuplication(boolean disabled) {
+        this.disabledByDuplication = disabled;
+        this.setChanged();
     }
 }

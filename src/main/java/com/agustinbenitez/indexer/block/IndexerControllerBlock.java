@@ -52,6 +52,45 @@ public class IndexerControllerBlock extends BaseEntityBlock {
     }
 
     @Override
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable net.minecraft.world.entity.LivingEntity placer, net.minecraft.world.item.ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        
+        // Restaurar el estado de mejoras si existe en el NBT del item
+        if (stack.hasTag()) {
+            net.minecraft.nbt.CompoundTag nbt = stack.getTag();
+            if (nbt.contains("UpgradeLevel") && nbt.contains("ItemsPerTransfer")) {
+                BlockEntity blockEntity = level.getBlockEntity(pos);
+                if (blockEntity instanceof IndexerControllerBlockEntity controller) {
+                    int upgradeLevel = nbt.getInt("UpgradeLevel");
+                    int itemsPerTransfer = nbt.getInt("ItemsPerTransfer");
+                    
+                    controller.setCurrentUpgradeLevel(upgradeLevel);
+                    controller.setItemsPerTransfer(itemsPerTransfer);
+                    controller.setChanged();
+                }
+            }
+        }
+        
+        // Verificar si hay otros controladores en la red
+        if (!level.isClientSide && placer instanceof Player player) {
+            BlockEntity blockEntity = level.getBlockEntity(pos);
+            if (blockEntity instanceof IndexerControllerBlockEntity controller) {
+                java.util.List<IndexerControllerBlockEntity> otherControllers = controller.findOtherControllers();
+                if (!otherControllers.isEmpty()) {
+                    // Deshabilitar este controlador por duplicación
+                    controller.setDisabledByDuplication(true);
+                    controller.setChanged();
+                    
+                    // Enviar mensaje de error al jugador en rojo
+                    net.minecraft.network.chat.Component message = net.minecraft.network.chat.Component.translatable("message.indexer.duplicate_controller")
+                            .withStyle(net.minecraft.ChatFormatting.RED);
+                    player.sendSystemMessage(message);
+                }
+            }
+        }
+    }
+
+    @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(FACING);
     }
@@ -77,8 +116,23 @@ public class IndexerControllerBlock extends BaseEntityBlock {
             
             // Solo dropear items si NO fue roto en modo creativo
             if (!isCreativeBreak) {
-                // Dropear el ítem del controlador cuando se rompe el bloque
+                // Obtener la BlockEntity para guardar el estado de mejoras
+                BlockEntity blockEntity = level.getBlockEntity(pos);
                 net.minecraft.world.item.ItemStack itemStack = new net.minecraft.world.item.ItemStack(this);
+                
+                if (blockEntity instanceof IndexerControllerBlockEntity controller) {
+                    // Guardar el estado de mejoras en el NBT del item
+                    int upgradeLevel = controller.getCurrentUpgradeLevel();
+                    int itemsPerTransfer = controller.getItemsPerTransfer();
+                    
+                    if (upgradeLevel > 0) {
+                        net.minecraft.nbt.CompoundTag nbt = itemStack.getOrCreateTag();
+                        nbt.putInt("UpgradeLevel", upgradeLevel);
+                        nbt.putInt("ItemsPerTransfer", itemsPerTransfer);
+                    }
+                }
+                
+                // Dropear el ítem del controlador cuando se rompe el bloque
                 net.minecraft.world.Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), itemStack);
             }
         }
@@ -89,8 +143,17 @@ public class IndexerControllerBlock extends BaseEntityBlock {
     public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
         if (!level.isClientSide()) {
             BlockEntity entity = level.getBlockEntity(pos);
-            if (entity instanceof IndexerControllerBlockEntity) {
-                NetworkHooks.openScreen((ServerPlayer) player, (IndexerControllerBlockEntity) entity, pos);
+            if (entity instanceof IndexerControllerBlockEntity controller) {
+                // Verificar si está deshabilitado por duplicación
+                if (controller.isDisabledByDuplication()) {
+                    // Mostrar mensaje de error en rojo
+                    net.minecraft.network.chat.Component message = net.minecraft.network.chat.Component.translatable("message.indexer.duplicate_controller")
+                            .withStyle(net.minecraft.ChatFormatting.RED);
+                    player.sendSystemMessage(message);
+                    return InteractionResult.CONSUME;
+                }
+                
+                NetworkHooks.openScreen((ServerPlayer) player, controller, pos);
                 return InteractionResult.CONSUME;
             }
         }

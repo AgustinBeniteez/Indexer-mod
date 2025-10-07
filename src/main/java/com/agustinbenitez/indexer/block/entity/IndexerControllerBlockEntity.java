@@ -3,6 +3,7 @@ package com.agustinbenitez.indexer.block.entity;
 import com.agustinbenitez.indexer.IndexerMod;
 import com.agustinbenitez.indexer.block.DropBoxBlock;
 import com.agustinbenitez.indexer.block.IndexerConnectorBlock;
+import com.agustinbenitez.indexer.block.IndexerControllerBlock;
 import com.agustinbenitez.indexer.block.IndexerPipeBlock;
 import com.agustinbenitez.indexer.init.ModBlockEntities;
 import com.agustinbenitez.indexer.init.ModBlocks;
@@ -38,6 +39,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
     private int currentUpgradeLevel = 0; // Nivel actual de mejora (0=sin mejora, 1=básica, 2=cobre, 3=avanzada, 4=élite, 5=definitiva)
     
     private boolean enabled = true;
+    private boolean disabledByDuplication = false; // Nuevo campo para marcar si está deshabilitado por duplicación
     private int transferCooldown = 0;
     private BlockPos dropContainerPos = null;
     private int previousConnectorCount = 0;
@@ -101,6 +103,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
     public void load(CompoundTag tag) {
         super.load(tag);
         this.enabled = tag.getBoolean("Enabled");
+        this.disabledByDuplication = tag.getBoolean("DisabledByDuplication");
         this.transferCooldown = tag.getInt("TransferCooldown");
         this.previousConnectorCount = tag.getInt("PreviousConnectorCount");
         this.hasNotifiedConnection = tag.getBoolean("HasNotifiedConnection");
@@ -132,6 +135,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
         tag.putBoolean("Enabled", this.enabled);
+        tag.putBoolean("DisabledByDuplication", this.disabledByDuplication);
         tag.putInt("TransferCooldown", this.transferCooldown);
         tag.putInt("PreviousConnectorCount", this.previousConnectorCount);
         tag.putBoolean("HasNotifiedConnection", this.hasNotifiedConnection);
@@ -151,7 +155,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
     }
     
     public boolean isEnabled() {
-        return this.enabled;
+        return this.enabled && !this.disabledByDuplication;
     }
     
     public int getItemsPerTransfer() {
@@ -1130,5 +1134,87 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         // Solo verificar hornos, sin dropContainer
         checkAndRefillFurnaceFuel(connectors, null);
         checkAndRefillFurnaceInput(connectors);
+    }
+    
+    // Método para detectar otros controladores en la misma red
+    public List<IndexerControllerBlockEntity> findOtherControllers() {
+        if (this.level == null) return new ArrayList<>();
+        
+        List<IndexerControllerBlockEntity> otherControllers = new ArrayList<>();
+        Set<BlockPos> visited = new HashSet<>();
+        Queue<BlockPos> queue = new LinkedList<>();
+        
+        // Comenzar la búsqueda desde las posiciones adyacentes
+        for (Direction direction : Direction.values()) {
+            BlockPos adjacentPos = this.worldPosition.relative(direction);
+            BlockState adjacentState = this.level.getBlockState(adjacentPos);
+            
+            // Si hay un controlador directamente adyacente (que no sea este mismo)
+            if (adjacentState.getBlock() instanceof IndexerControllerBlock && !adjacentPos.equals(this.worldPosition)) {
+                BlockEntity entity = this.level.getBlockEntity(adjacentPos);
+                if (entity instanceof IndexerControllerBlockEntity) {
+                    otherControllers.add((IndexerControllerBlockEntity) entity);
+                }
+            }
+            
+            // Si hay una tubería adyacente, añadirla a la cola para BFS
+            if (adjacentState.getBlock() instanceof IndexerPipeBlock) {
+                // Verificar que la tubería esté conectada en esta dirección
+                if (adjacentState.getValue(IndexerPipeBlock.getPropertyForDirection(direction.getOpposite()))) {
+                    queue.add(adjacentPos);
+                    visited.add(adjacentPos);
+                }
+            }
+        }
+        
+        // BFS para encontrar controladores a través de tuberías
+        while (!queue.isEmpty()) {
+            BlockPos currentPos = queue.poll();
+            BlockState currentState = this.level.getBlockState(currentPos);
+            
+            // Explorar en todas las direcciones
+            for (Direction direction : Direction.values()) {
+                BlockPos nextPos = currentPos.relative(direction);
+                if (visited.contains(nextPos) || nextPos.equals(this.worldPosition)) continue;
+                
+                BlockState nextState = this.level.getBlockState(nextPos);
+                Block nextBlock = nextState.getBlock();
+                
+                // Si encontramos otro controlador, agregarlo a la lista
+                if (nextBlock instanceof IndexerControllerBlock) {
+                    BlockEntity entity = this.level.getBlockEntity(nextPos);
+                    if (entity instanceof IndexerControllerBlockEntity) {
+                        otherControllers.add((IndexerControllerBlockEntity) entity);
+                        visited.add(nextPos);
+                    }
+                }
+                
+                // Si encontramos otra tubería, añadirla a la cola
+                if (nextBlock instanceof IndexerPipeBlock) {
+                    // Verificar que la tubería esté conectada en ambas direcciones
+                    boolean currentPipeConnected = currentState.getBlock() instanceof IndexerPipeBlock && 
+                                                 currentState.getValue(IndexerPipeBlock.getPropertyForDirection(direction));
+                    boolean nextPipeConnected = nextState.getValue(IndexerPipeBlock.getPropertyForDirection(direction.getOpposite()));
+                    
+                    if (currentPipeConnected && nextPipeConnected) {
+                        queue.add(nextPos);
+                        visited.add(nextPos);
+                    }
+                }
+            }
+        }
+        
+        return otherControllers;
+    }
+    
+    // Método para verificar si este controlador está deshabilitado por duplicación
+    public boolean isDisabledByDuplication() {
+        return this.disabledByDuplication;
+    }
+    
+    // Método para establecer el estado de deshabilitado por duplicación
+    public void setDisabledByDuplication(boolean disabled) {
+        this.disabledByDuplication = disabled;
+        this.setChanged();
     }
 }

@@ -49,8 +49,14 @@ public class DropBoxBlock extends BaseEntityBlock {
     public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
         if (!level.isClientSide()) {
             BlockEntity entity = level.getBlockEntity(pos);
-            if (entity instanceof DropBoxBlockEntity) {
-                NetworkHooks.openScreen((ServerPlayer) player, (DropBoxBlockEntity) entity, pos);
+            if (entity instanceof DropBoxBlockEntity dropBox) {
+                // Verificar si está deshabilitado por duplicación
+                if (dropBox.isDisabledByDuplication()) {
+                    player.sendSystemMessage(net.minecraft.network.chat.Component.translatable("message.indexer.duplicate_dropbox")
+                            .withStyle(net.minecraft.ChatFormatting.RED));
+                    return InteractionResult.CONSUME;
+                }
+                NetworkHooks.openScreen((ServerPlayer) player, dropBox, pos);
             } else {
                 throw new IllegalStateException("Our Container provider is missing!");
             }
@@ -72,6 +78,23 @@ public class DropBoxBlock extends BaseEntityBlock {
         }
         return createTickerHelper(type, ModBlockEntities.DROP_BOX.get(),
                 (level1, pos, state1, blockEntity) -> blockEntity.tick(level1, pos, state1));
+    }
+
+    @Override
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable net.minecraft.world.entity.LivingEntity placer, net.minecraft.world.item.ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        
+        if (!level.isClientSide() && placer instanceof net.minecraft.world.entity.player.Player player) {
+            BlockEntity entity = level.getBlockEntity(pos);
+            if (entity instanceof DropBoxBlockEntity dropBox) {
+                // Verificar si hay otros controladores en la red
+                if (dropBox.findOtherControllers()) {
+                    dropBox.setDisabledByDuplication(true);
+                    player.sendSystemMessage(net.minecraft.network.chat.Component.translatable("message.indexer.duplicate_dropbox")
+                            .withStyle(net.minecraft.ChatFormatting.RED));
+                }
+            }
+        }
     }
 
     @Override

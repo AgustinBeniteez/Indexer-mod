@@ -2,6 +2,7 @@ package com.agustinbenitez.indexer.init;
 
 import com.agustinbenitez.indexer.IndexerMod;
 import com.agustinbenitez.indexer.item.ExtractorItem;
+import com.agustinbenitez.indexer.item.IndexerControllerItem;
 import com.agustinbenitez.indexer.item.IndexerManualItem;
 import com.agustinbenitez.indexer.item.TransferSpeedUpgradeItem;
 
@@ -17,7 +18,7 @@ public class ModItems {
 
     // Block items
     public static final RegistryObject<Item> INDEXER_CONTROLLER_ITEM = ITEMS.register("indexer_controller",
-            () -> new BlockItem(ModBlocks.INDEXER_CONTROLLER.get(), new Item.Properties()));
+            () -> new IndexerControllerItem(ModBlocks.INDEXER_CONTROLLER.get(), new Item.Properties()));
 
     public static final RegistryObject<Item> INDEXER_PIPE_ITEM = ITEMS.register("indexer_pipe",
             () -> new BlockItem(ModBlocks.INDEXER_PIPE.get(), new Item.Properties()));

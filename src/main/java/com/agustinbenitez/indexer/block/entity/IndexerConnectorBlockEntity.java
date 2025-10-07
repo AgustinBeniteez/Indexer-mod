@@ -369,6 +369,11 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
         Container container = (Container) containerEntity;
         ItemStack remainder = stack.copy();
         int initialCount = remainder.getCount();
+        
+        // Si tenemos más de 64 items, dividir en múltiples operaciones
+        if (remainder.getCount() > 64) {
+            return insertItemInBatches(remainder, container, containerEntity);
+        }
 
         // Verificar si es un horno y el ítem es combustible válido
         boolean isCoalOrCharcoal = stack.getItem().getDescriptionId().equals("item.minecraft.coal") || 
@@ -591,39 +596,42 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
     
     // Método auxiliar para insertar items en un cofre doble como inventario unificado
     private ItemStack insertIntoDoubleChest(ItemStack stack, BlockPos chest1Pos, BlockPos chest2Pos) {
-        if (this.level == null) return stack;
-        
+        if (this.level == null) {
+            return stack;
+        }
+
         BlockEntity chest1Entity = this.level.getBlockEntity(chest1Pos);
         BlockEntity chest2Entity = this.level.getBlockEntity(chest2Pos);
-        
+
         if (!(chest1Entity instanceof Container) || !(chest2Entity instanceof Container)) {
             return stack;
         }
-        
+
         Container chest1 = (Container) chest1Entity;
         Container chest2 = (Container) chest2Entity;
         ItemStack remainder = stack.copy();
-        
-        // Tratar como inventario unificado de 54 slots (0-53)
-        // Slots 0-26 corresponden al primer cofre, slots 27-53 al segundo cofre
-        int totalSlots = chest1.getContainerSize() + chest2.getContainerSize();
-        
-        // Primero intentar llenar slots existentes con el mismo item (en orden secuencial)
-        for (int globalSlot = 0; globalSlot < totalSlots; globalSlot++) {
-            Container currentChest;
-            int localSlot;
+
+        // Intentar insertar en el primer cofre
+        for (int i = 0; i < chest1.getContainerSize(); i++) {
+            ItemStack slotStack = chest1.getItem(i);
             
-            if (globalSlot < chest1.getContainerSize()) {
-                currentChest = chest1;
-                localSlot = globalSlot;
-            } else {
-                currentChest = chest2;
-                localSlot = globalSlot - chest1.getContainerSize();
-            }
-            
-            ItemStack slotStack = currentChest.getItem(localSlot);
-            if (!slotStack.isEmpty() && ItemStack.isSameItemSameTags(slotStack, remainder)) {
-                int maxStackSize = Math.min(currentChest.getMaxStackSize(), slotStack.getMaxStackSize());
+            if (slotStack.isEmpty()) {
+                // Slot vacío, insertar todo lo que podamos
+                int maxStackSize = Math.min(chest1.getMaxStackSize(), remainder.getMaxStackSize());
+                int toInsert = Math.min(remainder.getCount(), maxStackSize);
+                
+                ItemStack newStack = remainder.copy();
+                newStack.setCount(toInsert);
+                chest1.setItem(i, newStack);
+                
+                remainder.shrink(toInsert);
+                
+                if (remainder.isEmpty()) {
+                    return ItemStack.EMPTY;
+                }
+            } else if (ItemStack.isSameItemSameTags(slotStack, remainder)) {
+                // Mismo ítem, intentar apilar
+                int maxStackSize = Math.min(chest1.getMaxStackSize(), slotStack.getMaxStackSize());
                 int space = maxStackSize - slotStack.getCount();
                 
                 if (space > 0) {
@@ -637,37 +645,259 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
                 }
             }
         }
+
+        // Si todavía quedan items, intentar insertar en el segundo cofre
+        if (!remainder.isEmpty()) {
+            for (int i = 0; i < chest2.getContainerSize(); i++) {
+                ItemStack slotStack = chest2.getItem(i);
+                
+                if (slotStack.isEmpty()) {
+                    // Slot vacío, insertar todo lo que podamos
+                    int maxStackSize = Math.min(chest2.getMaxStackSize(), remainder.getMaxStackSize());
+                    int toInsert = Math.min(remainder.getCount(), maxStackSize);
+                    
+                    ItemStack newStack = remainder.copy();
+                    newStack.setCount(toInsert);
+                    chest2.setItem(i, newStack);
+                    
+                    remainder.shrink(toInsert);
+                    
+                    if (remainder.isEmpty()) {
+                        return ItemStack.EMPTY;
+                    }
+                } else if (ItemStack.isSameItemSameTags(slotStack, remainder)) {
+                    // Mismo ítem, intentar apilar
+                    int maxStackSize = Math.min(chest2.getMaxStackSize(), slotStack.getMaxStackSize());
+                    int space = maxStackSize - slotStack.getCount();
+                    
+                    if (space > 0) {
+                        int toInsert = Math.min(remainder.getCount(), space);
+                        slotStack.grow(toInsert);
+                        remainder.shrink(toInsert);
+                        
+                        if (remainder.isEmpty()) {
+                            return ItemStack.EMPTY;
+                        }
+                    }
+                }
+            }
+        }
+
+        return remainder;
+    }
+    
+    /**
+     * Método auxiliar para insertar items en lotes cuando hay más de 64 items
+     */
+    private ItemStack insertItemInBatches(ItemStack stack, Container container, BlockEntity containerEntity) {
+        ItemStack remainder = stack.copy();
         
-        // Luego llenar slots vacíos (en orden secuencial desde el slot 0)
-        for (int globalSlot = 0; globalSlot < totalSlots; globalSlot++) {
-            Container currentChest;
-            int localSlot;
+        while (!remainder.isEmpty()) {
+            // Crear un lote de máximo 64 items
+            int batchSize = Math.min(remainder.getCount(), 64);
+            ItemStack batch = remainder.copy();
+            batch.setCount(batchSize);
             
-            if (globalSlot < chest1.getContainerSize()) {
-                currentChest = chest1;
-                localSlot = globalSlot;
-            } else {
-                currentChest = chest2;
-                localSlot = globalSlot - chest1.getContainerSize();
+            // Intentar insertar el lote usando el método original
+            ItemStack batchRemainder = insertItemSingle(batch, container, containerEntity);
+            
+            // Calcular cuántos items se insertaron en este lote
+            int inserted = batchSize - batchRemainder.getCount();
+            remainder.shrink(inserted);
+            
+            // Si no se pudo insertar nada en este lote, no podemos continuar
+            if (inserted == 0) {
+                break;
+            }
+        }
+        
+        return remainder;
+    }
+    
+    /**
+     * Método original de inserción para un solo lote (máximo 64 items)
+     */
+    private ItemStack insertItemSingle(ItemStack stack, Container container, BlockEntity containerEntity) {
+        ItemStack remainder = stack.copy();
+        int initialCount = remainder.getCount();
+
+        // Verificar si es un horno y el ítem es combustible válido
+        boolean isCoalOrCharcoal = stack.getItem().getDescriptionId().equals("item.minecraft.coal") || 
+                                  stack.getItem().getDescriptionId().equals("item.minecraft.charcoal");
+        boolean isLavaBucket = stack.getItem().getDescriptionId().equals("item.minecraft.lava_bucket");
+        boolean isFurnace = containerEntity.getClass().getName().contains("FurnaceBlockEntity");
+        
+        // Si es un horno (AbstractFurnaceBlockEntity) y el ítem es combustible válido (carbón, carbón vegetal o cubo de lava)
+        if (isFurnace && (isCoalOrCharcoal || isLavaBucket)) {
+            // El slot de combustible en AbstractFurnaceBlockEntity es 1
+            final int FURNACE_FUEL_SLOT = 1;
+            
+            if (FURNACE_FUEL_SLOT < container.getContainerSize()) {
+                ItemStack fuelSlotStack = container.getItem(FURNACE_FUEL_SLOT);
+                
+                if (fuelSlotStack.isEmpty()) {
+                    // Slot de combustible vacío, insertar todo lo que podamos
+                    int maxStackSize = Math.min(container.getMaxStackSize(), remainder.getMaxStackSize());
+                    int toInsert = Math.min(remainder.getCount(), maxStackSize);
+                    
+                    ItemStack newStack = remainder.copy();
+                    newStack.setCount(toInsert);
+                    container.setItem(FURNACE_FUEL_SLOT, newStack);
+                    
+                    remainder.shrink(toInsert);
+                    
+                    if (remainder.isEmpty()) {
+                        if (containerEntity instanceof BlockEntity) {
+                            ((BlockEntity) containerEntity).setChanged();
+                        }
+                        return ItemStack.EMPTY;
+                    }
+                } else if (ItemStack.isSameItemSameTags(fuelSlotStack, remainder)) {
+                    // Mismo ítem en el slot de combustible, intentar apilar
+                    int maxStackSize = Math.min(container.getMaxStackSize(), fuelSlotStack.getMaxStackSize());
+                    int space = maxStackSize - fuelSlotStack.getCount();
+                    
+                    if (space > 0) {
+                        int toInsert = Math.min(remainder.getCount(), space);
+                        fuelSlotStack.grow(toInsert);
+                        remainder.shrink(toInsert);
+                        
+                        if (remainder.isEmpty()) {
+                            if (containerEntity instanceof BlockEntity) {
+                                ((BlockEntity) containerEntity).setChanged();
+                            }
+                            return ItemStack.EMPTY;
+                        }
+                    }
+                }
             }
             
-            ItemStack slotStack = currentChest.getItem(localSlot);
+            // Si es un horno y combustible válido, SOLO intentamos insertar en el slot de combustible
+            if (containerEntity instanceof BlockEntity) {
+                ((BlockEntity) containerEntity).setChanged();
+            }
+            return remainder;
+        }
+        
+        // Si es un horno pero NO es combustible válido, solo permitir inserción en el slot superior (ingredientes)
+        if (isFurnace && !(isCoalOrCharcoal || isLavaBucket)) {
+            // El slot de ingredientes en AbstractFurnaceBlockEntity es 0
+            final int FURNACE_INPUT_SLOT = 0;
+            
+            if (FURNACE_INPUT_SLOT < container.getContainerSize()) {
+                ItemStack inputSlotStack = container.getItem(FURNACE_INPUT_SLOT);
+                
+                if (inputSlotStack.isEmpty()) {
+                    // Slot de ingredientes vacío, insertar todo lo que podamos
+                    int maxStackSize = Math.min(container.getMaxStackSize(), remainder.getMaxStackSize());
+                    int toInsert = Math.min(remainder.getCount(), maxStackSize);
+                    
+                    ItemStack newStack = remainder.copy();
+                    newStack.setCount(toInsert);
+                    container.setItem(FURNACE_INPUT_SLOT, newStack);
+                    
+                    remainder.shrink(toInsert);
+                    
+                    if (remainder.isEmpty()) {
+                        if (containerEntity instanceof BlockEntity) {
+                            ((BlockEntity) containerEntity).setChanged();
+                        }
+                        return ItemStack.EMPTY;
+                    }
+                } else if (ItemStack.isSameItemSameTags(inputSlotStack, remainder)) {
+                    // Mismo ítem en el slot de ingredientes, intentar apilar
+                    int maxStackSize = Math.min(container.getMaxStackSize(), inputSlotStack.getMaxStackSize());
+                    int space = maxStackSize - inputSlotStack.getCount();
+                    
+                    if (space > 0) {
+                        int toInsert = Math.min(remainder.getCount(), space);
+                        inputSlotStack.grow(toInsert);
+                        remainder.shrink(toInsert);
+                        
+                        if (remainder.isEmpty()) {
+                            if (containerEntity instanceof BlockEntity) {
+                                ((BlockEntity) containerEntity).setChanged();
+                            }
+                            return ItemStack.EMPTY;
+                        }
+                    }
+                }
+            }
+            
+            if (containerEntity instanceof BlockEntity) {
+                ((BlockEntity) containerEntity).setChanged();
+            }
+            return remainder;
+        }
+
+        // Verificar si es un cofre doble y manejar como inventario unificado
+        if (isChestBlockEntity(containerEntity)) {
+            BlockPos partnerPos = findDoubleChestPartner(this.connectedContainerPos);
+            if (partnerPos != null) {
+                // Es un cofre doble, determinar el orden correcto (cofre principal primero)
+                BlockPos mainChestPos = getMainChestPosition(this.connectedContainerPos, partnerPos);
+                BlockPos secondChestPos = mainChestPos.equals(this.connectedContainerPos) ? partnerPos : this.connectedContainerPos;
+                
+                // Usar inventario unificado con el orden correcto
+                remainder = insertIntoDoubleChest(remainder, mainChestPos, secondChestPos);
+                
+                // Marcar ambos cofres como cambiados
+                if (containerEntity instanceof BlockEntity) {
+                    ((BlockEntity) containerEntity).setChanged();
+                }
+                BlockEntity partnerEntity = this.level.getBlockEntity(partnerPos);
+                if (partnerEntity instanceof BlockEntity) {
+                    ((BlockEntity) partnerEntity).setChanged();
+                }
+                
+                return remainder;
+            }
+        }
+
+        // Comportamiento normal para otros contenedores o cofres simples
+        for (int i = 0; i < container.getContainerSize(); i++) {
+            // Si es un horno, no permitir inserción en el slot de salida (slot 2)
+            if (isFurnace && i == 2) {
+                continue; // Saltar el slot de salida del horno
+            }
+            
+            ItemStack slotStack = container.getItem(i);
+            
             if (slotStack.isEmpty()) {
-                int maxStackSize = Math.min(currentChest.getMaxStackSize(), remainder.getMaxStackSize());
+                // Slot vacío, insertar todo lo que podamos
+                int maxStackSize = Math.min(container.getMaxStackSize(), remainder.getMaxStackSize());
                 int toInsert = Math.min(remainder.getCount(), maxStackSize);
                 
                 ItemStack newStack = remainder.copy();
                 newStack.setCount(toInsert);
-                currentChest.setItem(localSlot, newStack);
+                container.setItem(i, newStack);
                 
                 remainder.shrink(toInsert);
                 
                 if (remainder.isEmpty()) {
-                    return ItemStack.EMPTY;
+                    break;
+                }
+            } else if (ItemStack.isSameItemSameTags(slotStack, remainder)) {
+                // Mismo ítem, intentar apilar
+                int maxStackSize = Math.min(container.getMaxStackSize(), slotStack.getMaxStackSize());
+                int space = maxStackSize - slotStack.getCount();
+                
+                if (space > 0) {
+                    int toInsert = Math.min(remainder.getCount(), space);
+                    slotStack.grow(toInsert);
+                    remainder.shrink(toInsert);
+                    
+                    if (remainder.isEmpty()) {
+                        break;
+                    }
                 }
             }
         }
-        
+
+        if (containerEntity instanceof BlockEntity) {
+            ((BlockEntity) containerEntity).setChanged();
+        }
+
         return remainder;
     }
 
