@@ -81,6 +81,9 @@ public class DropBoxBlockEntity extends RandomizableContainerBlockEntity impleme
     
     @Override
     public void setItem(int slot, ItemStack stack) {
+        // Si está deshabilitado por duplicación, no permitir cambios
+        if (disabledByDuplication) return;
+        
         ItemStack oldStack = this.items.get(slot);
         this.items.set(slot, stack);
         if (stack.getCount() > this.getMaxStackSize()) {
@@ -213,6 +216,9 @@ public class DropBoxBlockEntity extends RandomizableContainerBlockEntity impleme
     // Method to remove a specific item from the inventory
     @Override
     public ItemStack removeItem(int slot, int amount) {
+        // Si está deshabilitado por duplicación, no permitir extraer ítems
+        if (disabledByDuplication) return ItemStack.EMPTY;
+        
         ItemStack result = ContainerHelper.removeItem(this.items, slot, amount);
         if (!result.isEmpty()) {
             this.setChanged();
@@ -243,19 +249,28 @@ public class DropBoxBlockEntity extends RandomizableContainerBlockEntity impleme
         java.util.Set<BlockPos> visited = new java.util.HashSet<>();
         java.util.Queue<BlockPos> queue = new java.util.LinkedList<>();
         
-        // Comenzar desde bloques adyacentes
+        // Comenzar la búsqueda desde las posiciones adyacentes
         for (Direction direction : Direction.values()) {
             BlockPos adjacentPos = this.worldPosition.relative(direction);
-            if (visited.contains(adjacentPos)) continue;
-            
             BlockState adjacentState = this.level.getBlockState(adjacentPos);
             
-            // Si encontramos un controlador directamente adyacente
-            if (this.level.getBlockEntity(adjacentPos) instanceof IndexerControllerBlockEntity) {
-                return true;
+            // Si hay un controlador directamente adyacente
+            if (adjacentState.getBlock() instanceof com.agustinbenitez.indexer.block.IndexerControllerBlock) {
+                BlockEntity entity = this.level.getBlockEntity(adjacentPos);
+                if (entity instanceof IndexerControllerBlockEntity) {
+                    return true;
+                }
             }
             
-            // Si encontramos una tubería, la agregamos a la cola para BFS
+            // Si hay otro DropBox directamente adyacente
+            if (adjacentState.getBlock() instanceof com.agustinbenitez.indexer.block.DropBoxBlock) {
+                BlockEntity entity = this.level.getBlockEntity(adjacentPos);
+                if (entity instanceof DropBoxBlockEntity && !adjacentPos.equals(this.worldPosition)) {
+                    return true;
+                }
+            }
+            
+            // Si hay una tubería adyacente, añadirla a la cola para BFS
             if (adjacentState.getBlock() instanceof com.agustinbenitez.indexer.block.IndexerPipeBlock) {
                 // Verificar que la tubería esté conectada en esta dirección
                 if (adjacentState.getValue(com.agustinbenitez.indexer.block.IndexerPipeBlock.getPropertyForDirection(direction.getOpposite()))) {
@@ -269,21 +284,32 @@ public class DropBoxBlockEntity extends RandomizableContainerBlockEntity impleme
         while (!queue.isEmpty()) {
             BlockPos currentPos = queue.poll();
             BlockState currentState = this.level.getBlockState(currentPos);
-            BlockEntity blockEntity = this.level.getBlockEntity(currentPos);
-
-            // Si encontramos un controlador, hay duplicación
-            if (blockEntity instanceof IndexerControllerBlockEntity) {
-                return true;
-            }
-
+            
             // Explorar en todas las direcciones
             for (Direction direction : Direction.values()) {
                 BlockPos nextPos = currentPos.relative(direction);
-                if (visited.contains(nextPos)) continue;
-
+                if (visited.contains(nextPos) || nextPos.equals(this.worldPosition)) continue;
+                
                 BlockState nextState = this.level.getBlockState(nextPos);
                 net.minecraft.world.level.block.Block nextBlock = nextState.getBlock();
-
+                
+                // Si encontramos un controlador, hay duplicación
+                if (nextBlock instanceof com.agustinbenitez.indexer.block.IndexerControllerBlock) {
+                    BlockEntity entity = this.level.getBlockEntity(nextPos);
+                    if (entity instanceof IndexerControllerBlockEntity) {
+                        return true;
+                    }
+                }
+                
+                // Si encontramos otro DropBox, hay duplicación
+                if (nextBlock instanceof com.agustinbenitez.indexer.block.DropBoxBlock) {
+                    BlockEntity entity = this.level.getBlockEntity(nextPos);
+                    if (entity instanceof DropBoxBlockEntity) {
+                        return true;
+                    }
+                }
+                
+                // Si encontramos otra tubería, añadirla a la cola
                 if (nextBlock instanceof com.agustinbenitez.indexer.block.IndexerPipeBlock) {
                     // Verificar que la tubería esté conectada en ambas direcciones
                     boolean currentPipeConnected = currentState.getBlock() instanceof com.agustinbenitez.indexer.block.IndexerPipeBlock && 
@@ -293,14 +319,6 @@ public class DropBoxBlockEntity extends RandomizableContainerBlockEntity impleme
                     if (currentPipeConnected && nextPipeConnected) {
                         queue.add(nextPos);
                         visited.add(nextPos);
-                    }
-                } else if (nextBlock instanceof com.agustinbenitez.indexer.block.IndexerControllerBlock) {
-                    // Verificar que la tubería actual esté conectada al controlador
-                    boolean currentPipeConnected = currentState.getBlock() instanceof com.agustinbenitez.indexer.block.IndexerPipeBlock && 
-                                                 currentState.getValue(com.agustinbenitez.indexer.block.IndexerPipeBlock.getPropertyForDirection(direction));
-                    
-                    if (currentPipeConnected) {
-                        return true;
                     }
                 }
             }
