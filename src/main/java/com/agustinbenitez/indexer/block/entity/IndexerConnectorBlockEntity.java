@@ -247,13 +247,14 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
             return false;
         }
 
-        // Verificar si es carbón o carbón vegetal y si el contenedor es un horno
+        // Verificar si es combustible válido y si el contenedor es un horno
         boolean isCoalOrCharcoal = stack.getItem().getDescriptionId().equals("item.minecraft.coal") || 
                                   stack.getItem().getDescriptionId().equals("item.minecraft.charcoal");
+        boolean isLavaBucket = stack.getItem().getDescriptionId().equals("item.minecraft.lava_bucket");
         boolean isFurnace = containerEntity.getClass().getName().contains("FurnaceBlockEntity");
         
-        // Si es carbón/carbón vegetal y el contenedor es un horno, permitir siempre
-        if (isCoalOrCharcoal && isFurnace) {
+        // Si es combustible válido (carbón, carbón vegetal o cubo de lava) y el contenedor es un horno, permitir siempre
+        if ((isCoalOrCharcoal || isLavaBucket) && isFurnace) {
             return true;
         }
 
@@ -280,6 +281,81 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
         return false;
     }
 
+    public boolean canAcceptBuckets() {
+        // Verificar si hay un contenedor conectado
+        if (this.connectedContainerPos == null) {
+            updateConnectedContainer();
+            if (this.connectedContainerPos == null) {
+                return false;
+            }
+        }
+        
+        // Verificar que el contenedor exista y sea accesible
+        if (this.level == null) {
+            return false;
+        }
+        
+        BlockEntity containerEntity = this.level.getBlockEntity(this.connectedContainerPos);
+        if (!(containerEntity instanceof Container) || containerEntity instanceof IndexerConnectorBlockEntity) {
+            this.connectedContainerPos = null;
+            return false;
+        }
+
+        // Verificar si hay filtros configurados
+        boolean hasAnyFilter = false;
+        boolean hasBucketFilter = false;
+        
+        for (ItemStack filterItem : this.filterItems) {
+            if (!filterItem.isEmpty()) {
+                hasAnyFilter = true;
+                // Verificar si hay un filtro específico para buckets vacíos
+                if (filterItem.getItem().getDescriptionId().equals("item.minecraft.bucket")) {
+                    hasBucketFilter = true;
+                    break;
+                }
+            }
+        }
+        
+        // Si no hay filtros, puede aceptar buckets
+        if (!hasAnyFilter) {
+            // Verificar si hay espacio disponible en el contenedor
+            Container container = (Container) containerEntity;
+            ItemStack bucketStack = new ItemStack(net.minecraft.world.item.Items.BUCKET, 1);
+            
+            for (int i = 0; i < container.getContainerSize(); i++) {
+                ItemStack slotStack = container.getItem(i);
+                if (slotStack.isEmpty()) {
+                    return true; // Hay un slot vacío
+                }
+                if (slotStack.getItem() == bucketStack.getItem() && 
+                    slotStack.getCount() < slotStack.getMaxStackSize()) {
+                    return true; // Hay espacio en un stack existente
+                }
+            }
+            return false;
+        }
+        
+        // Si hay filtros, solo acepta si hay un filtro específico para buckets vacíos
+        if (hasBucketFilter) {
+            // Verificar si hay espacio disponible en el contenedor
+            Container container = (Container) containerEntity;
+            ItemStack bucketStack = new ItemStack(net.minecraft.world.item.Items.BUCKET, 1);
+            
+            for (int i = 0; i < container.getContainerSize(); i++) {
+                ItemStack slotStack = container.getItem(i);
+                if (slotStack.isEmpty()) {
+                    return true; // Hay un slot vacío
+                }
+                if (slotStack.getItem() == bucketStack.getItem() && 
+                    slotStack.getCount() < slotStack.getMaxStackSize()) {
+                    return true; // Hay espacio en un stack existente
+                }
+            }
+        }
+        
+        return false;
+    }
+
     public ItemStack insertItem(ItemStack stack) {
         if (!canAcceptItem(stack) || this.level == null) {
             return stack;
@@ -294,14 +370,15 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
         ItemStack remainder = stack.copy();
         int initialCount = remainder.getCount();
 
-        // Verificar si es un horno y el ítem es carbón o carbón vegetal
+        // Verificar si es un horno y el ítem es combustible válido
         boolean isCoalOrCharcoal = stack.getItem().getDescriptionId().equals("item.minecraft.coal") || 
                                   stack.getItem().getDescriptionId().equals("item.minecraft.charcoal");
+        boolean isLavaBucket = stack.getItem().getDescriptionId().equals("item.minecraft.lava_bucket");
         boolean isFurnace = containerEntity.getClass().getName().contains("FurnaceBlockEntity");
         
-        // Si es un horno (AbstractFurnaceBlockEntity) y el ítem es carbón/carbón vegetal
-        if (isFurnace && isCoalOrCharcoal) {
-            com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Detected furnace and coal/charcoal, attempting to insert into fuel slot");
+        // Si es un horno (AbstractFurnaceBlockEntity) y el ítem es combustible válido (carbón, carbón vegetal o cubo de lava)
+        if (isFurnace && (isCoalOrCharcoal || isLavaBucket)) {
+            com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Detected furnace and fuel item (coal/charcoal/lava bucket), attempting to insert into fuel slot");
             
             // El slot de combustible en AbstractFurnaceBlockEntity es 1
             final int FURNACE_FUEL_SLOT = 1;
@@ -348,9 +425,9 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
                     }
                 }
                 
-                // Si llegamos aquí, significa que no pudimos insertar todo el carbón en este horno
-                // porque el slot de combustible está lleno o casi lleno
-                if (!remainder.isEmpty()) {
+                // Si llegamos aquí, significa que no pudimos insertar todo el combustible en este horno
+                    // porque el slot de combustible está lleno o casi lleno
+                    if (!remainder.isEmpty()) {
 
                     // No continuamos con el comportamiento normal para este horno
                     // Devolvemos el remainder para que el controlador intente con otro conector
@@ -361,7 +438,7 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
                 }
             }
             
-            // Si es un horno y carbón, SOLO intentamos insertar en el slot de combustible
+            // Si es un horno y combustible válido, SOLO intentamos insertar en el slot de combustible
             // No continuamos con el comportamiento normal para otros slots
             if (containerEntity instanceof BlockEntity) {
                 ((BlockEntity) containerEntity).setChanged();
@@ -369,8 +446,8 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
             return remainder;
         }
         
-        // Si es un horno pero NO es carbón, solo permitir inserción en el slot superior (ingredientes)
-        if (isFurnace && !isCoalOrCharcoal) {
+        // Si es un horno pero NO es combustible válido, solo permitir inserción en el slot superior (ingredientes)
+        if (isFurnace && !(isCoalOrCharcoal || isLavaBucket)) {
             com.agustinbenitez.indexer.IndexerMod.LOGGER.info("Detected furnace and non-fuel item, attempting to insert into input slot");
             
             // El slot de ingredientes en AbstractFurnaceBlockEntity es 0
@@ -664,22 +741,29 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
             }
             
             if (!stack.isEmpty()) {
-                // Buscar el primer slot disponible más cercano al inicio
-                int targetSlot = findNearestEmptySlot();
-                if (targetSlot != -1 && targetSlot != slot) {
-                    // Mover el item al slot más cercano al inicio
-                    while (this.filterItems.size() <= targetSlot) {
-                        this.filterItems.add(ItemStack.EMPTY);
-                    }
-                    this.filterItems.set(targetSlot, stack.copy());
-                    this.filterItems.get(targetSlot).setCount(1);
-                    
-                    // Limpiar el slot original si es diferente
-                    this.filterItems.set(slot, ItemStack.EMPTY);
-                } else {
-                    // Si no hay slot más cercano o ya estamos en el correcto, colocar normalmente
+                // Si el slot ya tiene un item, permitir intercambio directo
+                if (!this.filterItems.get(slot).isEmpty()) {
+                    // Intercambio directo en la posición específica
                     this.filterItems.set(slot, stack.copy());
                     this.filterItems.get(slot).setCount(1);
+                } else {
+                    // Buscar el primer slot disponible más cercano al inicio solo si el slot está vacío
+                    int targetSlot = findNearestEmptySlot();
+                    if (targetSlot != -1 && targetSlot != slot) {
+                        // Mover el item al slot más cercano al inicio
+                        while (this.filterItems.size() <= targetSlot) {
+                            this.filterItems.add(ItemStack.EMPTY);
+                        }
+                        this.filterItems.set(targetSlot, stack.copy());
+                        this.filterItems.get(targetSlot).setCount(1);
+                        
+                        // Limpiar el slot original si es diferente
+                        this.filterItems.set(slot, ItemStack.EMPTY);
+                    } else {
+                        // Si no hay slot más cercano o ya estamos en el correcto, colocar normalmente
+                        this.filterItems.set(slot, stack.copy());
+                        this.filterItems.get(slot).setCount(1);
+                    }
                 }
             } else {
                 // Si el stack está vacío, simplemente limpiar el slot
@@ -688,6 +772,40 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
             
             this.setChanged();
         }
+    }
+    
+    /**
+     * Verifica si un item ya existe en el filtro
+     * @param stack el ItemStack a verificar
+     * @return true si el item ya existe en el filtro, false en caso contrario
+     */
+    private boolean isItemAlreadyInFilter(ItemStack stack) {
+        return isItemAlreadyInFilter(stack, -1);
+    }
+    
+    /**
+     * Verifica si un item ya existe en el filtro, excluyendo un slot específico
+     * @param stack el ItemStack a verificar
+     * @param excludeSlot el slot a excluir de la verificación (-1 para no excluir ninguno)
+     * @return true si el item ya existe en el filtro, false en caso contrario
+     */
+    private boolean isItemAlreadyInFilter(ItemStack stack, int excludeSlot) {
+        // Asegurar que la lista tenga el tamaño correcto
+        while (this.filterItems.size() < FILTER_SLOTS) {
+            this.filterItems.add(ItemStack.EMPTY);
+        }
+        
+        // Verificar cada slot del filtro
+        for (int i = 0; i < FILTER_SLOTS; i++) {
+            if (i == excludeSlot) {
+                continue; // Saltar el slot excluido
+            }
+            ItemStack filterItem = this.filterItems.get(i);
+            if (!filterItem.isEmpty() && ItemStack.isSameItem(filterItem, stack)) {
+                return true;
+            }
+        }
+        return false;
     }
     
     /**
@@ -716,6 +834,24 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
         } else {
             return player.distanceToSqr((double)this.worldPosition.getX() + 0.5D, (double)this.worldPosition.getY() + 0.5D, (double)this.worldPosition.getZ() + 0.5D) <= 64.0D;
         }
+    }
+
+    @Override
+    public boolean canPlaceItem(int slot, ItemStack stack) {
+        if (slot >= 0 && slot < FILTER_SLOTS) {
+            // No permitir colocar items vacíos
+            if (stack.isEmpty()) {
+                return true; // Permitir limpiar slots
+            }
+            
+            // Verificar si el item ya existe en el filtro, excluyendo el slot actual
+            if (isItemAlreadyInFilter(stack, slot)) {
+                return false; // No permitir colocar items duplicados
+            }
+            
+            return true; // Permitir colocar el item si no es duplicado o es intercambio en el mismo slot
+        }
+        return false;
     }
 
     @Override

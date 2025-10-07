@@ -27,8 +27,10 @@ public class ModCreativeTabs {
                         output.accept(ModItems.EXTRACTOR_ITEM.get());
                         output.accept(ModItems.INDEXER_MANUAL.get());
                         output.accept(ModItems.TRANSFER_SPEED_UPGRADE_BASIC.get());
+                        output.accept(ModItems.TRANSFER_SPEED_UPGRADE_COPPER.get());
                         output.accept(ModItems.TRANSFER_SPEED_UPGRADE_ADVANCED.get());
                         output.accept(ModItems.TRANSFER_SPEED_UPGRADE_ELITE.get());
+                        output.accept(ModItems.TRANSFER_SPEED_UPGRADE_DEFINITIVE.get());
                     })
                     .build());
 

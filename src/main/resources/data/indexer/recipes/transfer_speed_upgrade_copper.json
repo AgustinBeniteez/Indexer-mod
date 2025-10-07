@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "CCC",
+    "CUC",
+    "CCC"
+  ],
+  "key": {
+    "C": {
+      "item": "minecraft:copper_ingot"
+    },
+    "U": {
+      "item": "indexer:transfer_speed_upgrade_basic"
+    }
+  },
+  "result": {
+    "item": "indexer:transfer_speed_upgrade_copper",
+    "count": 1
+  }
+}

@@ -45,5 +45,6 @@
   "upgrade.indexer.none": "ninguna mejora previa",
   "upgrade.indexer.basic": "mejora Básica",
   "upgrade.indexer.advanced": "mejora Avanzada",
-  "upgrade.indexer.elite": "mejora Élite"
+  "upgrade.indexer.elite": "mejora Élite",
+  "upgrade.indexer.definitive": "Mejora definitiva"
 }

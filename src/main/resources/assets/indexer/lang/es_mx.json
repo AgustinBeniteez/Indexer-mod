@@ -8,6 +8,8 @@
   "item.indexer.transfer_speed_upgrade_basic": "Mejora Básica de Velocidad de Transferencia",
   "item.indexer.transfer_speed_upgrade_advanced": "Mejora Avanzada de Velocidad de Transferencia",
   "item.indexer.transfer_speed_upgrade_elite": "Mejora Élite de Velocidad de Transferencia",
+  "item.indexer.transfer_speed_upgrade_copper": "Mejora de Cobre de Velocidad de Transferencia",
+  "item.indexer.transfer_speed_upgrade_definitive": "Mejora Definitiva de Velocidad de Transferencia",
   "item.indexer.transfer_speed_upgrade.tooltip": "Permite a un Controlador Indexer transferir múltiples objetos a la vez",
   "item.indexer.transfer_speed_upgrade.transfers_info": "Transfiere hasta %s objetos a la vez",
   "item.indexer.transfer_speed_upgrade.usage": "Usar con clic derecho en un Controlador Indexador",
@@ -45,5 +47,6 @@
   "upgrade.indexer.none": "ninguna mejora previa",
   "upgrade.indexer.basic": "mejora Básica",
   "upgrade.indexer.advanced": "mejora Avanzada",
-  "upgrade.indexer.elite": "mejora Élite"
+  "upgrade.indexer.elite": "mejora Élite",
+  "upgrade.indexer.copper": "mejora de Cobre"
 }

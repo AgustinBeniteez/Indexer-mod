@@ -92,6 +92,32 @@ public class IndexerPipeBlock extends Block {
                 }
             }
         }
+        
+        // También notificar a conectores cercanos para que actualicen su estado de conexión
+        notifyNearbyConnectors(level, pos);
+    }
+    
+    private void notifyNearbyConnectors(Level level, BlockPos pos) {
+        if (level.isClientSide()) return;
+        
+        // Buscar conectores en un radio de 16 bloques
+        int searchRadius = 16;
+        for (int x = -searchRadius; x <= searchRadius; x++) {
+            for (int y = -searchRadius; y <= searchRadius; y++) {
+                for (int z = -searchRadius; z <= searchRadius; z++) {
+                    BlockPos checkPos = pos.offset(x, y, z);
+                    BlockState blockState = level.getBlockState(checkPos);
+                    
+                    if (blockState.getBlock() instanceof IndexerConnectorBlock) {
+                        // Verificar si el estado de conexión del conector ha cambiado
+                        boolean isConnected = IndexerConnectorBlock.isConnectedToController(level, checkPos);
+                        if (blockState.getValue(IndexerConnectorBlock.CONNECTED) != isConnected) {
+                            level.setBlock(checkPos, blockState.setValue(IndexerConnectorBlock.CONNECTED, isConnected), Block.UPDATE_ALL);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private BlockState getConnectionState(Level level, BlockPos pos) {

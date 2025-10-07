@@ -130,9 +130,50 @@ public class ExtractorBlockEntity extends BlockEntity {
                            containerEntity.getClass().getName().contains("SmokerBlockEntity");
         
         if (isFurnace) {
-            // Para hornos, solo extraer del slot de resultado (slot 2)
+            // Para hornos, extraer tanto del slot de resultado (slot 2) como del slot de combustible (slot 1) si hay buckets vacíos
             final int FURNACE_RESULT_SLOT = 2;
+            final int FURNACE_FUEL_SLOT = 1;
             
+            // Primero intentar extraer buckets vacíos del slot de combustible
+            if (FURNACE_FUEL_SLOT < container.getContainerSize()) {
+                ItemStack fuelSlotStack = container.getItem(FURNACE_FUEL_SLOT);
+                
+                if (!fuelSlotStack.isEmpty() && fuelSlotStack.getItem().getDescriptionId().equals("item.minecraft.bucket")) {
+                    // Verificar si hay espacio disponible para buckets vacíos antes de extraer
+                    ItemStack testStack = fuelSlotStack.copy();
+                    testStack.setCount(Math.min(itemsToExtract, fuelSlotStack.getCount()));
+                    
+                    if (canSendBucketToPipeSystem(testStack, level, extractorPos)) {
+                        // Hay espacio disponible, proceder con la extracción
+                        ItemStack extractedStack = fuelSlotStack.copy();
+                        extractedStack.setCount(Math.min(itemsToExtract, fuelSlotStack.getCount()));
+                        
+                        // Remover los buckets del contenedor
+                        fuelSlotStack.shrink(extractedStack.getCount());
+                        container.setItem(FURNACE_FUEL_SLOT, fuelSlotStack);
+                        
+                        // Intentar enviar los buckets al sistema de tuberías
+                        if (sendItemToPipeSystem(extractedStack, level, extractorPos)) {
+                            // Buckets enviados exitosamente
+                            this.setChanged();
+                            return;
+                        } else {
+                            // Si no se pudieron enviar, devolver los buckets al contenedor
+                            ItemStack remainingStack = container.getItem(FURNACE_FUEL_SLOT);
+                            if (remainingStack.isEmpty()) {
+                                container.setItem(FURNACE_FUEL_SLOT, extractedStack);
+                            } else if (remainingStack.getItem() == extractedStack.getItem() && 
+                                      remainingStack.getCount() + extractedStack.getCount() <= remainingStack.getMaxStackSize()) {
+                                remainingStack.grow(extractedStack.getCount());
+                                container.setItem(FURNACE_FUEL_SLOT, remainingStack);
+                            }
+                        }
+                    }
+                    // Si no hay espacio disponible, no extraer los buckets y esperar
+                }
+            }
+            
+            // Luego intentar extraer del slot de resultado (comportamiento original)
             if (FURNACE_RESULT_SLOT < container.getContainerSize()) {
                 ItemStack stackInSlot = container.getItem(FURNACE_RESULT_SLOT);
                 
@@ -203,6 +244,7 @@ public class ExtractorBlockEntity extends BlockEntity {
         // Buscar conectores de indexer cercanos para enviar el item
         int searchRadius = 16;
         
+        // Primero buscar conectores con filtro específico para este item
         for (int x = -searchRadius; x <= searchRadius; x++) {
             for (int y = -searchRadius; y <= searchRadius; y++) {
                 for (int z = -searchRadius; z <= searchRadius; z++) {
@@ -212,12 +254,42 @@ public class ExtractorBlockEntity extends BlockEntity {
                     if (entity instanceof IndexerConnectorBlockEntity) {
                         IndexerConnectorBlockEntity connector = (IndexerConnectorBlockEntity) entity;
                         
-                        // Intentar insertar el item en el conector
-                        ItemStack remainder = connector.insertItem(stack);
+                        // Verificar si el conector tiene un filtro específico para este ítem
+                        ItemStack filterItem = connector.getFilterItem(0);
+                        if (!filterItem.isEmpty() && filterItem.getItem() == stack.getItem()) {
+                            // Intentar insertar el item en el conector con filtro específico
+                            ItemStack remainder = connector.insertItem(stack);
+                            
+                            if (remainder.isEmpty() || remainder.getCount() < stack.getCount()) {
+                                // Se insertó al menos parte del item
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Si no se encontró un conector con filtro específico, buscar conectores sin filtro
+        for (int x = -searchRadius; x <= searchRadius; x++) {
+            for (int y = -searchRadius; y <= searchRadius; y++) {
+                for (int z = -searchRadius; z <= searchRadius; z++) {
+                    BlockPos checkPos = extractorPos.offset(x, y, z);
+                    BlockEntity entity = level.getBlockEntity(checkPos);
+                    
+                    if (entity instanceof IndexerConnectorBlockEntity) {
+                        IndexerConnectorBlockEntity connector = (IndexerConnectorBlockEntity) entity;
                         
-                        if (remainder.isEmpty() || remainder.getCount() < stack.getCount()) {
-                            // Se insertó al menos parte del item
-                            return true;
+                        // Verificar si el conector NO tiene filtro específico para este ítem
+                        ItemStack filterItem = connector.getFilterItem(0);
+                        if (filterItem.isEmpty() || filterItem.getItem() != stack.getItem()) {
+                            // Intentar insertar el item en el conector sin filtro específico
+                            ItemStack remainder = connector.insertItem(stack);
+                            
+                            if (remainder.isEmpty() || remainder.getCount() < stack.getCount()) {
+                                // Se insertó al menos parte del item
+                                return true;
+                            }
                         }
                     }
                 }
@@ -225,6 +297,31 @@ public class ExtractorBlockEntity extends BlockEntity {
         }
         
         return false; // No se pudo enviar el item
+    }
+    
+    private boolean canSendBucketToPipeSystem(ItemStack stack, Level level, BlockPos extractorPos) {
+        // Buscar conectores de indexer cercanos para verificar si hay espacio para buckets
+        int searchRadius = 16;
+        
+        for (int x = -searchRadius; x <= searchRadius; x++) {
+            for (int y = -searchRadius; y <= searchRadius; y++) {
+                for (int z = -searchRadius; z <= searchRadius; z++) {
+                    BlockPos checkPos = extractorPos.offset(x, y, z);
+                    BlockEntity entity = level.getBlockEntity(checkPos);
+                    
+                    if (entity instanceof IndexerConnectorBlockEntity) {
+                        IndexerConnectorBlockEntity connector = (IndexerConnectorBlockEntity) entity;
+                        
+                        // Verificar si hay espacio disponible para buckets vacíos
+                        if (connector.canAcceptBuckets()) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        
+        return false; // No hay espacio disponible para buckets
     }
 
     public boolean hasConnectedContainer() {
