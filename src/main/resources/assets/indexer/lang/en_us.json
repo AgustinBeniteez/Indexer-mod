@@ -52,5 +52,6 @@
   "gui.indexer.controller.stacks": "Stacks",
   "gui.indexer.controller.speed": "Speed",
   "gui.indexer.controller.items_at_once": "items at once",
+  "gui.indexer.dropbox.transfer_all": "Transfer All",
   "itemGroup.indexer": "Indexer"
 }

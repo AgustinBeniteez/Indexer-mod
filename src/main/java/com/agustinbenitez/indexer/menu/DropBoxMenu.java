@@ -86,4 +86,21 @@ public class DropBoxMenu extends AbstractContainerMenu {
     public boolean stillValid(Player player) {
         return this.blockEntity != null && this.blockEntity.stillValid(player);
     }
+
+    // Método para transferir todos los items del inventario del jugador al DropBox
+    public void transferAllItemsToDropBox() {
+        // Iterar sobre los slots del inventario del jugador (slots 54-89)
+        for (int i = CONTAINER_SIZE; i < this.slots.size(); i++) {
+            Slot slot = this.slots.get(i);
+            if (slot.hasItem()) {
+                ItemStack stack = slot.getItem();
+                ItemStack copy = stack.copy();
+                
+                // Intentar mover el stack al DropBox
+                if (this.moveItemStackTo(stack, 0, CONTAINER_SIZE, false)) {
+                    slot.setChanged();
+                }
+            }
+        }
+    }
 }

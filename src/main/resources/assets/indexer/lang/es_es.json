@@ -32,6 +32,7 @@
   "gui.indexer.controller.stacks": "Slots",
   "gui.indexer.controller.speed": "Velocidad",
   "gui.indexer.controller.items_at_once": "a la vez",
+  "gui.indexer.dropbox.transfer_all": "Transferir Todo",
   "itemGroup.indexer": "Indexer",
   "message.indexer.dropbox.no_controller": "¡No se encontró un Controlador Indexador cerca!",
   "message.indexer.dropbox.connected": "Conectado al Controlador Indexador en %s",

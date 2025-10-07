@@ -32,6 +32,13 @@ public class ModNetworking {
                 .encoder(ToggleControllerPacket::toBytes)
                 .consumerMainThread(ToggleControllerPacket::handle)
                 .add();
+        
+        // Registrar el paquete TransferAllItemsPacket
+        net.messageBuilder(TransferAllItemsPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
+                .decoder(TransferAllItemsPacket::new)
+                .encoder(TransferAllItemsPacket::toBytes)
+                .consumerMainThread(TransferAllItemsPacket::handle)
+                .add();
     }
     
     public static <MSG> void sendToServer(MSG message) {
