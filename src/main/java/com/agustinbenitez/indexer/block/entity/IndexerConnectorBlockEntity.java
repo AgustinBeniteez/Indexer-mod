@@ -137,9 +137,22 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
             // Verificar si es cualquier tipo de contenedor (barril, horno, etc.)
             // Pero excluir específicamente otros conectores
             if (adjacentEntity instanceof Container && !(adjacentEntity instanceof IndexerConnectorBlockEntity)) {
-                this.connectedContainerPos = adjacentPos;
-                this.setChanged();
+                // Verificar si es un cofre y si forma parte de un cofre doble
+                if (isChestBlockEntity(adjacentEntity)) {
+                    BlockPos doubleChestPos = findDoubleChestPartner(adjacentPos);
+                    if (doubleChestPos != null) {
+                        // Es un cofre doble, usar la posición del cofre "principal" (el de menor coordenada)
+                        this.connectedContainerPos = getMainChestPosition(adjacentPos, doubleChestPos);
+                    } else {
+                        // Es un cofre simple
+                        this.connectedContainerPos = adjacentPos;
+                    }
+                } else {
+                    // No es un cofre, usar comportamiento normal
+                    this.connectedContainerPos = adjacentPos;
+                }
                 
+                this.setChanged();
                 return;
             }
         }
@@ -147,6 +160,70 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
         // Si se perdió la conexión, marcar como cambiado
         if (oldContainerPos != null && this.connectedContainerPos == null) {
             this.setChanged();
+        }
+    }
+    
+    // Método auxiliar para verificar si una BlockEntity es un cofre
+    private boolean isChestBlockEntity(BlockEntity entity) {
+        return entity.getClass().getName().contains("ChestBlockEntity");
+    }
+    
+    // Método auxiliar para encontrar el cofre compañero en un cofre doble
+    private BlockPos findDoubleChestPartner(BlockPos chestPos) {
+        if (this.level == null) return null;
+        
+        // Los cofres dobles solo se forman horizontalmente (norte, sur, este, oeste)
+        Direction[] horizontalDirections = {Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST};
+        
+        for (Direction direction : horizontalDirections) {
+            BlockPos adjacentPos = chestPos.relative(direction);
+            BlockEntity adjacentEntity = this.level.getBlockEntity(adjacentPos);
+            
+            // Verificar si hay otro cofre adyacente
+            if (adjacentEntity != null && isChestBlockEntity(adjacentEntity)) {
+                // Verificar que ambos cofres estén orientados en la misma dirección
+                BlockState chestState = this.level.getBlockState(chestPos);
+                BlockState adjacentState = this.level.getBlockState(adjacentPos);
+                
+                // Ambos deben ser cofres y tener la misma orientación
+                if (chestState.getBlock().getClass().equals(adjacentState.getBlock().getClass())) {
+                    // Verificar orientación si tienen la propiedad FACING
+                    try {
+                        if (chestState.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING) &&
+                            adjacentState.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING)) {
+                            
+                            Direction chestFacing = chestState.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING);
+                            Direction adjacentFacing = adjacentState.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING);
+                            
+                            if (chestFacing.equals(adjacentFacing)) {
+                                return adjacentPos;
+                            }
+                        } else {
+                            // Si no tienen orientación, asumir que pueden formar cofre doble
+                            return adjacentPos;
+                        }
+                    } catch (Exception e) {
+                        // Si hay algún error con las propiedades, asumir que pueden formar cofre doble
+                        return adjacentPos;
+                    }
+                }
+            }
+        }
+        
+        return null;
+    }
+    
+    // Método auxiliar para obtener la posición "principal" del cofre doble
+    private BlockPos getMainChestPosition(BlockPos pos1, BlockPos pos2) {
+        // Usar el cofre con menor coordenada como principal
+        // Prioridad: X menor, luego Z menor
+        if (pos1.getX() < pos2.getX()) {
+            return pos1;
+        } else if (pos1.getX() > pos2.getX()) {
+            return pos2;
+        } else {
+            // Misma X, comparar Z
+            return pos1.getZ() < pos2.getZ() ? pos1 : pos2;
         }
     }
 
@@ -346,7 +423,38 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
             }
         }
 
-        // Comportamiento normal para otros contenedores o si no se pudo insertar todo en el slot de combustible
+        // Verificar si es un cofre doble y manejar como inventario unificado
+        if (isChestBlockEntity(containerEntity)) {
+            BlockPos partnerPos = findDoubleChestPartner(this.connectedContainerPos);
+            if (partnerPos != null) {
+                // Es un cofre doble, determinar el orden correcto (cofre principal primero)
+                BlockPos mainChestPos = getMainChestPosition(this.connectedContainerPos, partnerPos);
+                BlockPos secondChestPos = mainChestPos.equals(this.connectedContainerPos) ? partnerPos : this.connectedContainerPos;
+                
+                // Usar inventario unificado con el orden correcto
+                remainder = insertIntoDoubleChest(remainder, mainChestPos, secondChestPos);
+                
+                // Marcar ambos cofres como cambiados
+                if (containerEntity instanceof BlockEntity) {
+                    ((BlockEntity) containerEntity).setChanged();
+                }
+                BlockEntity partnerEntity = this.level.getBlockEntity(partnerPos);
+                if (partnerEntity instanceof BlockEntity) {
+                    ((BlockEntity) partnerEntity).setChanged();
+                }
+                
+                int inserted = initialCount - remainder.getCount();
+                if (inserted > 0) {
+                    // Ya no enviamos mensajes de notificación al chat
+                } else {
+                    // No se pudo insertar nada
+                }
+                
+                return remainder;
+            }
+        }
+
+        // Comportamiento normal para otros contenedores o cofres simples
         for (int i = 0; i < container.getContainerSize(); i++) {
             // Si es un horno, no permitir inserción en el slot de salida (slot 2)
             if (isFurnace && i == 2) {
@@ -401,6 +509,88 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
 
         }
 
+        return remainder;
+    }
+    
+    // Método auxiliar para insertar items en un cofre doble como inventario unificado
+    private ItemStack insertIntoDoubleChest(ItemStack stack, BlockPos chest1Pos, BlockPos chest2Pos) {
+        if (this.level == null) return stack;
+        
+        BlockEntity chest1Entity = this.level.getBlockEntity(chest1Pos);
+        BlockEntity chest2Entity = this.level.getBlockEntity(chest2Pos);
+        
+        if (!(chest1Entity instanceof Container) || !(chest2Entity instanceof Container)) {
+            return stack;
+        }
+        
+        Container chest1 = (Container) chest1Entity;
+        Container chest2 = (Container) chest2Entity;
+        ItemStack remainder = stack.copy();
+        
+        // Tratar como inventario unificado de 54 slots (0-53)
+        // Slots 0-26 corresponden al primer cofre, slots 27-53 al segundo cofre
+        int totalSlots = chest1.getContainerSize() + chest2.getContainerSize();
+        
+        // Primero intentar llenar slots existentes con el mismo item (en orden secuencial)
+        for (int globalSlot = 0; globalSlot < totalSlots; globalSlot++) {
+            Container currentChest;
+            int localSlot;
+            
+            if (globalSlot < chest1.getContainerSize()) {
+                currentChest = chest1;
+                localSlot = globalSlot;
+            } else {
+                currentChest = chest2;
+                localSlot = globalSlot - chest1.getContainerSize();
+            }
+            
+            ItemStack slotStack = currentChest.getItem(localSlot);
+            if (!slotStack.isEmpty() && ItemStack.isSameItemSameTags(slotStack, remainder)) {
+                int maxStackSize = Math.min(currentChest.getMaxStackSize(), slotStack.getMaxStackSize());
+                int space = maxStackSize - slotStack.getCount();
+                
+                if (space > 0) {
+                    int toInsert = Math.min(remainder.getCount(), space);
+                    slotStack.grow(toInsert);
+                    remainder.shrink(toInsert);
+                    
+                    if (remainder.isEmpty()) {
+                        return ItemStack.EMPTY;
+                    }
+                }
+            }
+        }
+        
+        // Luego llenar slots vacíos (en orden secuencial desde el slot 0)
+        for (int globalSlot = 0; globalSlot < totalSlots; globalSlot++) {
+            Container currentChest;
+            int localSlot;
+            
+            if (globalSlot < chest1.getContainerSize()) {
+                currentChest = chest1;
+                localSlot = globalSlot;
+            } else {
+                currentChest = chest2;
+                localSlot = globalSlot - chest1.getContainerSize();
+            }
+            
+            ItemStack slotStack = currentChest.getItem(localSlot);
+            if (slotStack.isEmpty()) {
+                int maxStackSize = Math.min(currentChest.getMaxStackSize(), remainder.getMaxStackSize());
+                int toInsert = Math.min(remainder.getCount(), maxStackSize);
+                
+                ItemStack newStack = remainder.copy();
+                newStack.setCount(toInsert);
+                currentChest.setItem(localSlot, newStack);
+                
+                remainder.shrink(toInsert);
+                
+                if (remainder.isEmpty()) {
+                    return ItemStack.EMPTY;
+                }
+            }
+        }
+        
         return remainder;
     }
 
@@ -472,12 +662,51 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
             while (this.filterItems.size() <= slot) {
                 this.filterItems.add(ItemStack.EMPTY);
             }
-            this.filterItems.set(slot, stack.isEmpty() ? ItemStack.EMPTY : stack.copy());
-            if (!this.filterItems.get(slot).isEmpty()) {
-                this.filterItems.get(slot).setCount(1);
+            
+            if (!stack.isEmpty()) {
+                // Buscar el primer slot disponible más cercano al inicio
+                int targetSlot = findNearestEmptySlot();
+                if (targetSlot != -1 && targetSlot != slot) {
+                    // Mover el item al slot más cercano al inicio
+                    while (this.filterItems.size() <= targetSlot) {
+                        this.filterItems.add(ItemStack.EMPTY);
+                    }
+                    this.filterItems.set(targetSlot, stack.copy());
+                    this.filterItems.get(targetSlot).setCount(1);
+                    
+                    // Limpiar el slot original si es diferente
+                    this.filterItems.set(slot, ItemStack.EMPTY);
+                } else {
+                    // Si no hay slot más cercano o ya estamos en el correcto, colocar normalmente
+                    this.filterItems.set(slot, stack.copy());
+                    this.filterItems.get(slot).setCount(1);
+                }
+            } else {
+                // Si el stack está vacío, simplemente limpiar el slot
+                this.filterItems.set(slot, ItemStack.EMPTY);
             }
+            
             this.setChanged();
         }
+    }
+    
+    /**
+     * Encuentra el primer slot vacío más cercano al inicio del filtro
+     * @return el índice del slot vacío más cercano al inicio, o -1 si no hay slots vacíos
+     */
+    private int findNearestEmptySlot() {
+        // Asegurar que la lista tenga el tamaño correcto
+        while (this.filterItems.size() < FILTER_SLOTS) {
+            this.filterItems.add(ItemStack.EMPTY);
+        }
+        
+        // Buscar desde el slot 0 hacia adelante
+        for (int i = 0; i < FILTER_SLOTS; i++) {
+            if (this.filterItems.get(i).isEmpty()) {
+                return i;
+            }
+        }
+        return -1; // No hay slots vacíos
     }
 
     @Override
