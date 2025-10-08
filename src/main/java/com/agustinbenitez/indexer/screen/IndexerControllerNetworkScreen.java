@@ -46,6 +46,10 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
     private int maxVisibleContainers = 6; // Reducido de 8 a 6 debido al mayor tamaño de items
     private ContainerInfo selectedContainer = null;
     
+    // Vista detallada
+    private boolean showDetailedView = false;
+    private ContainerInfo detailedContainer = null;
+    
     // Búsqueda
     private EditBox searchBox;
     private String searchFilter = "";
@@ -237,6 +241,11 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
         
         // Renderizar estadísticas
         renderNetworkStats(guiGraphics);
+        
+        // Renderizar vista detallada si está activa
+        if (showDetailedView && detailedContainer != null) {
+            renderDetailedView(guiGraphics, mouseX, mouseY);
+        }
     }
     
     private void renderContainerList(GuiGraphics guiGraphics, int mouseX, int mouseY) {
@@ -275,27 +284,22 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
             ContainerInfo container = filteredContainers.get(index);
             int itemY = startY + (i * itemHeight);
             
-            // Fondo del item (seleccionado o hover) - colores para modo oscuro
+            // Fondo del item (solo hover, sin selección) - colores para modo oscuro
             boolean isHovered = mouseX >= LEFT_PANEL_X && mouseX <= LEFT_PANEL_X + LEFT_PANEL_WIDTH - 20 &&
                                mouseY >= itemY && mouseY <= itemY + itemHeight - 2;
-            boolean isSelected = container == selectedContainer;
             
-            if (isSelected) {
-                guiGraphics.fill(LEFT_PANEL_X + 2, itemY, LEFT_PANEL_X + LEFT_PANEL_WIDTH - 20, itemY + itemHeight - 2, 0xFF0078D4);
-            } else if (isHovered) {
+            if (isHovered && !showDetailedView) { // Solo mostrar hover si no estamos en vista detallada
                 guiGraphics.fill(LEFT_PANEL_X + 2, itemY, LEFT_PANEL_X + LEFT_PANEL_WIDTH - 20, itemY + itemHeight - 2, 0xFF555555);
             }
             
             // Información del contenedor - posición
             String posText = container.position.getX() + ", " + container.position.getY() + ", " + container.position.getZ();
-            guiGraphics.drawString(this.font, posText, LEFT_PANEL_X + 5, itemY + 2, 
-                                  isSelected ? 0xFFFFFF : 0xCCCCCC, false);
+            guiGraphics.drawString(this.font, posText, LEFT_PANEL_X + 5, itemY + 2, 0xCCCCCC, false);
             
             // Mostrar tipo de contenedor con traducción
             String translatedType = getTranslatedContainerType(container.containerType);
             String typeText = translatedType + " (" + container.itemCount + "/" + container.maxSlots + ")";
-            guiGraphics.drawString(this.font, typeText, LEFT_PANEL_X + 5, itemY + 12, 
-                                  isSelected ? 0xFFFFFF : 0xAAAAAA, false);
+            guiGraphics.drawString(this.font, typeText, LEFT_PANEL_X + 5, itemY + 12, 0xAAAAAA, false);
             
             // Mostrar filtros del contenedor
             if (!container.filters.isEmpty()) {
@@ -318,13 +322,11 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
                 
                 // Si hay más filtros, mostrar "..."
                 if (container.filters.size() > maxFilters) {
-                    guiGraphics.drawString(this.font, "...", filterX + (maxFilters * filterSpacing), filterY + 2, 
-                                          isSelected ? 0xFFFFFF : 0xAAAAAA, false);
+                    guiGraphics.drawString(this.font, "...", filterX + (maxFilters * filterSpacing), filterY + 2, 0xAAAAAA, false);
                 }
             } else {
                 // Mostrar "Sin filtros" si no hay filtros
-                guiGraphics.drawString(this.font, "Sin filtros", LEFT_PANEL_X + 75, itemY + 18, 
-                                      isSelected ? 0xFFFFFF : 0x888888, false);
+                guiGraphics.drawString(this.font, "Sin filtros", LEFT_PANEL_X + 75, itemY + 18, 0x888888, false);
             }
         }
         
@@ -431,6 +433,113 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
         }
     }
     
+    private void renderDetailedView(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        // Fondo semi-transparente para toda la pantalla
+        guiGraphics.fill(0, 0, this.width, this.height, 0x80000000);
+        
+        // Panel detallado centrado
+        int panelWidth = 300;
+        int panelHeight = 200;
+        int panelX = (this.width - panelWidth) / 2;
+        int panelY = (this.height - panelHeight) / 2;
+        
+        // Fondo del panel
+        guiGraphics.fill(panelX, panelY, panelX + panelWidth, panelY + panelHeight, 0xFF2D2D30);
+        
+        // Borde del panel
+        guiGraphics.fill(panelX, panelY, panelX + panelWidth, panelY + 1, 0xFF404040);
+        guiGraphics.fill(panelX, panelY + panelHeight - 1, panelX + panelWidth, panelY + panelHeight, 0xFF404040);
+        guiGraphics.fill(panelX, panelY, panelX + 1, panelY + panelHeight, 0xFF404040);
+        guiGraphics.fill(panelX + panelWidth - 1, panelY, panelX + panelWidth, panelY + panelHeight, 0xFF404040);
+        
+        // Título del panel
+        String title = "Detalles del Contenedor";
+        int titleWidth = this.font.width(title);
+        guiGraphics.drawString(this.font, title, panelX + (panelWidth - titleWidth) / 2, panelY + 8, 0xFFFFFF, false);
+        
+        // Información básica
+        int yOffset = panelY + 25;
+        
+        // Posición
+        String posText = "Posición: " + detailedContainer.position.getX() + ", " + 
+                        detailedContainer.position.getY() + ", " + detailedContainer.position.getZ();
+        guiGraphics.drawString(this.font, posText, panelX + 10, yOffset, 0xCCCCCC, false);
+        yOffset += 12;
+        
+        // Tipo de contenedor
+        String translatedType = getTranslatedContainerType(detailedContainer.containerType);
+        guiGraphics.drawString(this.font, "Tipo: " + translatedType, panelX + 10, yOffset, 0xCCCCCC, false);
+        yOffset += 12;
+        
+        // Capacidad y llenado
+        String capacityText = "Capacidad: " + detailedContainer.itemCount + "/" + detailedContainer.maxSlots + " slots";
+        guiGraphics.drawString(this.font, capacityText, panelX + 10, yOffset, 0xCCCCCC, false);
+        yOffset += 12;
+        
+        // Porcentaje de llenado
+        float fillPercentage = detailedContainer.maxSlots > 0 ? 
+            (float) detailedContainer.itemCount / detailedContainer.maxSlots * 100 : 0;
+        String fillText = String.format("Llenado: %.1f%%", fillPercentage);
+        int fillColor = fillPercentage > 80 ? 0xFFFF4444 : fillPercentage > 50 ? 0xFFFFAA00 : 0xFF44FF44;
+        guiGraphics.drawString(this.font, fillText, panelX + 10, yOffset, fillColor, false);
+        yOffset += 12;
+        
+        // Barra de llenado visual
+        int barWidth = panelWidth - 20;
+        int barHeight = 6;
+        int barX = panelX + 10;
+        int barY = yOffset;
+        
+        // Fondo de la barra
+        guiGraphics.fill(barX, barY, barX + barWidth, barY + barHeight, 0xFF444444);
+        
+        // Barra de progreso
+        int fillWidth = (int) (barWidth * fillPercentage / 100);
+        if (fillWidth > 0) {
+            guiGraphics.fill(barX, barY, barX + fillWidth, barY + barHeight, fillColor);
+        }
+        yOffset += 20;
+        
+        // Filtros
+        guiGraphics.drawString(this.font, "Filtros:", panelX + 10, yOffset, 0xFFFFFF, false);
+        yOffset += 15;
+        
+        if (detailedContainer.filters.isEmpty()) {
+            guiGraphics.drawString(this.font, "  Sin filtros configurados", panelX + 10, yOffset, 0x888888, false);
+        } else {
+            // Mostrar todos los filtros en una cuadrícula
+            int filterX = panelX + 10;
+            int filterY = yOffset;
+            int filterSize = 16;
+            int filtersPerRow = (panelWidth - 20) / (filterSize + 4);
+            
+            for (int i = 0; i < detailedContainer.filters.size(); i++) {
+                ItemStack filter = detailedContainer.filters.get(i);
+                if (!filter.isEmpty()) {
+                    int row = i / filtersPerRow;
+                    int col = i % filtersPerRow;
+                    int itemX = filterX + col * (filterSize + 4);
+                    int itemY = filterY + row * (filterSize + 4);
+                    
+                    // Renderizar el item
+                    guiGraphics.renderItem(filter, itemX, itemY);
+                    
+                    // Tooltip si el mouse está sobre el item
+                    if (mouseX >= itemX && mouseX < itemX + filterSize &&
+                        mouseY >= itemY && mouseY < itemY + filterSize) {
+                        guiGraphics.renderTooltip(this.font, filter, mouseX, mouseY);
+                    }
+                }
+            }
+        }
+        
+        // Instrucciones para cerrar
+        String closeText = "Click fuera para cerrar";
+        int closeWidth = this.font.width(closeText);
+        guiGraphics.drawString(this.font, closeText, panelX + (panelWidth - closeWidth) / 2, 
+                              panelY + panelHeight - 15, 0x888888, false);
+    }
+    
     private List<ContainerInfo> getFilteredContainers() {
         if (searchFilter.isEmpty()) {
             return containerList;
@@ -445,16 +554,30 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
     
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        // Manejar clics en la lista de contenedores
+        // Si estamos en vista detallada, manejar el click para cerrarla
+        if (showDetailedView) {
+            // Click fuera del panel detallado para cerrarlo
+            if (mouseX < LEFT_PANEL_X || mouseX > LEFT_PANEL_X + LEFT_PANEL_WIDTH ||
+                mouseY < LEFT_PANEL_Y || mouseY > LEFT_PANEL_Y + LEFT_PANEL_HEIGHT) {
+                showDetailedView = false;
+                detailedContainer = null;
+                return true;
+            }
+            return true; // Consumir el click dentro del panel detallado
+        }
+        
+        // Manejar clics en la lista de contenedores para abrir vista detallada
         if (mouseX >= LEFT_PANEL_X && mouseX <= LEFT_PANEL_X + LEFT_PANEL_WIDTH &&
             mouseY >= LEFT_PANEL_Y + 5 && mouseY <= LEFT_PANEL_Y + LEFT_PANEL_HEIGHT - 5) {
             
-            int itemHeight = 22;
+            int itemHeight = 32; // Usar el mismo itemHeight que en renderContainerList
             int clickedIndex = ((int)mouseY - LEFT_PANEL_Y - 5) / itemHeight + scrollOffset;
             List<ContainerInfo> filteredContainers = getFilteredContainers();
             
             if (clickedIndex >= 0 && clickedIndex < filteredContainers.size()) {
-                selectedContainer = filteredContainers.get(clickedIndex);
+                // Abrir vista detallada en lugar de seleccionar
+                detailedContainer = filteredContainers.get(clickedIndex);
+                showDetailedView = true;
                 return true;
             }
         }
