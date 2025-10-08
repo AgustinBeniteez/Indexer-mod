@@ -3,7 +3,8 @@ package com.agustinbenitez.indexer.init;
 import com.agustinbenitez.indexer.IndexerMod;
 import com.agustinbenitez.indexer.inventory.IndexerConnectorMenu;
 import com.agustinbenitez.indexer.menu.DropBoxMenu;
-import com.agustinbenitez.indexer.menu.IndexerControllerMenu;
+
+import com.agustinbenitez.indexer.menu.IndexerControllerNetworkMenu;
 
 import net.minecraft.world.inventory.MenuType;
 import net.minecraftforge.common.extensions.IForgeMenuType;
@@ -21,9 +22,9 @@ public class ModMenuTypes {
                     () -> IForgeMenuType.create((id, inventory, data) -> 
                             new IndexerConnectorMenu(id, inventory, new net.minecraft.world.SimpleContainer(9), null)));
 
-    public static final RegistryObject<MenuType<IndexerControllerMenu>> INDEXER_CONTROLLER_MENU = 
-            MENUS.register("indexer_controller_menu", 
-                    () -> IForgeMenuType.create(IndexerControllerMenu::new));
+    public static final RegistryObject<MenuType<IndexerControllerNetworkMenu>> INDEXER_CONTROLLER_NETWORK_MENU = 
+            MENUS.register("indexer_controller_network_menu", 
+                    () -> IForgeMenuType.create(IndexerControllerNetworkMenu::new));
                     
     public static final RegistryObject<MenuType<DropBoxMenu>> DROP_BOX_MENU = 
             MENUS.register("drop_box_menu", 

@@ -128,7 +128,8 @@ public class IndexerControllerBlock extends BaseEntityBlock {
         if (!level.isClientSide()) {
             BlockEntity entity = level.getBlockEntity(pos);
             if (entity instanceof IndexerControllerBlockEntity controller) {
-                NetworkHooks.openScreen((ServerPlayer) player, controller, pos);
+                // Abrir directamente la GUI de red con clic derecho normal
+                controller.openNetworkScreen((ServerPlayer) player, pos);
                 return InteractionResult.CONSUME;
             }
         }

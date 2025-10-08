@@ -37,6 +37,9 @@ public class ModItems {
             () -> new IndexerManualItem(new Item.Properties().stacksTo(1)));
             
     // Transfer speed upgrades
+    public static final RegistryObject<Item> TRANSFER_SPEED_UPGRADE_ZERO = ITEMS.register("transfer_speed_upgrade_zero",
+            () -> new TransferSpeedUpgradeItem(new Item.Properties().stacksTo(16), 0, 1));
+            
     public static final RegistryObject<Item> TRANSFER_SPEED_UPGRADE_BASIC = ITEMS.register("transfer_speed_upgrade_basic",
             () -> new TransferSpeedUpgradeItem(new Item.Properties().stacksTo(16), 1, 5));
             

@@ -7,12 +7,13 @@ import com.agustinbenitez.indexer.block.IndexerControllerBlock;
 import com.agustinbenitez.indexer.block.IndexerPipeBlock;
 import com.agustinbenitez.indexer.init.ModBlockEntities;
 import com.agustinbenitez.indexer.init.ModBlocks;
-import com.agustinbenitez.indexer.menu.IndexerControllerMenu;
+import com.agustinbenitez.indexer.menu.IndexerControllerNetworkMenu;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.Container;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
@@ -61,6 +62,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                     case 4 -> IndexerControllerBlockEntity.this.getItemsPerTransfer();
                     case 5 -> IndexerControllerBlockEntity.this.getTotalCapacity();
                     case 6 -> IndexerControllerBlockEntity.this.getOccupiedSlots();
+                    case 7 -> IndexerControllerBlockEntity.this.getCurrentUpgradeLevel();
                     default -> 0;
                 };
             }
@@ -75,19 +77,19 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
 
             @Override
             public int getCount() {
-                return 7;
+                return 8;
             }
         };
     }
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable("container.indexer.controller");
+        return Component.translatable("container.indexer.controller.network");
     }
 
     @Override
     public AbstractContainerMenu createMenu(int id, Inventory inventory, Player player) {
-        return new IndexerControllerMenu(id, inventory, this, this.data);
+        return new IndexerControllerNetworkMenu(id, inventory, this, this.data);
     }
     
     public boolean stillValid(Player player) {
@@ -1202,5 +1204,120 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         }
         
         return otherControllers;
+    }
+    
+    // Métodos para la nueva GUI de red
+    public void forceNetworkRefresh() {
+        connectorCache = null;
+        uniqueContainersCache = null;
+        totalAvailableSlotsCache = -1;
+        totalCapacityCache = -1;
+        occupiedSlotsCache = -1;
+        markNetworkChanged();
+        setChanged();
+    }
+    
+    public List<ContainerNetworkInfo> getNetworkContainers() {
+        List<ContainerNetworkInfo> networkContainers = new ArrayList<>();
+        List<IndexerConnectorBlockEntity> connectors = findConnectors();
+        
+        for (IndexerConnectorBlockEntity connector : connectors) {
+            BlockPos connectedPos = connector.getConnectedContainerPos();
+            if (connectedPos != null && level != null) {
+                BlockEntity blockEntity = level.getBlockEntity(connectedPos);
+                if (blockEntity instanceof Container container) {
+                    ContainerNetworkInfo info = new ContainerNetworkInfo();
+                    info.position = connectedPos;
+                    info.containerType = getContainerTypeName(blockEntity);
+                    info.maxSlots = container.getContainerSize();
+                    info.itemCount = getOccupiedSlots(container);
+                    info.filters = getContainerFilters(connector);
+                    networkContainers.add(info);
+                }
+            }
+        }
+        
+        return networkContainers;
+    }
+    
+    private String getContainerTypeName(BlockEntity blockEntity) {
+        // Usar el ResourceLocation del bloque para obtener un nombre consistente
+        ResourceLocation blockId = net.minecraftforge.registries.ForgeRegistries.BLOCKS.getKey(blockEntity.getBlockState().getBlock());
+        if (blockId != null) {
+            String path = blockId.getPath();
+            // Convertir nombres como "chest", "furnace", "barrel" a nombres más legibles
+            switch (path) {
+                case "chest":
+                    return "Cofre";
+                case "furnace":
+                    return "Horno";
+                case "barrel":
+                    return "Barril";
+                case "shulker_box":
+                    return "Caja Shulker";
+                case "hopper":
+                    return "Tolva";
+                case "dropper":
+                    return "Dispensador";
+                case "dispenser":
+                    return "Dispensador";
+                default:
+                    // Para otros contenedores, capitalizar la primera letra
+                    return path.substring(0, 1).toUpperCase() + path.substring(1).replace("_", " ");
+            }
+        }
+        // Fallback al método anterior si no se puede obtener el ResourceLocation
+        String blockName = blockEntity.getBlockState().getBlock().getName().getString();
+        return blockName.substring(blockName.lastIndexOf('.') + 1);
+    }
+    
+    private int getOccupiedSlots(Container container) {
+        int occupied = 0;
+        for (int i = 0; i < container.getContainerSize(); i++) {
+            if (!container.getItem(i).isEmpty()) {
+                occupied++;
+            }
+        }
+        return occupied;
+    }
+    
+    private List<ItemStack> getContainerFilters(IndexerConnectorBlockEntity connector) {
+        List<ItemStack> filters = new ArrayList<>();
+        // Obtener filtros del conector (implementación específica del mod)
+        for (int i = 0; i < connector.getContainerSize(); i++) {
+            ItemStack filterItem = connector.getItem(i);
+            if (!filterItem.isEmpty()) {
+                filters.add(filterItem.copy());
+            }
+        }
+        return filters;
+    }
+    
+    // Método para abrir la GUI de red
+    public void openNetworkScreen(net.minecraft.server.level.ServerPlayer player, BlockPos pos) {
+        net.minecraftforge.network.NetworkHooks.openScreen(player, new MenuProvider() {
+            @Override
+            public Component getDisplayName() {
+                return Component.translatable("gui.indexer.controller.network_title");
+            }
+            
+            @Override
+            public AbstractContainerMenu createMenu(int id, Inventory inventory, Player player) {
+                return new com.agustinbenitez.indexer.menu.IndexerControllerNetworkMenu(id, inventory, IndexerControllerBlockEntity.this, data);
+            }
+        }, pos);
+    }
+    
+    // Clase para almacenar información de contenedores de red
+    public static class ContainerNetworkInfo {
+        public BlockPos position;
+        public String containerType;
+        public int itemCount;
+        public int maxSlots;
+        public List<ItemStack> filters;
+
+        public ContainerNetworkInfo() {
+            this.filters = new ArrayList<>();
+        }
     }
 }

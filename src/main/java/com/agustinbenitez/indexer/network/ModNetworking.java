@@ -39,6 +39,20 @@ public class ModNetworking {
                 .encoder(TransferAllItemsPacket::toBytes)
                 .consumerMainThread(TransferAllItemsPacket::handle)
                 .add();
+        
+        // Registrar el paquete RefreshNetworkPacket
+        net.messageBuilder(RefreshNetworkPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
+                .decoder(RefreshNetworkPacket::new)
+                .encoder(RefreshNetworkPacket::toBytes)
+                .consumerMainThread(RefreshNetworkPacket::handle)
+                .add();
+        
+        // Registrar el paquete ContainerListUpdatePacket
+        net.messageBuilder(ContainerListUpdatePacket.class, id(), NetworkDirection.PLAY_TO_CLIENT)
+                .decoder(ContainerListUpdatePacket::new)
+                .encoder(ContainerListUpdatePacket::toBytes)
+                .consumerMainThread(ContainerListUpdatePacket::handle)
+                .add();
     }
     
     public static <MSG> void sendToServer(MSG message) {

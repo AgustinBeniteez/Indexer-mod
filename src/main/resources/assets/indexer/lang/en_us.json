@@ -21,6 +21,7 @@
   "item.indexer.extractor.tooltip": "Automatically extracts items from containers above or below and sends them through the pipe network",
   "item.indexer.controller.upgrade_info": "Upgrade: %s (Transfers %s items at once)",
   "container.indexer.controller": "Indexer Controller",
+  "container.indexer.controller.network": "Controlador Indexer",
   "container.indexer.connector": "Indexer Connector",
   "container.indexer.drop_box": "DropBox",
   "message.indexer.connector.filter_set": "Filter set to: %s",
@@ -44,6 +45,7 @@
   "upgrade.indexer.elite": "Elite upgrade",
   "upgrade.indexer.definitive": "Definitive upgrade",
   "upgrade.indexer.copper": "Copper upgrade",
+  "upgrade.indexer.zero": "Initial upgrade",
   "gui.indexer.controller.connection_info": "Connection Info:",
   "gui.indexer.controller.dropbox": "DropBox",
   "gui.indexer.controller.connected": "Connected",
@@ -53,6 +55,12 @@
   "gui.indexer.controller.stacks": "Stacks",
   "gui.indexer.controller.speed": "Speed",
   "gui.indexer.controller.items_at_once": "items at once",
+  "gui.indexer.controller.search": "Search containers...",
+  "gui.indexer.controller.refresh": "Refresh",
+  "gui.indexer.controller.network_stats": "Network Statistics",
+  "gui.indexer.controller.network_title": "Network Controller",
+  "gui.indexer.controller.container_enabled": "Enabled",
+  "gui.indexer.controller.container_disabled": "Disabled",
   "gui.indexer.dropbox.transfer_all": "Transfer All",
   "itemGroup.indexer": "Indexer"
 }

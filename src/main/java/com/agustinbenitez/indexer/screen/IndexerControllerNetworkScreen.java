@@ -1,0 +1,566 @@
+package com.agustinbenitez.indexer.screen;
+
+import com.agustinbenitez.indexer.menu.IndexerControllerNetworkMenu;
+import com.agustinbenitez.indexer.network.ModNetworking;
+import com.agustinbenitez.indexer.network.RefreshNetworkPacket;
+import com.agustinbenitez.indexer.network.ContainerListUpdatePacket;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.core.BlockPos;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
+
+import java.text.DecimalFormat;
+import java.util.*;
+
+@OnlyIn(Dist.CLIENT)
+public class IndexerControllerNetworkScreen extends AbstractContainerScreen<IndexerControllerNetworkMenu> {
+    private static final ResourceLocation TEXTURE = new ResourceLocation("indexer", "textures/gui/indexer_controller_network_gui.png");
+    
+    // Dimensiones de la GUI
+    private static final int GUI_WIDTH = 400;
+    private static final int GUI_HEIGHT = 240;
+    
+    // Panel izquierdo - Lista de contenedores
+    private static final int LEFT_PANEL_X = 8;
+    private static final int LEFT_PANEL_Y = 20;
+    private static final int LEFT_PANEL_WIDTH = 180;
+    private static final int LEFT_PANEL_HEIGHT = 200;
+    
+    // Panel derecho - Estadísticas
+    private static final int RIGHT_PANEL_X = 200;
+    private static final int RIGHT_PANEL_Y = 20;
+    private static final int RIGHT_PANEL_WIDTH = 180;
+    private static final int RIGHT_PANEL_HEIGHT = 200;
+    
+    // Lista de contenedores y scroll
+    private List<ContainerInfo> containerList = new ArrayList<>();
+    private int scrollOffset = 0;
+    private int maxVisibleContainers = 6; // Reducido de 8 a 6 debido al mayor tamaño de items
+    private ContainerInfo selectedContainer = null;
+    
+    // Búsqueda
+    private EditBox searchBox;
+    private String searchFilter = "";
+    
+    // Botón de refresh
+    private Button refreshButton;
+    
+    // Sistema de refresco automático
+    private int autoRefreshTicks = 0;
+    private static final int AUTO_REFRESH_INTERVAL = 60; // Refrescar cada 3 segundos (60 ticks)
+    
+    // Indicador de carga
+    private boolean isLoading = false;
+    
+    public IndexerControllerNetworkScreen(IndexerControllerNetworkMenu menu, Inventory inventory, Component title) {
+        super(menu, inventory, title);
+        this.imageWidth = GUI_WIDTH;
+        this.imageHeight = GUI_HEIGHT;
+        this.inventoryLabelY = this.imageHeight - 10;
+        
+        // Inicializar lista de contenedores (esto se actualizará desde el servidor)
+        updateContainerList();
+    }
+    
+    @Override
+    protected void init() {
+        super.init();
+        
+        int leftX = (this.width - this.imageWidth) / 2;
+        int topY = (this.height - this.imageHeight) / 2;
+        
+        // Caja de búsqueda
+        this.searchBox = new EditBox(this.font, leftX + LEFT_PANEL_X + 2, topY + LEFT_PANEL_Y - 15, 
+                                   LEFT_PANEL_WIDTH - 4, 12, Component.translatable("gui.indexer.controller.search"));
+        this.searchBox.setMaxLength(50);
+        this.searchBox.setResponder(this::onSearchChanged);
+        this.addWidget(this.searchBox);
+        
+        // Botón de refrescar
+        this.refreshButton = Button.builder(Component.translatable("gui.indexer.controller.refresh"), 
+                                          button -> refreshNetwork())
+                                  .bounds(leftX + RIGHT_PANEL_X + 10, topY + RIGHT_PANEL_Y + RIGHT_PANEL_HEIGHT - 25, 80, 20)
+                                  .build();
+        this.addRenderableWidget(this.refreshButton);
+    }
+    
+    private void onSearchChanged(String search) {
+        this.searchFilter = search.toLowerCase();
+        this.scrollOffset = 0;
+    }
+    
+    private void refreshNetwork() {
+        // Enviar paquete al servidor para refrescar la red
+        ModNetworking.sendToServer(new RefreshNetworkPacket(this.menu.getBlockEntity().getBlockPos()));
+        
+        // Actualizar la lista de contenedores inmediatamente
+        updateContainerList();
+        
+        // Resetear el contador de refresco automático para evitar refrescos duplicados
+        autoRefreshTicks = 0;
+        
+        // Opcional: Mostrar feedback visual al usuario
+        // Se podría agregar un mensaje temporal o cambiar el color del botón brevemente
+    }
+    
+    private void updateContainerList() {
+        // Mostrar indicador de carga
+        isLoading = true;
+        
+        // Limpiar la lista actual
+        containerList.clear();
+        
+        // Enviar solicitud al servidor para obtener datos reales
+        ModNetworking.sendToServer(new RefreshNetworkPacket(this.menu.getBlockEntity().getBlockPos()));
+    }
+    
+    // Método para actualizar la lista desde el servidor
+    public void updateContainerListFromServer(List<ContainerListUpdatePacket.ContainerData> serverContainers) {
+        containerList.clear();
+        
+        for (ContainerListUpdatePacket.ContainerData serverContainer : serverContainers) {
+            ContainerInfo info = new ContainerInfo();
+            info.position = serverContainer.position;
+            info.containerType = serverContainer.containerType;
+            info.itemCount = serverContainer.itemCount;
+            info.maxSlots = serverContainer.maxSlots;
+            info.filters = new ArrayList<>(serverContainer.filters);
+            containerList.add(info);
+        }
+        
+        // Ocultar indicador de carga
+        isLoading = false;
+    }
+    
+    private String getRandomContainerType() {
+        String[] types = {"Chest", "Barrel", "Furnace", "Blast Furnace", "Smoker", "Hopper"};
+        return types[(int)(Math.random() * types.length)];
+    }
+    
+    private int getMaxSlotsForType(String type) {
+        return switch (type) {
+            case "Chest", "Barrel" -> 27;
+            case "Furnace", "Blast Furnace", "Smoker" -> 3;
+            case "Hopper" -> 5;
+            default -> 27;
+        };
+    }
+    
+    private List<ItemStack> generateRandomFilters() {
+        List<ItemStack> filters = new ArrayList<>();
+        ItemStack[] possibleItems = {
+            new ItemStack(Items.IRON_INGOT),
+            new ItemStack(Items.GOLD_INGOT),
+            new ItemStack(Items.DIAMOND),
+            new ItemStack(Items.COAL),
+            new ItemStack(Items.REDSTONE)
+        };
+        
+        int filterCount = (int)(Math.random() * 3);
+        for (int i = 0; i < filterCount; i++) {
+            filters.add(possibleItems[(int)(Math.random() * possibleItems.length)]);
+        }
+        
+        return filters;
+    }
+    
+    @Override
+    protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
+        int x = (this.width - this.imageWidth) / 2;
+        int y = (this.height - this.imageHeight) / 2;
+        
+        // Renderizar fondo base en modo oscuro
+        guiGraphics.fill(x, y, x + this.imageWidth, y + this.imageHeight, 0xFF2D2D30);
+        
+        // Bordes de la GUI en modo oscuro
+        guiGraphics.fill(x, y, x + this.imageWidth, y + 2, 0xFF1E1E1E); // Top
+        guiGraphics.fill(x, y + this.imageHeight - 2, x + this.imageWidth, y + this.imageHeight, 0xFF1E1E1E); // Bottom
+        guiGraphics.fill(x, y, x + 2, y + this.imageHeight, 0xFF1E1E1E); // Left
+        guiGraphics.fill(x + this.imageWidth - 2, y, x + this.imageWidth, y + this.imageHeight, 0xFF1E1E1E); // Right
+        
+        // Panel izquierdo - fondo oscuro
+        guiGraphics.fill(x + LEFT_PANEL_X, y + LEFT_PANEL_Y, 
+                        x + LEFT_PANEL_X + LEFT_PANEL_WIDTH, y + LEFT_PANEL_Y + LEFT_PANEL_HEIGHT, 
+                        0xFF1E1E1E);
+        
+        // Panel izquierdo - borde
+        guiGraphics.fill(x + LEFT_PANEL_X, y + LEFT_PANEL_Y, 
+                        x + LEFT_PANEL_X + LEFT_PANEL_WIDTH, y + LEFT_PANEL_Y + 1, 0xFF404040);
+        guiGraphics.fill(x + LEFT_PANEL_X, y + LEFT_PANEL_Y + LEFT_PANEL_HEIGHT - 1, 
+                        x + LEFT_PANEL_X + LEFT_PANEL_WIDTH, y + LEFT_PANEL_Y + LEFT_PANEL_HEIGHT, 0xFF404040);
+        guiGraphics.fill(x + LEFT_PANEL_X, y + LEFT_PANEL_Y, 
+                        x + LEFT_PANEL_X + 1, y + LEFT_PANEL_Y + LEFT_PANEL_HEIGHT, 0xFF404040);
+        guiGraphics.fill(x + LEFT_PANEL_X + LEFT_PANEL_WIDTH - 1, y + LEFT_PANEL_Y, 
+                        x + LEFT_PANEL_X + LEFT_PANEL_WIDTH, y + LEFT_PANEL_Y + LEFT_PANEL_HEIGHT, 0xFF404040);
+        
+        // Panel derecho - fondo oscuro
+        guiGraphics.fill(x + RIGHT_PANEL_X, y + RIGHT_PANEL_Y, 
+                        x + RIGHT_PANEL_X + RIGHT_PANEL_WIDTH, y + RIGHT_PANEL_Y + RIGHT_PANEL_HEIGHT, 
+                        0xFF1E1E1E);
+        
+        // Panel derecho - borde
+        guiGraphics.fill(x + RIGHT_PANEL_X, y + RIGHT_PANEL_Y, 
+                        x + RIGHT_PANEL_X + RIGHT_PANEL_WIDTH, y + RIGHT_PANEL_Y + 1, 0xFF404040);
+        guiGraphics.fill(x + RIGHT_PANEL_X, y + RIGHT_PANEL_Y + RIGHT_PANEL_HEIGHT - 1, 
+                        x + RIGHT_PANEL_X + RIGHT_PANEL_WIDTH, y + RIGHT_PANEL_Y + RIGHT_PANEL_HEIGHT, 0xFF404040);
+        guiGraphics.fill(x + RIGHT_PANEL_X, y + RIGHT_PANEL_Y, 
+                        x + RIGHT_PANEL_X + 1, y + RIGHT_PANEL_Y + RIGHT_PANEL_HEIGHT, 0xFF404040);
+        guiGraphics.fill(x + RIGHT_PANEL_X + RIGHT_PANEL_WIDTH - 1, y + RIGHT_PANEL_Y, 
+                        x + RIGHT_PANEL_X + RIGHT_PANEL_WIDTH, y + RIGHT_PANEL_Y + RIGHT_PANEL_HEIGHT, 0xFF404040);
+    }
+    
+    @Override
+    protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        // Título centrado en color claro para modo oscuro - movido más abajo
+        int titleWidth = this.font.width(this.title);
+        int titleX = (this.imageWidth - titleWidth) / 2;
+        guiGraphics.drawString(this.font, this.title, titleX, this.imageHeight - 15, 0xFFFFFF, false);
+        
+        // Título del panel izquierdo en color claro
+        guiGraphics.drawString(this.font, Component.translatable("gui.indexer.controller.containers"), 
+                              LEFT_PANEL_X + 5, LEFT_PANEL_Y - 10, 0xCCCCCC, false);
+        
+        // Título del panel derecho en color claro
+        guiGraphics.drawString(this.font, Component.translatable("gui.indexer.controller.network_stats"), 
+                              RIGHT_PANEL_X + 5, RIGHT_PANEL_Y - 10, 0xCCCCCC, false);
+        
+        // Renderizar lista de contenedores
+        renderContainerList(guiGraphics, mouseX, mouseY);
+        
+        // Renderizar estadísticas
+        renderNetworkStats(guiGraphics);
+    }
+    
+    private void renderContainerList(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        // Mostrar indicador de carga si está cargando
+        if (isLoading) {
+            int centerX = LEFT_PANEL_X + LEFT_PANEL_WIDTH / 2;
+            int centerY = LEFT_PANEL_Y + LEFT_PANEL_HEIGHT / 2;
+            
+            // Fondo semi-transparente
+            guiGraphics.fill(LEFT_PANEL_X + 2, LEFT_PANEL_Y + 2, 
+                           LEFT_PANEL_X + LEFT_PANEL_WIDTH - 2, LEFT_PANEL_Y + LEFT_PANEL_HEIGHT - 2, 
+                           0x80000000);
+            
+            // Icono de carga (spinner simple usando caracteres)
+            long time = System.currentTimeMillis() / 200;
+            String[] spinnerChars = {"|", "/", "-", "\\"};
+            String spinner = spinnerChars[(int)(time % 4)];
+            
+            // Texto de carga con icono
+            String loadingText = "Cargando " + spinner;
+            int textWidth = this.font.width(loadingText);
+            guiGraphics.drawString(this.font, loadingText, centerX - textWidth / 2, centerY - 4, 0xFFFFFF, false);
+            
+            return;
+        }
+        
+        List<ContainerInfo> filteredContainers = getFilteredContainers();
+        
+        int startY = LEFT_PANEL_Y + 5;
+        int itemHeight = 32; // Aumentado para dar espacio a los filtros
+        
+        for (int i = 0; i < Math.min(maxVisibleContainers, filteredContainers.size() - scrollOffset); i++) {
+            int index = i + scrollOffset;
+            if (index >= filteredContainers.size()) break;
+            
+            ContainerInfo container = filteredContainers.get(index);
+            int itemY = startY + (i * itemHeight);
+            
+            // Fondo del item (seleccionado o hover) - colores para modo oscuro
+            boolean isHovered = mouseX >= LEFT_PANEL_X && mouseX <= LEFT_PANEL_X + LEFT_PANEL_WIDTH - 20 &&
+                               mouseY >= itemY && mouseY <= itemY + itemHeight - 2;
+            boolean isSelected = container == selectedContainer;
+            
+            if (isSelected) {
+                guiGraphics.fill(LEFT_PANEL_X + 2, itemY, LEFT_PANEL_X + LEFT_PANEL_WIDTH - 20, itemY + itemHeight - 2, 0xFF0078D4);
+            } else if (isHovered) {
+                guiGraphics.fill(LEFT_PANEL_X + 2, itemY, LEFT_PANEL_X + LEFT_PANEL_WIDTH - 20, itemY + itemHeight - 2, 0xFF555555);
+            }
+            
+            // Información del contenedor - posición
+            String posText = container.position.getX() + ", " + container.position.getY() + ", " + container.position.getZ();
+            guiGraphics.drawString(this.font, posText, LEFT_PANEL_X + 5, itemY + 2, 
+                                  isSelected ? 0xFFFFFF : 0xCCCCCC, false);
+            
+            // Mostrar tipo de contenedor con traducción
+            String translatedType = getTranslatedContainerType(container.containerType);
+            String typeText = translatedType + " (" + container.itemCount + "/" + container.maxSlots + ")";
+            guiGraphics.drawString(this.font, typeText, LEFT_PANEL_X + 5, itemY + 12, 
+                                  isSelected ? 0xFFFFFF : 0xAAAAAA, false);
+            
+            // Mostrar filtros del contenedor
+            if (!container.filters.isEmpty()) {
+                int filterX = LEFT_PANEL_X + 75; // Centrado mejor para evitar que se salgan
+                int filterY = itemY + 18; // Subido de 22 a 18 para que aparezcan más arriba
+                int filterSize = 8; // Tamaño pequeño para los iconos de filtro
+                int maxFilters = 5; // Reducido a 5 para mejor centrado
+                int filterSpacing = 12; // Espaciado entre filtros
+                
+                for (int f = 0; f < Math.min(container.filters.size(), maxFilters); f++) {
+                    ItemStack filter = container.filters.get(f);
+                    if (!filter.isEmpty()) {
+                        // Renderizar el icono del item del filtro en pequeño
+                        guiGraphics.pose().pushPose();
+                        guiGraphics.pose().scale(0.6f, 0.6f, 1.0f);
+                        guiGraphics.renderItem(filter, (int)((filterX + (f * filterSpacing)) / 0.6f), (int)(filterY / 0.6f));
+                        guiGraphics.pose().popPose();
+                    }
+                }
+                
+                // Si hay más filtros, mostrar "..."
+                if (container.filters.size() > maxFilters) {
+                    guiGraphics.drawString(this.font, "...", filterX + (maxFilters * filterSpacing), filterY + 2, 
+                                          isSelected ? 0xFFFFFF : 0xAAAAAA, false);
+                }
+            } else {
+                // Mostrar "Sin filtros" si no hay filtros
+                guiGraphics.drawString(this.font, "Sin filtros", LEFT_PANEL_X + 75, itemY + 18, 
+                                      isSelected ? 0xFFFFFF : 0x888888, false);
+            }
+        }
+        
+        // Scrollbar si es necesario
+        if (filteredContainers.size() > maxVisibleContainers) {
+            renderScrollbar(guiGraphics, filteredContainers.size());
+        }
+    }
+    
+    private void renderScrollbar(GuiGraphics guiGraphics, int totalItems) {
+        int scrollbarX = LEFT_PANEL_X + LEFT_PANEL_WIDTH - 8;
+        int scrollbarY = LEFT_PANEL_Y + 5;
+        int scrollbarHeight = LEFT_PANEL_HEIGHT - 10;
+        
+        // Fondo del scrollbar
+        guiGraphics.fill(scrollbarX, scrollbarY, scrollbarX + 6, scrollbarY + scrollbarHeight, 0xFFCCCCCC);
+        
+        // Thumb del scrollbar
+        int thumbHeight = Math.max(10, (maxVisibleContainers * scrollbarHeight) / totalItems);
+        int thumbY = scrollbarY + (scrollOffset * (scrollbarHeight - thumbHeight)) / (totalItems - maxVisibleContainers);
+        
+        guiGraphics.fill(scrollbarX + 1, thumbY, scrollbarX + 5, thumbY + thumbHeight, 0xFF888888);
+    }
+    
+    private void renderNetworkStats(GuiGraphics guiGraphics) {
+        int startY = RIGHT_PANEL_Y + 10;
+        int lineHeight = 12;
+        int currentY = startY;
+        
+        // Estadísticas de conexión - colores para modo oscuro
+        guiGraphics.drawString(this.font, Component.translatable("gui.indexer.controller.connection_info"), 
+                              RIGHT_PANEL_X + 10, currentY, 0xCCCCCC, false);
+        currentY += lineHeight + 5;
+        
+        String dropBoxText = Component.translatable("gui.indexer.controller.dropbox").getString() + ": " + 
+                           (this.menu.getBlockEntity().hasDropContainer() ? Component.translatable("gui.indexer.controller.connected").getString() : "None");
+        guiGraphics.drawString(this.font, dropBoxText, RIGHT_PANEL_X + 10, currentY, 0xFFFFFF, false);
+        currentY += lineHeight;
+        
+        String containersText = Component.translatable("gui.indexer.controller.containers").getString() + ": " + 
+                               this.menu.getConnectedContainersCount();
+        guiGraphics.drawString(this.font, containersText, RIGHT_PANEL_X + 10, currentY, 0xFFFFFF, false);
+        currentY += lineHeight + 10;
+        
+        // Estadísticas de capacidad - colores para modo oscuro
+        guiGraphics.drawString(this.font, Component.translatable("gui.indexer.controller.capacity_info"), 
+                              RIGHT_PANEL_X + 10, currentY, 0xCCCCCC, false);
+        currentY += lineHeight + 5;
+        
+        int totalCapacity = this.menu.getTotalCapacity();
+        int occupiedSlots = this.menu.getOccupiedSlots();
+        int availableSlots = totalCapacity - occupiedSlots;
+        
+        // Mostrar solo los slots disponibles sin el texto de objetos
+        String slotsText = formatNumber(availableSlots) + "/" + formatNumber(totalCapacity);
+        guiGraphics.drawString(this.font, slotsText, RIGHT_PANEL_X + 10, currentY, 0xFFFFFF, false);
+        currentY += lineHeight;
+        
+        // Mostrar información de la mejora aplicada y velocidad en la misma línea
+        int upgradeLevel = this.menu.getCurrentUpgradeLevel();
+        
+        String transferRateText = Component.translatable("gui.indexer.controller.speed").getString() + ": " + 
+                                 this.menu.getItemsPerTransfer() + " " + 
+                                 Component.translatable("gui.indexer.controller.items_at_once").getString();
+        
+        // Renderizar el texto de velocidad
+        guiGraphics.drawString(this.font, transferRateText, RIGHT_PANEL_X + 10, currentY, 0x00FF00, false);
+        
+        // Renderizar el icono de la mejora a la derecha del texto de velocidad
+        if (upgradeLevel > 0) {
+            ItemStack upgradeItem = getUpgradeItemForLevel(upgradeLevel);
+            if (!upgradeItem.isEmpty()) {
+                int textWidth = this.font.width(transferRateText);
+                guiGraphics.renderItem(upgradeItem, RIGHT_PANEL_X + 15 + textWidth, currentY - 2);
+            }
+        }
+        
+        currentY += lineHeight + 10;
+        
+        // Barra de progreso de capacidad
+        if (totalCapacity > 0) {
+            int barWidth = RIGHT_PANEL_WIDTH - 20;
+            int barHeight = 8;
+            int barX = RIGHT_PANEL_X + 10;
+            int barY = currentY;
+            
+            // Fondo de la barra - más oscuro para modo oscuro
+            guiGraphics.fill(barX, barY, barX + barWidth, barY + barHeight, 0xFF222222);
+            
+            // Barra de progreso
+            int fillWidth = (occupiedSlots * barWidth) / totalCapacity;
+            int fillColor = occupiedSlots > totalCapacity * 0.8 ? 0xFFFF4444 : 
+                           occupiedSlots > totalCapacity * 0.6 ? 0xFFFFAA00 : 0xFF44FF44;
+            
+            if (fillWidth > 0) {
+                guiGraphics.fill(barX, barY, barX + fillWidth, barY + barHeight, fillColor);
+            }
+            
+            // Porcentaje - color claro para modo oscuro
+            String percentText = String.format("%.1f%%", (occupiedSlots * 100.0) / totalCapacity);
+            int textWidth = this.font.width(percentText);
+            guiGraphics.drawString(this.font, percentText, barX + (barWidth - textWidth) / 2, barY + barHeight + 5, 
+                                  0xFFFFFF, false);
+        }
+    }
+    
+    private List<ContainerInfo> getFilteredContainers() {
+        if (searchFilter.isEmpty()) {
+            return containerList;
+        }
+        
+        return containerList.stream()
+                .filter(container -> 
+                    container.containerType.toLowerCase().contains(searchFilter) ||
+                    container.position.toString().toLowerCase().contains(searchFilter))
+                .toList();
+    }
+    
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        // Manejar clics en la lista de contenedores
+        if (mouseX >= LEFT_PANEL_X && mouseX <= LEFT_PANEL_X + LEFT_PANEL_WIDTH &&
+            mouseY >= LEFT_PANEL_Y + 5 && mouseY <= LEFT_PANEL_Y + LEFT_PANEL_HEIGHT - 5) {
+            
+            int itemHeight = 22;
+            int clickedIndex = ((int)mouseY - LEFT_PANEL_Y - 5) / itemHeight + scrollOffset;
+            List<ContainerInfo> filteredContainers = getFilteredContainers();
+            
+            if (clickedIndex >= 0 && clickedIndex < filteredContainers.size()) {
+                selectedContainer = filteredContainers.get(clickedIndex);
+                return true;
+            }
+        }
+        
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+    
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        // Scroll en la lista de contenedores
+        if (mouseX >= LEFT_PANEL_X && mouseX <= LEFT_PANEL_X + LEFT_PANEL_WIDTH &&
+            mouseY >= LEFT_PANEL_Y && mouseY <= LEFT_PANEL_Y + LEFT_PANEL_HEIGHT) {
+            
+            List<ContainerInfo> filteredContainers = getFilteredContainers();
+            int maxScroll = Math.max(0, filteredContainers.size() - maxVisibleContainers);
+            
+            scrollOffset = Math.max(0, Math.min(maxScroll, scrollOffset - (int)delta));
+            return true;
+        }
+        
+        return super.mouseScrolled(mouseX, mouseY, delta);
+    }
+    
+    @Override
+    public void containerTick() {
+        super.containerTick();
+        
+        // Sistema de refresco automático
+        autoRefreshTicks++;
+        if (autoRefreshTicks >= AUTO_REFRESH_INTERVAL) {
+            autoRefreshTicks = 0;
+            refreshNetwork();
+        }
+    }
+    
+    private String formatNumber(int number) {
+        if (number < 1000) {
+            return String.valueOf(number);
+        } else if (number < 1000000) {
+            return String.format("%.1fK", number / 1000.0).replace(".0K", "K");
+        } else {
+            return String.format("%.1fM", number / 1000000.0).replace(".0M", "M");
+        }
+    }
+    
+    private String getTranslatedContainerType(String containerType) {
+        switch (containerType.toLowerCase()) {
+            case "chest":
+                return "Cofre";
+            case "furnace":
+                return "Horno";
+            case "blast_furnace":
+                return "Alto Horno";
+            case "smoker":
+                return "Ahumador";
+            case "barrel":
+                return "Barril";
+            case "shulker_box":
+                return "Caja Shulker";
+            case "hopper":
+                return "Tolva";
+            case "dispenser":
+                return "Dispensador";
+            case "dropper":
+                return "Soltador";
+            case "brewing_stand":
+                return "Soporte de Pociones";
+            default:
+                return containerType; // Devolver el tipo original si no hay traducción
+        }
+    }
+    
+    private ItemStack getUpgradeItemForLevel(int level) {
+        switch (level) {
+            case 0: return new ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_ZERO.get());
+            case 1: return new ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_BASIC.get());
+            case 2: return new ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_COPPER.get());
+            case 3: return new ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_ADVANCED.get());
+            case 4: return new ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_ELITE.get());
+            case 5: return new ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_DEFINITIVE.get());
+            default: return ItemStack.EMPTY;
+        }
+    }
+    
+    private String getUpgradeNameForLevel(int level) {
+        switch (level) {
+            case 0: return Component.translatable("upgrade.indexer.zero").getString();
+            case 1: return Component.translatable("upgrade.indexer.basic").getString();
+            case 2: return Component.translatable("upgrade.indexer.copper").getString();
+            case 3: return Component.translatable("upgrade.indexer.advanced").getString();
+            case 4: return Component.translatable("upgrade.indexer.elite").getString();
+            case 5: return Component.translatable("upgrade.indexer.definitive").getString();
+            default: return "Sin mejora";
+        }
+    }
+    
+    // Clase interna para almacenar información de contenedores
+    private static class ContainerInfo {
+        BlockPos position;
+        String containerType;
+        int itemCount;
+        int maxSlots;
+        List<ItemStack> filters;
+        
+        public ContainerInfo() {
+            this.filters = new ArrayList<>();
+        }
+    }
+}

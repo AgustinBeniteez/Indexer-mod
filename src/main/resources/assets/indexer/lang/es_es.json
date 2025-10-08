@@ -33,6 +33,7 @@
   "gui.indexer.controller.stacks": "Slots",
   "gui.indexer.controller.speed": "Velocidad",
   "gui.indexer.controller.items_at_once": "a la vez",
+  "gui.indexer.controller.network_title": "Controlador de Red",
   "gui.indexer.dropbox.transfer_all": "Transferir Todo",
   "itemGroup.indexer": "Indexer",
   "message.indexer.dropbox.no_controller": "¡No se encontró un Controlador Indexador cerca!",
@@ -48,5 +49,7 @@
   "upgrade.indexer.basic": "mejora Básica",
   "upgrade.indexer.advanced": "mejora Avanzada",
   "upgrade.indexer.elite": "mejora Élite",
-  "upgrade.indexer.definitive": "Mejora definitiva"
+  "upgrade.indexer.definitive": "mejora Definitiva",
+  "upgrade.indexer.copper": "mejora de Cobre",
+  "upgrade.indexer.zero": "mejora Inicial"
 }
