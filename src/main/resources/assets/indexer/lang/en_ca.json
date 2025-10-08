@@ -42,6 +42,10 @@
   "upgrade.indexer.advanced": "Advanced upgrade",
   "upgrade.indexer.elite": "Elite upgrade",
   "upgrade.indexer.copper": "Copper upgrade",
+  "upgrade.indexer.definitive": "Definitive upgrade",
+  "upgrade.indexer.zero": "Initial upgrade",
+  "item.indexer.controller.upgrade_info": "Upgrade: %s (Transfers %s items at once)",
+  "container.indexer.controller.network": "Indexer Controller",
   "gui.indexer.controller.connection_info": "Connection Info:",
   "gui.indexer.controller.dropbox": "DropBox",
   "gui.indexer.controller.connected": "Connected",
@@ -51,5 +55,12 @@
   "gui.indexer.controller.stacks": "Stacks",
   "gui.indexer.controller.speed": "Speed",
   "gui.indexer.controller.items_at_once": "items at once",
+  "gui.indexer.controller.search": "Search containers...",
+  "gui.indexer.controller.refresh": "Refresh",
+  "gui.indexer.controller.network_stats": "Network Statistics",
+  "gui.indexer.controller.network_title": "Network Controller",
+  "gui.indexer.controller.container_enabled": "Enabled",
+  "gui.indexer.controller.container_disabled": "Disabled",
+  "gui.indexer.dropbox.transfer_all": "Transfer All",
   "itemGroup.indexer": "Indexer"
 }

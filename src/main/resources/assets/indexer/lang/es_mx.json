@@ -48,5 +48,19 @@
   "upgrade.indexer.basic": "mejora Básica",
   "upgrade.indexer.advanced": "mejora Avanzada",
   "upgrade.indexer.elite": "mejora Élite",
-  "upgrade.indexer.copper": "mejora de Cobre"
+  "upgrade.indexer.copper": "mejora de Cobre",
+  "upgrade.indexer.definitive": "mejora Definitiva",
+  "upgrade.indexer.zero": "mejora Inicial",
+  "item.indexer.transfer_speed_upgrade_basic.tooltip": "Mejora Básica de Velocidad de Transferencia",
+  "item.indexer.transfer_speed_upgrade_advanced.tooltip": "Mejora Avanzada de Velocidad de Transferencia",
+  "item.indexer.transfer_speed_upgrade_elite.tooltip": "Mejora Élite de Velocidad de Transferencia",
+  "item.indexer.controller.upgrade_info": "Mejora: %s (Transfiere %s objetos a la vez)",
+  "container.indexer.controller.network": "Controlador Indexer",
+  "gui.indexer.controller.search": "Buscar contenedores...",
+  "gui.indexer.controller.refresh": "Actualizar",
+  "gui.indexer.controller.network_stats": "Estadísticas de Red",
+  "gui.indexer.controller.network_title": "Controlador de Red",
+  "gui.indexer.controller.container_enabled": "Habilitado",
+  "gui.indexer.controller.container_disabled": "Deshabilitado",
+  "gui.indexer.dropbox.transfer_all": "Transferir Todo"
 }

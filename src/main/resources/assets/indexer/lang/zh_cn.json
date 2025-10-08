@@ -48,5 +48,22 @@
   "gui.indexer.controller.stacks": "组",
   "gui.indexer.controller.speed": "速度",
   "gui.indexer.controller.items_at_once": "个物品同时传输",
-  "itemGroup.indexer": "索引器"
+  "itemGroup.indexer": "索引器",
+  "item.indexer.transfer_speed_upgrade_copper": "铜质传输速度升级",
+  "item.indexer.transfer_speed_upgrade_definitive": "终极传输速度升级",
+  "item.indexer.transfer_speed_upgrade_zero": "零级传输速度升级",
+  "item.indexer.transfer_speed_upgrade_copper.tooltip": "铜质传输速度升级",
+  "item.indexer.transfer_speed_upgrade_definitive.tooltip": "终极传输速度升级",
+  "item.indexer.transfer_speed_upgrade_zero.tooltip": "零级传输速度升级",
+  "item.indexer.controller_upgrade_info": "控制器升级信息",
+  "upgrade.indexer.copper": "铜质升级",
+  "upgrade.indexer.definitive": "终极升级",
+  "upgrade.indexer.zero": "零级升级",
+  "gui.indexer.controller.search": "搜索",
+  "gui.indexer.controller.refresh": "刷新",
+  "gui.indexer.controller.network_stats": "网络统计",
+  "gui.indexer.controller.enabled": "已启用",
+  "gui.indexer.controller.disabled": "已禁用",
+  "message.indexer.dropbox.enabled": "投放箱已启用",
+  "message.indexer.dropbox.disabled": "投放箱已禁用"
 }

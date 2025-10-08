@@ -45,5 +45,22 @@
   "upgrade.indexer.none": "ninguna mejóra previa",
   "upgrade.indexer.basic": "mejóra Básica",
   "upgrade.indexer.advanced": "mejóra Avanzá",
-  "upgrade.indexer.elite": "mejóra Élite"
+  "upgrade.indexer.elite": "mejóra Élite",
+  "item.indexer.transfer_speed_upgrade_copper": "Mejóra e Cobre e Velocidá de Transferencia",
+  "item.indexer.transfer_speed_upgrade_definitive": "Mejóra Definitiva e Velocidá de Transferencia",
+  "item.indexer.transfer_speed_upgrade_zero": "Mejóra Cero e Velocidá de Transferencia",
+  "item.indexer.transfer_speed_upgrade_copper.tooltip": "Mejóra e Cobre e Velocidá de Transferencia",
+  "item.indexer.transfer_speed_upgrade_definitive.tooltip": "Mejóra Definitiva e Velocidá de Transferencia",
+  "item.indexer.transfer_speed_upgrade_zero.tooltip": "Mejóra Cero e Velocidá de Transferencia",
+  "item.indexer.controller_upgrade_info": "Info e Mejóra der Controlao",
+  "upgrade.indexer.copper": "mejóra e Cobre",
+  "upgrade.indexer.definitive": "mejóra Definitiva",
+  "upgrade.indexer.zero": "mejóra Cero",
+  "gui.indexer.controller.search": "Buscá",
+  "gui.indexer.controller.refresh": "Actualizá",
+  "gui.indexer.controller.network_stats": "Ehtadíhticah e la Re",
+  "gui.indexer.controller.enabled": "Activao",
+  "gui.indexer.controller.disabled": "Desactivao",
+  "message.indexer.dropbox.enabled": "DropBox activao",
+  "message.indexer.dropbox.disabled": "DropBox desactivao"
 }
