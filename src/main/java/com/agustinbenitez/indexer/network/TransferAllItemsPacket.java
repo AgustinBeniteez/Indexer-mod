@@ -26,7 +26,7 @@ public class TransferAllItemsPacket {
         context.enqueueWork(() -> {
             ServerPlayer player = context.getSender();
             if (player != null && player.containerMenu instanceof DropBoxMenu menu) {
-                menu.transferAllItemsToDropBox();
+                menu.transferAllItemsToDropBox(player);
             }
         });
         return true;

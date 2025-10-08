@@ -28,7 +28,8 @@ public class ModMenuTypes {
                     
     public static final RegistryObject<MenuType<DropBoxMenu>> DROP_BOX_MENU = 
             MENUS.register("drop_box_menu", 
-                    () -> IForgeMenuType.create(DropBoxMenu::new));
+                    () -> IForgeMenuType.create((id, inventory, data) -> 
+                            new DropBoxMenu(id, inventory)));
 
     public static void register(IEventBus eventBus) {
         MENUS.register(eventBus);

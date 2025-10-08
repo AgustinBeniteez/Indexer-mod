@@ -226,5 +226,41 @@ public class DropBoxBlockEntity extends RandomizableContainerBlockEntity impleme
         }
     }
     
+    // Method to find the connected IndexerController
+    @Nullable
+    public IndexerControllerBlockEntity findConnectedController() {
+        if (this.level == null) return null;
+        
+        // First, search for controllers in adjacent positions for quick response
+        for (Direction direction : Direction.values()) {
+            BlockPos adjacentPos = this.worldPosition.relative(direction);
+            BlockEntity blockEntity = this.level.getBlockEntity(adjacentPos);
+            
+            if (blockEntity instanceof IndexerControllerBlockEntity controller) {
+                return controller;
+            }
+        }
+        
+        // If no adjacent controllers found, search in a wider radius
+        int searchRadius = 16;
+        for (int x = -searchRadius; x <= searchRadius; x++) {
+            for (int y = -searchRadius; y <= searchRadius; y++) {
+                for (int z = -searchRadius; z <= searchRadius; z++) {
+                    // Skip the central position that we already verified
+                    if (x == 0 && y == 0 && z == 0) continue;
+                    
+                    BlockPos checkPos = this.worldPosition.offset(x, y, z);
+                    BlockEntity blockEntity = this.level.getBlockEntity(checkPos);
+                    
+                    if (blockEntity instanceof IndexerControllerBlockEntity controller) {
+                        return controller;
+                    }
+                }
+            }
+        }
+        
+        return null;
+    }
+    
 
 }
