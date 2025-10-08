@@ -38,8 +38,6 @@
   "message.indexer.upgrade.success": "Upgrade applied! Now transfers up to %s items at once per cycle",
   "message.indexer.upgrade.transfer_starts": "Transfer will start immediately",
   "message.indexer.upgrade.controller_only": "This upgrade can only be applied to an Indexer Controller",
-  "message.indexer.duplicate_controller": "Error: Multiple Indexer Controllers detected in the same pipe network! This controller has been disabled.",
-  "message.indexer.duplicate_dropbox": "Error: Multiple Indexer Controllers detected in the same pipe network! This DropBox has been disabled.",
   "upgrade.indexer.none": "no previous upgrade",
   "upgrade.indexer.basic": "Basic upgrade",
   "upgrade.indexer.advanced": "Advanced upgrade",

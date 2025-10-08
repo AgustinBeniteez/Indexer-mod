@@ -39,7 +39,6 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
     private int currentUpgradeLevel = 0; // Nivel actual de mejora (0=sin mejora, 1=básica, 2=cobre, 3=avanzada, 4=élite, 5=definitiva)
     
     private boolean enabled = true;
-    private boolean disabledByDuplication = false; // Nuevo campo para marcar si está deshabilitado por duplicación
     private int transferCooldown = 0;
     private BlockPos dropContainerPos = null;
     private int previousConnectorCount = 0;
@@ -103,7 +102,6 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
     public void load(CompoundTag tag) {
         super.load(tag);
         this.enabled = tag.getBoolean("Enabled");
-        this.disabledByDuplication = tag.getBoolean("DisabledByDuplication");
         this.transferCooldown = tag.getInt("TransferCooldown");
         this.previousConnectorCount = tag.getInt("PreviousConnectorCount");
         this.hasNotifiedConnection = tag.getBoolean("HasNotifiedConnection");
@@ -135,7 +133,6 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
         tag.putBoolean("Enabled", this.enabled);
-        tag.putBoolean("DisabledByDuplication", this.disabledByDuplication);
         tag.putInt("TransferCooldown", this.transferCooldown);
         tag.putInt("PreviousConnectorCount", this.previousConnectorCount);
         tag.putBoolean("HasNotifiedConnection", this.hasNotifiedConnection);
@@ -1205,16 +1202,5 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         }
         
         return otherControllers;
-    }
-    
-    // Método para verificar si este controlador está deshabilitado por duplicación
-    public boolean isDisabledByDuplication() {
-        return this.disabledByDuplication;
-    }
-    
-    // Método para establecer el estado de deshabilitado por duplicación
-    public void setDisabledByDuplication(boolean disabled) {
-        this.disabledByDuplication = disabled;
-        this.setChanged();
     }
 }

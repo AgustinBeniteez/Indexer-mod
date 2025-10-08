@@ -44,8 +44,6 @@
   "message.indexer.upgrade.success": "¡Mejora aplicada! Ahora se transferirán hasta %s objetos a la vez en cada ciclo",
   "message.indexer.upgrade.transfer_starts": "La transferencia comenzará inmediatamente",
   "message.indexer.upgrade.controller_only": "Esta mejora solo puede aplicarse a un Controlador Indexador",
-  "message.indexer.duplicate_controller": "Error: ¡Se detectaron múltiples Controladores Indexadores en la misma red de tuberías! Este controlador ha sido deshabilitado.",
-  "message.indexer.duplicate_dropbox": "Error: ¡Se detectaron múltiples Controladores Indexadores en la misma red de tuberías! Este DropBox ha sido deshabilitado.",
   "upgrade.indexer.none": "ninguna mejora previa",
   "upgrade.indexer.basic": "mejora Básica",
   "upgrade.indexer.advanced": "mejora Avanzada",

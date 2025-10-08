@@ -71,23 +71,7 @@ public class IndexerControllerBlock extends BaseEntityBlock {
             }
         }
         
-        // Verificar si hay otros controladores en la red
-        if (!level.isClientSide && placer instanceof Player player) {
-            BlockEntity blockEntity = level.getBlockEntity(pos);
-            if (blockEntity instanceof IndexerControllerBlockEntity controller) {
-                java.util.List<IndexerControllerBlockEntity> otherControllers = controller.findOtherControllers();
-                if (!otherControllers.isEmpty()) {
-                    // Deshabilitar este controlador por duplicación
-                    controller.setDisabledByDuplication(true);
-                    controller.setChanged();
-                    
-                    // Enviar mensaje de error al jugador en rojo
-                    net.minecraft.network.chat.Component message = net.minecraft.network.chat.Component.translatable("message.indexer.duplicate_controller")
-                            .withStyle(net.minecraft.ChatFormatting.RED);
-                    player.sendSystemMessage(message);
-                }
-            }
-        }
+
     }
 
     @Override
@@ -144,15 +128,6 @@ public class IndexerControllerBlock extends BaseEntityBlock {
         if (!level.isClientSide()) {
             BlockEntity entity = level.getBlockEntity(pos);
             if (entity instanceof IndexerControllerBlockEntity controller) {
-                // Verificar si está deshabilitado por duplicación
-                if (controller.isDisabledByDuplication()) {
-                    // Mostrar mensaje de error en rojo
-                    net.minecraft.network.chat.Component message = net.minecraft.network.chat.Component.translatable("message.indexer.duplicate_controller")
-                            .withStyle(net.minecraft.ChatFormatting.RED);
-                    player.sendSystemMessage(message);
-                    return InteractionResult.CONSUME;
-                }
-                
                 NetworkHooks.openScreen((ServerPlayer) player, controller, pos);
                 return InteractionResult.CONSUME;
             }

@@ -25,7 +25,6 @@ public class DropBoxBlockEntity extends RandomizableContainerBlockEntity impleme
     private static final int CONTAINER_SIZE = 54; // 6 rows of 9 slots = 54 slots (double the size of a normal chest)
     private NonNullList<ItemStack> items = NonNullList.withSize(CONTAINER_SIZE, ItemStack.EMPTY);
     private static final int[] SLOTS = new int[CONTAINER_SIZE];
-    private boolean disabledByDuplication = false;
     
     static {
         for (int i = 0; i < CONTAINER_SIZE; i++) {
@@ -67,7 +66,6 @@ public class DropBoxBlockEntity extends RandomizableContainerBlockEntity impleme
         super.load(tag);
         this.items = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
         ContainerHelper.loadAllItems(tag, this.items);
-        this.disabledByDuplication = tag.getBoolean("disabledByDuplication");
         // Initialize the hadItemsLastTick variable based on current inventory state
         this.hadItemsLastTick = hasItems();
     }
@@ -76,14 +74,10 @@ public class DropBoxBlockEntity extends RandomizableContainerBlockEntity impleme
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
         ContainerHelper.saveAllItems(tag, this.items);
-        tag.putBoolean("disabledByDuplication", this.disabledByDuplication);
     }
     
     @Override
     public void setItem(int slot, ItemStack stack) {
-        // Si está deshabilitado por duplicación, no permitir cambios
-        if (disabledByDuplication) return;
-        
         ItemStack oldStack = this.items.get(slot);
         this.items.set(slot, stack);
         if (stack.getCount() > this.getMaxStackSize()) {
@@ -103,9 +97,6 @@ public class DropBoxBlockEntity extends RandomizableContainerBlockEntity impleme
     
     public void tick(Level level, BlockPos pos, BlockState state) {
         if (level.isClientSide()) return;
-        
-        // Si está deshabilitado por duplicación, no hacer nada
-        if (disabledByDuplication) return;
         
         // Verificar si el estado de los ítems ha cambiado
         boolean hasItemsNow = hasItems();
@@ -175,15 +166,11 @@ public class DropBoxBlockEntity extends RandomizableContainerBlockEntity impleme
 
     @Override
     public boolean canPlaceItemThroughFace(int index, ItemStack itemStack, @Nullable Direction direction) {
-        // Si está deshabilitado por duplicación, no permitir insertar ítems
-        if (disabledByDuplication) return false;
         return true; // Allows inserting items from any side
     }
 
     @Override
     public boolean canTakeItemThroughFace(int index, ItemStack stack, Direction direction) {
-        // Si está deshabilitado por duplicación, no permitir extraer ítems
-        if (disabledByDuplication) return false;
         return true; // Allows extracting items from any side
     }
 
@@ -216,9 +203,6 @@ public class DropBoxBlockEntity extends RandomizableContainerBlockEntity impleme
     // Method to remove a specific item from the inventory
     @Override
     public ItemStack removeItem(int slot, int amount) {
-        // Si está deshabilitado por duplicación, no permitir extraer ítems
-        if (disabledByDuplication) return ItemStack.EMPTY;
-        
         ItemStack result = ContainerHelper.removeItem(this.items, slot, amount);
         if (!result.isEmpty()) {
             this.setChanged();
@@ -242,97 +226,5 @@ public class DropBoxBlockEntity extends RandomizableContainerBlockEntity impleme
         }
     }
     
-    // Método para verificar si hay controladores duplicados en la red
-    public boolean findOtherControllers() {
-        if (this.level == null) return false;
-        
-        java.util.Set<BlockPos> visited = new java.util.HashSet<>();
-        java.util.Queue<BlockPos> queue = new java.util.LinkedList<>();
-        
-        // Comenzar la búsqueda desde las posiciones adyacentes
-        for (Direction direction : Direction.values()) {
-            BlockPos adjacentPos = this.worldPosition.relative(direction);
-            BlockState adjacentState = this.level.getBlockState(adjacentPos);
-            
-            // Si hay un controlador directamente adyacente
-            if (adjacentState.getBlock() instanceof com.agustinbenitez.indexer.block.IndexerControllerBlock) {
-                BlockEntity entity = this.level.getBlockEntity(adjacentPos);
-                if (entity instanceof IndexerControllerBlockEntity) {
-                    return true;
-                }
-            }
-            
-            // Si hay otro DropBox directamente adyacente
-            if (adjacentState.getBlock() instanceof com.agustinbenitez.indexer.block.DropBoxBlock) {
-                BlockEntity entity = this.level.getBlockEntity(adjacentPos);
-                if (entity instanceof DropBoxBlockEntity && !adjacentPos.equals(this.worldPosition)) {
-                    return true;
-                }
-            }
-            
-            // Si hay una tubería adyacente, añadirla a la cola para BFS
-            if (adjacentState.getBlock() instanceof com.agustinbenitez.indexer.block.IndexerPipeBlock) {
-                // Verificar que la tubería esté conectada en esta dirección
-                if (adjacentState.getValue(com.agustinbenitez.indexer.block.IndexerPipeBlock.getPropertyForDirection(direction.getOpposite()))) {
-                    queue.add(adjacentPos);
-                    visited.add(adjacentPos);
-                }
-            }
-        }
-        
-        // BFS para encontrar controladores a través de tuberías
-        while (!queue.isEmpty()) {
-            BlockPos currentPos = queue.poll();
-            BlockState currentState = this.level.getBlockState(currentPos);
-            
-            // Explorar en todas las direcciones
-            for (Direction direction : Direction.values()) {
-                BlockPos nextPos = currentPos.relative(direction);
-                if (visited.contains(nextPos) || nextPos.equals(this.worldPosition)) continue;
-                
-                BlockState nextState = this.level.getBlockState(nextPos);
-                net.minecraft.world.level.block.Block nextBlock = nextState.getBlock();
-                
-                // Si encontramos un controlador, hay duplicación
-                if (nextBlock instanceof com.agustinbenitez.indexer.block.IndexerControllerBlock) {
-                    BlockEntity entity = this.level.getBlockEntity(nextPos);
-                    if (entity instanceof IndexerControllerBlockEntity) {
-                        return true;
-                    }
-                }
-                
-                // Si encontramos otro DropBox, hay duplicación
-                if (nextBlock instanceof com.agustinbenitez.indexer.block.DropBoxBlock) {
-                    BlockEntity entity = this.level.getBlockEntity(nextPos);
-                    if (entity instanceof DropBoxBlockEntity) {
-                        return true;
-                    }
-                }
-                
-                // Si encontramos otra tubería, añadirla a la cola
-                if (nextBlock instanceof com.agustinbenitez.indexer.block.IndexerPipeBlock) {
-                    // Verificar que la tubería esté conectada en ambas direcciones
-                    boolean currentPipeConnected = currentState.getBlock() instanceof com.agustinbenitez.indexer.block.IndexerPipeBlock && 
-                                                 currentState.getValue(com.agustinbenitez.indexer.block.IndexerPipeBlock.getPropertyForDirection(direction));
-                    boolean nextPipeConnected = nextState.getValue(com.agustinbenitez.indexer.block.IndexerPipeBlock.getPropertyForDirection(direction.getOpposite()));
-                    
-                    if (currentPipeConnected && nextPipeConnected) {
-                        queue.add(nextPos);
-                        visited.add(nextPos);
-                    }
-                }
-            }
-        }
-        
-        return false;
-    }
-    
-    public boolean isDisabledByDuplication() {
-        return this.disabledByDuplication;
-    }
-    
-    public void setDisabledByDuplication(boolean disabled) {
-        this.disabledByDuplication = disabled;
-        this.setChanged();
-    }
+
 }
