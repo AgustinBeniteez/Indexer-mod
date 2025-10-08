@@ -241,10 +241,38 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
         
         // Renderizar estadísticas
         renderNetworkStats(guiGraphics);
+    }
+    
+    @Override
+    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        // Ocultar widgets cuando se muestra la vista detallada
+        if (showDetailedView) {
+            this.searchBox.visible = false;
+            this.refreshButton.visible = false;
+        } else {
+            this.searchBox.visible = true;
+            this.refreshButton.visible = true;
+        }
         
-        // Renderizar vista detallada si está activa
+        // Renderizar todo el contenido base primero
+        super.render(guiGraphics, mouseX, mouseY, partialTick);
+        
+        // Renderizar tooltips de items normales si no estamos en vista detallada
+        if (!showDetailedView) {
+            this.renderTooltip(guiGraphics, mouseX, mouseY);
+        }
+        
+        // Renderizar vista detallada AL FINAL para que aparezca por encima de TODO
         if (showDetailedView && detailedContainer != null) {
             renderDetailedView(guiGraphics, mouseX, mouseY);
+        }
+    }
+    
+    @Override
+    protected void renderTooltip(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        // Solo renderizar tooltips normales si no estamos en vista detallada
+        if (!showDetailedView) {
+            super.renderTooltip(guiGraphics, mouseX, mouseY);
         }
     }
     
@@ -301,32 +329,34 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
             String typeText = translatedType + " (" + container.itemCount + "/" + container.maxSlots + ")";
             guiGraphics.drawString(this.font, typeText, LEFT_PANEL_X + 5, itemY + 12, 0xAAAAAA, false);
             
-            // Mostrar filtros del contenedor
-            if (!container.filters.isEmpty()) {
-                int filterX = LEFT_PANEL_X + 75; // Centrado mejor para evitar que se salgan
-                int filterY = itemY + 18; // Subido de 22 a 18 para que aparezcan más arriba
-                int filterSize = 8; // Tamaño pequeño para los iconos de filtro
-                int maxFilters = 5; // Reducido a 5 para mejor centrado
-                int filterSpacing = 12; // Espaciado entre filtros
-                
-                for (int f = 0; f < Math.min(container.filters.size(), maxFilters); f++) {
-                    ItemStack filter = container.filters.get(f);
-                    if (!filter.isEmpty()) {
-                        // Renderizar el icono del item del filtro en pequeño
-                        guiGraphics.pose().pushPose();
-                        guiGraphics.pose().scale(0.6f, 0.6f, 1.0f);
-                        guiGraphics.renderItem(filter, (int)((filterX + (f * filterSpacing)) / 0.6f), (int)(filterY / 0.6f));
-                        guiGraphics.pose().popPose();
+            // Mostrar filtros del contenedor solo si no estamos en vista detallada
+            if (!showDetailedView) {
+                if (!container.filters.isEmpty()) {
+                    int filterX = LEFT_PANEL_X + 75; // Centrado mejor para evitar que se salgan
+                    int filterY = itemY + 18; // Subido de 22 a 18 para que aparezcan más arriba
+                    int filterSize = 8; // Tamaño pequeño para los iconos de filtro
+                    int maxFilters = 5; // Reducido a 5 para mejor centrado
+                    int filterSpacing = 12; // Espaciado entre filtros
+                    
+                    for (int f = 0; f < Math.min(container.filters.size(), maxFilters); f++) {
+                        ItemStack filter = container.filters.get(f);
+                        if (!filter.isEmpty()) {
+                            // Renderizar el icono del item del filtro en pequeño
+                            guiGraphics.pose().pushPose();
+                            guiGraphics.pose().scale(0.6f, 0.6f, 1.0f);
+                            guiGraphics.renderItem(filter, (int)((filterX + (f * filterSpacing)) / 0.6f), (int)(filterY / 0.6f));
+                            guiGraphics.pose().popPose();
+                        }
                     }
+                    
+                    // Si hay más filtros, mostrar "..."
+                    if (container.filters.size() > maxFilters) {
+                        guiGraphics.drawString(this.font, "...", filterX + (maxFilters * filterSpacing), filterY + 2, 0xAAAAAA, false);
+                    }
+                } else {
+                    // Mostrar "Sin filtros" si no hay filtros
+                    guiGraphics.drawString(this.font, "Sin filtros", LEFT_PANEL_X + 75, itemY + 18, 0x888888, false);
                 }
-                
-                // Si hay más filtros, mostrar "..."
-                if (container.filters.size() > maxFilters) {
-                    guiGraphics.drawString(this.font, "...", filterX + (maxFilters * filterSpacing), filterY + 2, 0xAAAAAA, false);
-                }
-            } else {
-                // Mostrar "Sin filtros" si no hay filtros
-                guiGraphics.drawString(this.font, "Sin filtros", LEFT_PANEL_X + 75, itemY + 18, 0x888888, false);
             }
         }
         
@@ -437,10 +467,10 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
         // Fondo semi-transparente para toda la pantalla
         guiGraphics.fill(0, 0, this.width, this.height, 0x80000000);
         
-        // Panel detallado centrado
-        int panelWidth = 300;
-        int panelHeight = 200;
-        int panelX = (this.width - panelWidth) / 2;
+        // Panel detallado centrado - ajustado más hacia la izquierda
+        int panelWidth = 320; // Aumentado ligeramente para más espacio
+        int panelHeight = 220; // Aumentado para acomodar mejor los filtros
+        int panelX = (this.width - panelWidth) / 2 - 30; // Movido 30 píxeles a la izquierda
         int panelY = (this.height - panelHeight) / 2;
         
         // Fondo del panel
@@ -507,19 +537,24 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
         if (detailedContainer.filters.isEmpty()) {
             guiGraphics.drawString(this.font, "  Sin filtros configurados", panelX + 10, yOffset, 0x888888, false);
         } else {
-            // Mostrar todos los filtros en una cuadrícula
+            // Mostrar todos los filtros en una cuadrícula con mejor espaciado
             int filterX = panelX + 10;
             int filterY = yOffset;
             int filterSize = 16;
-            int filtersPerRow = (panelWidth - 20) / (filterSize + 4);
+            int filterSpacing = 20; // Aumentado el espaciado entre filtros
+            int filtersPerRow = (panelWidth - 20) / filterSpacing;
             
             for (int i = 0; i < detailedContainer.filters.size(); i++) {
                 ItemStack filter = detailedContainer.filters.get(i);
                 if (!filter.isEmpty()) {
                     int row = i / filtersPerRow;
                     int col = i % filtersPerRow;
-                    int itemX = filterX + col * (filterSize + 4);
-                    int itemY = filterY + row * (filterSize + 4);
+                    int itemX = filterX + col * filterSpacing;
+                    int itemY = filterY + row * filterSpacing;
+                    
+                    // Fondo para el slot del filtro para evitar solapamiento
+                    guiGraphics.fill(itemX - 1, itemY - 1, itemX + filterSize + 1, itemY + filterSize + 1, 0xFF1A1A1A);
+                    guiGraphics.fill(itemX, itemY, itemX + filterSize, itemY + filterSize, 0xFF2D2D30);
                     
                     // Renderizar el item
                     guiGraphics.renderItem(filter, itemX, itemY);
