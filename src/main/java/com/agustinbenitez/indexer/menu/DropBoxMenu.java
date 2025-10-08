@@ -20,7 +20,7 @@ public class DropBoxMenu extends AbstractContainerMenu {
 
     // Client constructor
     public DropBoxMenu(int id, Inventory playerInventory) {
-        this(id, playerInventory, new SimpleContainer(54), new SimpleContainerData(4), null);
+        this(id, playerInventory, new SimpleContainer(54), new SimpleContainerData(5), null);
     }
 
     // Server constructor
@@ -70,6 +70,7 @@ public class DropBoxMenu extends AbstractContainerMenu {
                             case 1: return controller.getTotalCapacity();
                             case 2: return controller.getConnectedContainersCount();
                             case 3: return controller.isEnabled() ? 1 : 0;
+                            case 4: return controller.getCurrentUpgradeLevel();
                         }
                     }
                 }
@@ -83,7 +84,7 @@ public class DropBoxMenu extends AbstractContainerMenu {
 
             @Override
             public int getCount() {
-                return 4;
+                return 5;
             }
         };
     }
@@ -103,6 +104,10 @@ public class DropBoxMenu extends AbstractContainerMenu {
 
     public boolean isControllerEnabled() {
         return this.data.get(3) == 1;
+    }
+
+    public int getUpgradeLevel() {
+        return this.data.get(4);
     }
 
     @Override

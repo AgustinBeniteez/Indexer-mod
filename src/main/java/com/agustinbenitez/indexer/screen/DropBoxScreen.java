@@ -70,15 +70,22 @@ public class DropBoxScreen extends AbstractContainerScreen<DropBoxMenu> {
         int occupiedSlots = this.menu.getOccupiedSlots();
         int totalCapacity = this.menu.getTotalCapacity();
         int connectedContainers = this.menu.getConnectedContainersCount();
-        boolean isEnabled = this.menu.isControllerEnabled();
+        int upgradeLevel = this.menu.getUpgradeLevel();
         
-        // Status indicator
+        // Upgrade level indicator
         statsY += 15;
-        Component statusText = isEnabled ? 
-            Component.translatable("gui.indexer.status.enabled") : 
-            Component.translatable("gui.indexer.status.disabled");
-        int statusColor = isEnabled ? 0x55FF55 : 0xFF5555;
-        guiGraphics.drawString(this.font, statusText, statsX, statsY, statusColor, false);
+        String speedMultiplier;
+        switch (upgradeLevel) {
+            case 1: speedMultiplier = "x5"; break;
+            case 2: speedMultiplier = "x10"; break;
+            case 3: speedMultiplier = "x20"; break;
+            case 4: speedMultiplier = "x64"; break;
+            case 5: speedMultiplier = "x256"; break;
+            default: speedMultiplier = "x1"; break;
+        }
+        Component speedText = Component.literal("Speed: " + speedMultiplier);
+        int speedColor = upgradeLevel > 0 ? 0x55FF55 : 0xCCCCCC;
+        guiGraphics.drawString(this.font, speedText, statsX, statsY, speedColor, false);
         
         // Capacity section
         statsY += 20;
