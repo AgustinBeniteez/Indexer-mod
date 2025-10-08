@@ -73,6 +73,7 @@
   "gui.indexer.controller.container_type.dropper": "Dropper",
   "gui.indexer.controller.container_type.brewing_stand": "Brewing Stand",
   "gui.indexer.controller.container_type.other": "Other Container",
+  "gui.indexer.controller.filters": "Filters:",
   "gui.indexer.controller.no_filters": "No filters",
   "gui.indexer.controller.no_filters_configured": "  No filters configured",
   "gui.indexer.controller.detailed_view.title": "Container Details",

@@ -68,6 +68,8 @@
   "gui.indexer.controller.detailed_view.capacity": "Capacidad:",
   "gui.indexer.controller.detailed_view.filled": "Llenado:",
   "gui.indexer.controller.detailed_view.filters": "Filtros:",
+  "gui.indexer.controller.detailed_view.items": "Items:",
   "gui.indexer.controller.detailed_view.close_instruction": "Presiona ESC o haz click fuera para cerrar",
+  "gui.indexer.controller.container_empty": "Contenedor vacío",
   "gui.indexer.dropbox.transfer_all": "Transferir Todo"
 }

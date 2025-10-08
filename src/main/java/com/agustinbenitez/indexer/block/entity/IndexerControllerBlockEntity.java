@@ -1232,6 +1232,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                     info.maxSlots = container.getContainerSize();
                     info.itemCount = getOccupiedSlots(container);
                     info.filters = getContainerFilters(connector);
+                    info.uniqueItems = getUniqueItemsWithQuantities(container); // Agregar items únicos con cantidades
                     networkContainers.add(info);
                 }
             }
@@ -1287,6 +1288,24 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         return occupied;
     }
     
+    private Map<String, Integer> getUniqueItemsWithQuantities(Container container) {
+        Map<String, Integer> uniqueItems = new HashMap<>();
+        
+        for (int i = 0; i < container.getContainerSize(); i++) {
+            ItemStack stack = container.getItem(i);
+            if (!stack.isEmpty()) {
+                // Usar el ResourceLocation del item en lugar del description ID
+                ResourceLocation itemLocation = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(stack.getItem());
+                if (itemLocation != null) {
+                    String itemKey = itemLocation.toString();
+                    uniqueItems.put(itemKey, uniqueItems.getOrDefault(itemKey, 0) + stack.getCount());
+                }
+            }
+        }
+        
+        return uniqueItems;
+    }
+    
     private List<ItemStack> getContainerFilters(IndexerConnectorBlockEntity connector) {
         List<ItemStack> filters = new ArrayList<>();
         // Obtener filtros del conector (implementación específica del mod)
@@ -1321,9 +1340,11 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         public int itemCount;
         public int maxSlots;
         public List<ItemStack> filters;
+        public Map<String, Integer> uniqueItems; // Nuevo campo para items únicos con cantidades
 
         public ContainerNetworkInfo() {
             this.filters = new ArrayList<>();
+            this.uniqueItems = new HashMap<>();
         }
     }
 }

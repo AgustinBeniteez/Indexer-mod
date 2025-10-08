@@ -76,6 +76,7 @@
   "gui.indexer.controller.container_type.dropper": "投掷器",
   "gui.indexer.controller.container_type.brewing_stand": "酿造台",
   "gui.indexer.controller.container_type.other": "其他容器",
+  "gui.indexer.controller.filters": "过滤器：",
   "gui.indexer.controller.no_filters": "无过滤器",
   "gui.indexer.controller.no_filters_configured": "  未配置过滤器",
   "gui.indexer.controller.detailed_view.title": "容器详情",

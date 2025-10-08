@@ -11,7 +11,9 @@ import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Supplier;
 
 public class ContainerListUpdatePacket {
@@ -58,6 +60,7 @@ public class ContainerListUpdatePacket {
         public int itemCount;
         public int maxSlots;
         public List<ItemStack> filters;
+        public Map<String, Integer> uniqueItems;
         
         public ContainerData(IndexerControllerBlockEntity.ContainerNetworkInfo info) {
             this.position = info.position;
@@ -65,10 +68,12 @@ public class ContainerListUpdatePacket {
             this.itemCount = info.itemCount;
             this.maxSlots = info.maxSlots;
             this.filters = new ArrayList<>(info.filters);
+            this.uniqueItems = new HashMap<>(info.uniqueItems);
         }
         
         public ContainerData() {
             this.filters = new ArrayList<>();
+            this.uniqueItems = new HashMap<>();
         }
         
         public void toBuffer(FriendlyByteBuf buf) {
@@ -79,6 +84,11 @@ public class ContainerListUpdatePacket {
             buf.writeInt(filters.size());
             for (ItemStack filter : filters) {
                 buf.writeItem(filter);
+            }
+            buf.writeInt(uniqueItems.size());
+            for (Map.Entry<String, Integer> entry : uniqueItems.entrySet()) {
+                buf.writeUtf(entry.getKey());
+                buf.writeInt(entry.getValue());
             }
         }
         
@@ -92,6 +102,13 @@ public class ContainerListUpdatePacket {
             data.filters = new ArrayList<>();
             for (int i = 0; i < filterCount; i++) {
                 data.filters.add(buf.readItem());
+            }
+            int uniqueItemsCount = buf.readInt();
+            data.uniqueItems = new HashMap<>();
+            for (int i = 0; i < uniqueItemsCount; i++) {
+                String itemName = buf.readUtf();
+                int quantity = buf.readInt();
+                data.uniqueItems.put(itemName, quantity);
             }
             return data;
         }

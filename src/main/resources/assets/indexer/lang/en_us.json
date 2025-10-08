@@ -73,6 +73,7 @@
   "gui.indexer.controller.container_type.dropper": "Dropper",
   "gui.indexer.controller.container_type.brewing_stand": "Brewing Stand",
   "gui.indexer.controller.container_type.other": "Other Container",
+  "gui.indexer.controller.filters": "Filters:",
   "gui.indexer.controller.no_filters": "No filters",
   "gui.indexer.controller.no_filters_configured": "  No filters configured",
   "gui.indexer.controller.detailed_view.title": "Container Details",
@@ -81,12 +82,15 @@
   "gui.indexer.status.disabled": "Disabled",
   "gui.indexer.capacity": "Capacity:",
   "gui.indexer.connected_containers": "Containers:",
+  "gui.indexer.controller.detailed_view.title": "Container Details",
   "gui.indexer.controller.detailed_view.position": "Position:",
   "gui.indexer.controller.detailed_view.type": "Type:",
   "gui.indexer.controller.detailed_view.capacity": "Capacity:",
   "gui.indexer.controller.detailed_view.filled": "Filled:",
   "gui.indexer.controller.detailed_view.filters": "Filters:",
+  "gui.indexer.controller.detailed_view.items": "Items:",
   "gui.indexer.controller.detailed_view.close_instruction": "Press ESC or click outside to close",
+  "gui.indexer.controller.container_empty": "Container is empty",
   "gui.indexer.dropbox.transfer_all": "Transfer All",
   "itemGroup.indexer": "Indexer"
 }
