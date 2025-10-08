@@ -169,9 +169,6 @@ public class ExtractorBlockEntity extends BlockEntity {
         // Obtener la cantidad de ítems a extraer según la mejora aplicada al controlador
         int itemsToExtract = controller.getItemsPerTransfer();
         
-        // Debug log para verificar el valor
-        System.out.println("DEBUG EXTRACTOR: itemsToExtract = " + itemsToExtract + " en posición " + extractorPos);
-        
         BlockEntity containerEntity = this.level.getBlockEntity(this.connectedContainerPos);
         if (containerEntity == null) {
             this.connectedContainerPos = null;
@@ -233,9 +230,6 @@ public class ExtractorBlockEntity extends BlockEntity {
                     ItemStack extractedStack = fuelSlotStack.copy();
                     extractedStack.setCount(Math.min(itemsToExtract, fuelSlotStack.getCount()));
                     
-                    // Debug log para buckets
-                    System.out.println("DEBUG EXTRACTOR: Extrayendo " + extractedStack.getCount() + " buckets del slot de combustible (máximo permitido: " + itemsToExtract + ")");
-                    
                     // Remover los buckets del contenedor
                     fuelSlotStack.shrink(extractedStack.getCount());
                     container.setItem(FURNACE_FUEL_SLOT, fuelSlotStack);
@@ -265,9 +259,6 @@ public class ExtractorBlockEntity extends BlockEntity {
             if (!stackInSlot.isEmpty()) {
                 ItemStack extractedStack = stackInSlot.copy();
                 extractedStack.setCount(Math.min(itemsToExtract, stackInSlot.getCount()));
-                
-                // Debug log para resultado del horno
-                System.out.println("DEBUG EXTRACTOR: Extrayendo " + extractedStack.getCount() + " items del slot de resultado del horno (máximo permitido: " + itemsToExtract + ")");
                 
                 stackInSlot.shrink(extractedStack.getCount());
                 container.setItem(FURNACE_RESULT_SLOT, stackInSlot);
@@ -301,9 +292,6 @@ public class ExtractorBlockEntity extends BlockEntity {
             if (!stackInSlot.isEmpty()) {
                 ItemStack extractedStack = stackInSlot.copy();
                 extractedStack.setCount(Math.min(itemsToExtract, stackInSlot.getCount()));
-                
-                // Debug log para verificar la extracción
-                System.out.println("DEBUG EXTRACTOR: Extrayendo " + extractedStack.getCount() + " items de " + extractedStack.getItem().getDescriptionId() + " (máximo permitido: " + itemsToExtract + ")");
                 
                 stackInSlot.shrink(extractedStack.getCount());
                 container.setItem(slot, stackInSlot);

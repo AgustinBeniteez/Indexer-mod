@@ -100,7 +100,6 @@ public class IndexerManualScreen extends Screen {
         } catch (Exception e) {
             // Si hay un error al renderizar la imagen webp, mostrar un mensaje de error
             guiGraphics.drawString(this.font, "Error loading image", leftPos + 28, topPos + 70, 0xFF0000, false);
-            IndexerMod.LOGGER.error("Error rendering manual image: " + e.getMessage());
         }
         
         // Renderizar botones y otros elementos
