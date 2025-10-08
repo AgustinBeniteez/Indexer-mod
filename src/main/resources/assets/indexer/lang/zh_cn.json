@@ -64,6 +64,13 @@
   "gui.indexer.controller.network_stats": "网络统计",
   "gui.indexer.controller.enabled": "已启用",
   "gui.indexer.controller.disabled": "已禁用",
+  "gui.indexer.controller.detailed_view.title": "容器详情",
+  "gui.indexer.controller.detailed_view.position": "位置：",
+  "gui.indexer.controller.detailed_view.type": "类型：",
+  "gui.indexer.controller.detailed_view.capacity": "容量：",
+  "gui.indexer.controller.detailed_view.filled": "已填充：",
+  "gui.indexer.controller.detailed_view.filters": "过滤器：",
+  "gui.indexer.controller.detailed_view.close_instruction": "按ESC键或点击外部关闭",
   "message.indexer.dropbox.enabled": "投放箱已启用",
   "message.indexer.dropbox.disabled": "投放箱已禁用"
 }

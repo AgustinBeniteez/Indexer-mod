@@ -61,6 +61,13 @@
   "gui.indexer.controller.network_stats": "Ehtadíhticah e la Re",
   "gui.indexer.controller.enabled": "Activao",
   "gui.indexer.controller.disabled": "Desactivao",
+  "gui.indexer.controller.detailed_view.title": "Detalleh der Contenedó",
+  "gui.indexer.controller.detailed_view.position": "Posición:",
+  "gui.indexer.controller.detailed_view.type": "Tipo:",
+  "gui.indexer.controller.detailed_view.capacity": "Capacidá:",
+  "gui.indexer.controller.detailed_view.filled": "Llenao:",
+  "gui.indexer.controller.detailed_view.filters": "Filtroh:",
+  "gui.indexer.controller.detailed_view.close_instruction": "Aprieta ESC o haz clic fuera pa cerrá",
   "message.indexer.dropbox.enabled": "DropBox activao",
   "message.indexer.dropbox.disabled": "DropBox desactivao"
 }

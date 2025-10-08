@@ -51,5 +51,12 @@
   "upgrade.indexer.elite": "mejora Élite",
   "upgrade.indexer.definitive": "mejora Definitiva",
   "upgrade.indexer.copper": "mejora de Cobre",
-  "upgrade.indexer.zero": "mejora Inicial"
+  "upgrade.indexer.zero": "mejora Inicial",
+  "gui.indexer.controller.detailed_view.title": "Detalles del Contenedor",
+  "gui.indexer.controller.detailed_view.position": "Posición:",
+  "gui.indexer.controller.detailed_view.type": "Tipo:",
+  "gui.indexer.controller.detailed_view.capacity": "Capacidad:",
+  "gui.indexer.controller.detailed_view.filled": "Llenado:",
+  "gui.indexer.controller.detailed_view.filters": "Filtros:",
+  "gui.indexer.controller.detailed_view.close_instruction": "Presiona ESC o haz click fuera para cerrar"
 }

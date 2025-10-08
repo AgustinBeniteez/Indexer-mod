@@ -75,6 +75,19 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
     }
     
     @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        // Si estamos en vista detallada y se presiona Escape, cerrar el modal
+        if (showDetailedView && keyCode == 256) { // 256 es el código de la tecla Escape
+            showDetailedView = false;
+            detailedContainer = null;
+            return true; // Consumir el evento para que no cierre la pantalla completa
+        }
+        
+        // Si no estamos en vista detallada, permitir que Escape cierre la pantalla normalmente
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    @Override
     protected void init() {
         super.init();
         
@@ -483,7 +496,7 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
         guiGraphics.fill(panelX + panelWidth - 1, panelY, panelX + panelWidth, panelY + panelHeight, 0xFF404040);
         
         // Título del panel
-        String title = "Detalles del Contenedor";
+        Component title = Component.translatable("gui.indexer.controller.detailed_view.title");
         int titleWidth = this.font.width(title);
         guiGraphics.drawString(this.font, title, panelX + (panelWidth - titleWidth) / 2, panelY + 8, 0xFFFFFF, false);
         
@@ -491,25 +504,29 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
         int yOffset = panelY + 25;
         
         // Posición
-        String posText = "Posición: " + detailedContainer.position.getX() + ", " + 
-                        detailedContainer.position.getY() + ", " + detailedContainer.position.getZ();
+        Component posText = Component.translatable("gui.indexer.controller.detailed_view.position")
+                .append(" " + detailedContainer.position.getX() + ", " + 
+                        detailedContainer.position.getY() + ", " + detailedContainer.position.getZ());
         guiGraphics.drawString(this.font, posText, panelX + 10, yOffset, 0xCCCCCC, false);
         yOffset += 12;
         
         // Tipo de contenedor
         String translatedType = getTranslatedContainerType(detailedContainer.containerType);
-        guiGraphics.drawString(this.font, "Tipo: " + translatedType, panelX + 10, yOffset, 0xCCCCCC, false);
+        Component typeText = Component.translatable("gui.indexer.controller.detailed_view.type").append(" " + translatedType);
+        guiGraphics.drawString(this.font, typeText, panelX + 10, yOffset, 0xCCCCCC, false);
         yOffset += 12;
         
         // Capacidad y llenado
-        String capacityText = "Capacidad: " + detailedContainer.itemCount + "/" + detailedContainer.maxSlots + " slots";
+        Component capacityText = Component.translatable("gui.indexer.controller.detailed_view.capacity")
+                .append(" " + detailedContainer.itemCount + "/" + detailedContainer.maxSlots + " slots");
         guiGraphics.drawString(this.font, capacityText, panelX + 10, yOffset, 0xCCCCCC, false);
         yOffset += 12;
         
         // Porcentaje de llenado
         float fillPercentage = detailedContainer.maxSlots > 0 ? 
             (float) detailedContainer.itemCount / detailedContainer.maxSlots * 100 : 0;
-        String fillText = String.format("Llenado: %.1f%%", fillPercentage);
+        Component fillText = Component.translatable("gui.indexer.controller.detailed_view.filled")
+                .append(String.format(" %.1f%%", fillPercentage));
         int fillColor = fillPercentage > 80 ? 0xFFFF4444 : fillPercentage > 50 ? 0xFFFFAA00 : 0xFF44FF44;
         guiGraphics.drawString(this.font, fillText, panelX + 10, yOffset, fillColor, false);
         yOffset += 12;
@@ -531,7 +548,8 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
         yOffset += 20;
         
         // Filtros
-        guiGraphics.drawString(this.font, "Filtros:", panelX + 10, yOffset, 0xFFFFFF, false);
+        Component filtersText = Component.translatable("gui.indexer.controller.detailed_view.filters");
+        guiGraphics.drawString(this.font, filtersText, panelX + 10, yOffset, 0xFFFFFF, false);
         yOffset += 15;
         
         if (detailedContainer.filters.isEmpty()) {
@@ -569,7 +587,7 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
         }
         
         // Instrucciones para cerrar
-        String closeText = "Click fuera para cerrar";
+        Component closeText = Component.translatable("gui.indexer.controller.detailed_view.close_instruction");
         int closeWidth = this.font.width(closeText);
         guiGraphics.drawString(this.font, closeText, panelX + (panelWidth - closeWidth) / 2, 
                               panelY + panelHeight - 15, 0x888888, false);

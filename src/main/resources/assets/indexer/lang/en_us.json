@@ -61,6 +61,13 @@
   "gui.indexer.controller.network_title": "Network Controller",
   "gui.indexer.controller.container_enabled": "Enabled",
   "gui.indexer.controller.container_disabled": "Disabled",
+  "gui.indexer.controller.detailed_view.title": "Container Details",
+  "gui.indexer.controller.detailed_view.position": "Position:",
+  "gui.indexer.controller.detailed_view.type": "Type:",
+  "gui.indexer.controller.detailed_view.capacity": "Capacity:",
+  "gui.indexer.controller.detailed_view.filled": "Filled:",
+  "gui.indexer.controller.detailed_view.filters": "Filters:",
+  "gui.indexer.controller.detailed_view.close_instruction": "Press ESC or click outside to close",
   "gui.indexer.dropbox.transfer_all": "Transfer All",
   "itemGroup.indexer": "Indexer"
 }
