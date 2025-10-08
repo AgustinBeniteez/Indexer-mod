@@ -1,0 +1,29 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "LHL",
+    "CPC",
+    "LBL"
+  ],
+  "key": {
+    "L": {
+      "item": "minecraft:leather"
+    },
+    "H": {
+      "item": "minecraft:iron_helmet"
+    },
+    "C": {
+      "item": "minecraft:iron_chestplate"
+    },
+    "P": {
+      "item": "minecraft:iron_leggings"
+    },
+    "B": {
+      "item": "minecraft:iron_boots"
+    }
+  },
+  "result": {
+    "item": "indexer:armor_filter",
+    "count": 1
+  }
+}

@@ -8,6 +8,7 @@ import com.agustinbenitez.indexer.block.IndexerPipeBlock;
 import com.agustinbenitez.indexer.init.ModBlockEntities;
 import com.agustinbenitez.indexer.init.ModBlocks;
 import com.agustinbenitez.indexer.menu.IndexerControllerNetworkMenu;
+import com.agustinbenitez.indexer.util.FilterUtils;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -904,7 +905,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                     } else {
                         // Con filtro: solo rellenar con el item filtrado
                         needsRefill = inputSlotStack.isEmpty() || 
-                                     (inputSlotStack.getItem() == filterItem.getItem() && 
+                                     (FilterUtils.passesFilter(inputSlotStack, filterItem) && 
                                       inputSlotStack.getCount() < inputSlotStack.getMaxStackSize());
                     }
                     
@@ -938,7 +939,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                                                       inputSlotStack.getItem() == stack.getItem();
                                     } else {
                                         // Con filtro: solo el item filtrado es compatible
-                                        isCompatible = stack.getItem() == filterItem.getItem();
+                                        isCompatible = FilterUtils.passesFilter(stack, filterItem);
                                     }
                                     
                                     if (!isCompatible) continue;

@@ -31,6 +31,17 @@ public class ModCreativeTabs {
                         output.accept(ModItems.TRANSFER_SPEED_UPGRADE_ADVANCED.get());
                         output.accept(ModItems.TRANSFER_SPEED_UPGRADE_ELITE.get());
                         output.accept(ModItems.TRANSFER_SPEED_UPGRADE_DEFINITIVE.get());
+                        // Filter items
+                        output.accept(ModItems.BASE_FILTER.get());
+                        output.accept(ModItems.TOOLS_FILTER.get());
+                        output.accept(ModItems.FOOD_FILTER.get());
+                        output.accept(ModItems.PICKAXE_FILTER.get());
+                        output.accept(ModItems.CUSTOM_TAG_FILTER.get());
+                        output.accept(ModItems.FUEL_FILTER.get());
+                        output.accept(ModItems.ORES_FILTER.get());
+                        output.accept(ModItems.BLOCKS_FILTER.get());
+                        output.accept(ModItems.WEAPONS_FILTER.get());
+                        output.accept(ModItems.ARMOR_FILTER.get());
                     })
                     .build());
 

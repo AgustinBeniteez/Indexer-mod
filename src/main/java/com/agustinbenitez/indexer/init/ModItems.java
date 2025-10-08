@@ -1,10 +1,7 @@
 package com.agustinbenitez.indexer.init;
 
 import com.agustinbenitez.indexer.IndexerMod;
-import com.agustinbenitez.indexer.item.ExtractorItem;
-import com.agustinbenitez.indexer.item.IndexerControllerItem;
-import com.agustinbenitez.indexer.item.IndexerManualItem;
-import com.agustinbenitez.indexer.item.TransferSpeedUpgradeItem;
+import com.agustinbenitez.indexer.item.*;
 
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
@@ -54,6 +51,37 @@ public class ModItems {
             
     public static final RegistryObject<Item> TRANSFER_SPEED_UPGRADE_DEFINITIVE = ITEMS.register("transfer_speed_upgrade_definitive",
             () -> new TransferSpeedUpgradeItem(new Item.Properties().stacksTo(16), 5, 256));
+
+    // Filter items
+    public static final RegistryObject<Item> BASE_FILTER = ITEMS.register("base_filter",
+            () -> new BaseFilterItem(new Item.Properties().stacksTo(64)));
+            
+    public static final RegistryObject<Item> TOOLS_FILTER = ITEMS.register("tools_filter",
+            () -> new ToolsFilterItem(new Item.Properties().stacksTo(64)));
+            
+    public static final RegistryObject<Item> FOOD_FILTER = ITEMS.register("food_filter",
+            () -> new FoodFilterItem(new Item.Properties().stacksTo(64)));
+            
+    public static final RegistryObject<Item> PICKAXE_FILTER = ITEMS.register("pickaxe_filter",
+            () -> new PickaxeFilterItem(new Item.Properties().stacksTo(64)));
+            
+    public static final RegistryObject<Item> CUSTOM_TAG_FILTER = ITEMS.register("custom_tag_filter",
+            () -> new CustomTagFilterItem(new Item.Properties().stacksTo(64)));
+    
+    public static final RegistryObject<Item> FUEL_FILTER = ITEMS.register("fuel_filter",
+            () -> new FuelFilterItem(new Item.Properties()));
+    
+    public static final RegistryObject<Item> ORES_FILTER = ITEMS.register("ores_filter",
+            () -> new OresFilterItem(new Item.Properties()));
+    
+    public static final RegistryObject<Item> BLOCKS_FILTER = ITEMS.register("blocks_filter",
+            () -> new BlocksFilterItem(new Item.Properties()));
+    
+    public static final RegistryObject<Item> WEAPONS_FILTER = ITEMS.register("weapons_filter",
+            () -> new WeaponsFilterItem(new Item.Properties()));
+    
+    public static final RegistryObject<Item> ARMOR_FILTER = ITEMS.register("armor_filter",
+            () -> new ArmorFilterItem(new Item.Properties()));
 
 
 

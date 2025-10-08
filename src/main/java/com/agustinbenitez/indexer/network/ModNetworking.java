@@ -53,6 +53,13 @@ public class ModNetworking {
                 .encoder(ContainerListUpdatePacket::toBytes)
                 .consumerMainThread(ContainerListUpdatePacket::handle)
                 .add();
+        
+        // Registrar el paquete CustomTagFilterPacket
+        net.messageBuilder(CustomTagFilterPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
+                .decoder(CustomTagFilterPacket::new)
+                .encoder(CustomTagFilterPacket::toBytes)
+                .consumerMainThread(CustomTagFilterPacket::handle)
+                .add();
     }
     
     public static <MSG> void sendToServer(MSG message) {

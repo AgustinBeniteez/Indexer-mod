@@ -3,6 +3,7 @@ package com.agustinbenitez.indexer.block.entity;
 import com.agustinbenitez.indexer.init.ModBlockEntities;
 import com.agustinbenitez.indexer.block.IndexerControllerBlock;
 import com.agustinbenitez.indexer.block.IndexerPipeBlock;
+import com.agustinbenitez.indexer.util.FilterUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
@@ -434,7 +435,7 @@ public class ExtractorBlockEntity extends BlockEntity {
                         
                         // Verificar si el conector tiene un filtro específico para este ítem
                         ItemStack filterItem = connector.getFilterItem(0);
-                        if (!filterItem.isEmpty() && filterItem.getItem() == stack.getItem()) {
+                        if (!filterItem.isEmpty() && FilterUtils.passesFilter(stack, filterItem)) {
                             // Intentar insertar el item en el conector con filtro específico
                             ItemStack remainder = connector.insertItem(stack);
                             

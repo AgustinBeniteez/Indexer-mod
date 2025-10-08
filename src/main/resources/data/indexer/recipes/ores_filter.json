@@ -1,0 +1,29 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "LIL",
+    "GDG",
+    "LRL"
+  ],
+  "key": {
+    "L": {
+      "item": "minecraft:leather"
+    },
+    "I": {
+      "item": "minecraft:iron_ore"
+    },
+    "G": {
+      "item": "minecraft:gold_ore"
+    },
+    "D": {
+      "item": "minecraft:diamond_ore"
+    },
+    "R": {
+      "item": "minecraft:redstone_ore"
+    }
+  },
+  "result": {
+    "item": "indexer:ores_filter",
+    "count": 1
+  }
+}

@@ -3,6 +3,7 @@ package com.agustinbenitez.indexer.block.entity;
 import com.agustinbenitez.indexer.block.IndexerConnectorBlock;
 import com.agustinbenitez.indexer.init.ModBlockEntities;
 import com.agustinbenitez.indexer.inventory.IndexerConnectorMenu;
+import com.agustinbenitez.indexer.util.FilterUtils;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -271,9 +272,9 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
             return true;
         }
 
-        // Verificar si el ítem coincide con alguno de los filtros
+        // Verificar si el ítem coincide con alguno de los filtros usando la nueva lógica
         for (ItemStack filterItem : this.filterItems) {
-            if (!filterItem.isEmpty() && filterItem.getItem() == stack.getItem()) {
+            if (!filterItem.isEmpty() && FilterUtils.passesFilter(stack, filterItem)) {
                 return true;
             }
         }

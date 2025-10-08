@@ -1,0 +1,26 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "LCL",
+    "CFC",
+    "LBL"
+  ],
+  "key": {
+    "L": {
+      "item": "minecraft:leather"
+    },
+    "C": {
+      "item": "minecraft:coal"
+    },
+    "F": {
+      "item": "minecraft:lava_bucket"
+    },
+    "B": {
+      "item": "minecraft:charcoal"
+    }
+  },
+  "result": {
+    "item": "indexer:fuel_filter",
+    "count": 1
+  }
+}
