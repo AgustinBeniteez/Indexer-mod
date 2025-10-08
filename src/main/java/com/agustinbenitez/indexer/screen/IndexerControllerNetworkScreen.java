@@ -630,7 +630,7 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
                     
                     // Renderizar la cantidad en la esquina inferior derecha con texto más pequeño
                     // Usar un z-level más alto para que aparezca por encima del item
-                    String quantityText = String.valueOf(quantity);
+                    String quantityText = formatNumber(quantity);
                     
                     // Mover el pose para renderizar por encima
                     guiGraphics.pose().pushPose();
@@ -655,7 +655,7 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
                         mouseY >= currentItemY && mouseY < currentItemY + itemSize) {
                         List<Component> tooltip = new ArrayList<>();
                         tooltip.add(displayItem.getHoverName());
-                        tooltip.add(Component.literal("Cantidad: " + quantity));
+                        tooltip.add(Component.literal("Cantidad: " + formatNumber(quantity)));
                         guiGraphics.renderComponentTooltip(this.font, tooltip, mouseX, mouseY);
                     }
                 }
