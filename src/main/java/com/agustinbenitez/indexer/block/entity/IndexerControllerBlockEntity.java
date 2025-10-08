@@ -152,7 +152,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
     }
     
     public boolean isEnabled() {
-        return this.enabled && !this.disabledByDuplication;
+        return this.enabled;
     }
     
     public int getItemsPerTransfer() {
