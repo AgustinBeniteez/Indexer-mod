@@ -306,7 +306,7 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
             String spinner = spinnerChars[(int)(time % 4)];
             
             // Texto de carga con icono
-            String loadingText = "Cargando " + spinner;
+            String loadingText = Component.translatable("gui.indexer.controller.updating").getString() + " " + spinner;
             int textWidth = this.font.width(loadingText);
             guiGraphics.drawString(this.font, loadingText, centerX - textWidth / 2, centerY - 4, 0xFFFFFF, false);
             
@@ -368,7 +368,7 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
                     }
                 } else {
                     // Mostrar "Sin filtros" si no hay filtros
-                    guiGraphics.drawString(this.font, "Sin filtros", LEFT_PANEL_X + 75, itemY + 18, 0x888888, false);
+                    guiGraphics.drawString(this.font, Component.translatable("gui.indexer.controller.no_filters").getString(), LEFT_PANEL_X + 75, itemY + 18, 0x888888, false);
                 }
             }
         }
@@ -553,7 +553,7 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
         yOffset += 15;
         
         if (detailedContainer.filters.isEmpty()) {
-            guiGraphics.drawString(this.font, "  Sin filtros configurados", panelX + 10, yOffset, 0x888888, false);
+            guiGraphics.drawString(this.font, Component.translatable("gui.indexer.controller.no_filters_configured").getString(), panelX + 10, yOffset, 0x888888, false);
         } else {
             // Mostrar todos los filtros en una cuadrícula con mejor espaciado
             int filterX = panelX + 10;
@@ -679,25 +679,25 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
     private String getTranslatedContainerType(String containerType) {
         switch (containerType.toLowerCase()) {
             case "chest":
-                return "Cofre";
+                return Component.translatable("gui.indexer.controller.container_type.chest").getString();
             case "furnace":
-                return "Horno";
+                return Component.translatable("gui.indexer.controller.container_type.furnace").getString();
             case "blast_furnace":
-                return "Alto Horno";
+                return Component.translatable("gui.indexer.controller.container_type.blast_furnace").getString();
             case "smoker":
-                return "Ahumador";
+                return Component.translatable("gui.indexer.controller.container_type.smoker").getString();
             case "barrel":
-                return "Barril";
+                return Component.translatable("gui.indexer.controller.container_type.barrel").getString();
             case "shulker_box":
-                return "Caja Shulker";
+                return Component.translatable("gui.indexer.controller.container_type.shulker_box").getString();
             case "hopper":
-                return "Tolva";
+                return Component.translatable("gui.indexer.controller.container_type.hopper").getString();
             case "dispenser":
-                return "Dispensador";
+                return Component.translatable("gui.indexer.controller.container_type.dispenser").getString();
             case "dropper":
-                return "Soltador";
+                return Component.translatable("gui.indexer.controller.container_type.dropper").getString();
             case "brewing_stand":
-                return "Soporte de Pociones";
+                return Component.translatable("gui.indexer.controller.container_type.brewing_stand").getString();
             default:
                 return containerType; // Devolver el tipo original si no hay traducción
         }
