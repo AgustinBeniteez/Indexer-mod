@@ -57,10 +57,6 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
     // Botón de refresh
     private Button refreshButton;
     
-    // Sistema de refresco automático
-    private int autoRefreshTicks = 0;
-    private static final int AUTO_REFRESH_INTERVAL = 60; // Refrescar cada 3 segundos (60 ticks)
-    
     // Indicador de carga
     private boolean isLoading = false;
     
@@ -70,8 +66,8 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
         this.imageHeight = GUI_HEIGHT;
         this.inventoryLabelY = this.imageHeight - 10;
         
-        // Inicializar lista de contenedores (esto se actualizará desde el servidor)
-        updateContainerList();
+        // Actualización inicial al abrir el controlador
+        refreshNetwork();
     }
     
     @Override
@@ -115,14 +111,11 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
     }
     
     private void refreshNetwork() {
-        // Enviar paquete al servidor para refrescar la red
+        // Enviar paquete al servidor para solicitar actualización de la red
         ModNetworking.sendToServer(new RefreshNetworkPacket(this.menu.getBlockEntity().getBlockPos()));
         
         // Actualizar la lista de contenedores inmediatamente
         updateContainerList();
-        
-        // Resetear el contador de refresco automático para evitar refrescos duplicados
-        autoRefreshTicks = 0;
         
         // Opcional: Mostrar feedback visual al usuario
         // Se podría agregar un mensaje temporal o cambiar el color del botón brevemente
@@ -742,13 +735,7 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
     @Override
     public void containerTick() {
         super.containerTick();
-        
-        // Sistema de refresco automático
-        autoRefreshTicks++;
-        if (autoRefreshTicks >= AUTO_REFRESH_INTERVAL) {
-            autoRefreshTicks = 0;
-            refreshNetwork();
-        }
+        // El auto-refresh ha sido eliminado - ahora solo se actualiza cuando es necesario
     }
     
     private String formatNumber(int number) {
