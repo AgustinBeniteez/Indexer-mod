@@ -28,15 +28,13 @@ public class DropBoxScreen extends AbstractContainerScreen<DropBoxMenu> {
     protected void init() {
         super.init();
         
-        // Position the transfer all button (small green arrow button)
-        int buttonX = this.leftPos + 157; // Position on the main DropBox GUI
-        int buttonY = this.topPos + 4;
+        // Position the transfer all button at bottom right between the two inventories
+        int buttonX = this.leftPos + 157; // Right side of the DropBox inventory area
+        int buttonY = this.topPos + 125; // Bottom area between DropBox and player inventories
         
         this.transferAllButton = Button.builder(Component.literal("↑"), button -> {
             // Send packet to server to transfer all items
-            if (this.minecraft != null && this.minecraft.gameMode != null) {
-                this.menu.transferAllItemsToDropBox(this.minecraft.player);
-            }
+            com.agustinbenitez.indexer.network.ModNetworking.sendToServer(new com.agustinbenitez.indexer.network.TransferAllItemsPacket());
         })
         .bounds(buttonX, buttonY, 12, 12)
         .build();
