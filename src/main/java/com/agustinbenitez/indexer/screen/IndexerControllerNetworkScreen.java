@@ -699,7 +699,7 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
             case "brewing_stand":
                 return Component.translatable("gui.indexer.controller.container_type.brewing_stand").getString();
             default:
-                return containerType; // Devolver el tipo original si no hay traducción
+                return Component.translatable("gui.indexer.controller.container_type.other").getString();
         }
     }
     

@@ -1245,25 +1245,31 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         ResourceLocation blockId = net.minecraftforge.registries.ForgeRegistries.BLOCKS.getKey(blockEntity.getBlockState().getBlock());
         if (blockId != null) {
             String path = blockId.getPath();
-            // Convertir nombres como "chest", "furnace", "barrel" a nombres más legibles
+            // Devolver los nombres en inglés para que coincidan con las claves de traducción
             switch (path) {
                 case "chest":
-                    return "Cofre";
+                    return "chest";
                 case "furnace":
-                    return "Horno";
+                    return "furnace";
+                case "blast_furnace":
+                    return "blast_furnace";
+                case "smoker":
+                    return "smoker";
                 case "barrel":
-                    return "Barril";
+                    return "barrel";
                 case "shulker_box":
-                    return "Caja Shulker";
+                    return "shulker_box";
                 case "hopper":
-                    return "Tolva";
+                    return "hopper";
                 case "dropper":
-                    return "Dispensador";
+                    return "dropper";
                 case "dispenser":
-                    return "Dispensador";
+                    return "dispenser";
+                case "brewing_stand":
+                    return "brewing_stand";
                 default:
-                    // Para otros contenedores, capitalizar la primera letra
-                    return path.substring(0, 1).toUpperCase() + path.substring(1).replace("_", " ");
+                    // Para otros contenedores, devolver el path original
+                    return path;
             }
         }
         // Fallback al método anterior si no se puede obtener el ResourceLocation
