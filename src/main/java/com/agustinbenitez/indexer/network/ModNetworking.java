@@ -60,6 +60,20 @@ public class ModNetworking {
                 .encoder(CustomTagFilterPacket::toBytes)
                 .consumerMainThread(CustomTagFilterPacket::handle)
                 .add();
+        
+        // Registrar el paquete AttributeFilterPacket
+        net.messageBuilder(AttributeFilterPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
+                .decoder(AttributeFilterPacket::new)
+                .encoder(AttributeFilterPacket::toBytes)
+                .consumerMainThread(AttributeFilterPacket::handle)
+                .add();
+        
+        // Registrar el paquete NameFilterPacket
+        net.messageBuilder(NameFilterPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
+                .decoder(NameFilterPacket::new)
+                .encoder(NameFilterPacket::toBytes)
+                .consumerMainThread(NameFilterPacket::handle)
+                .add();
     }
     
     public static <MSG> void sendToServer(MSG message) {

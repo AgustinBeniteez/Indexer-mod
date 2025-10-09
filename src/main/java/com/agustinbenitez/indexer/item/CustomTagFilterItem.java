@@ -42,17 +42,17 @@ public class CustomTagFilterItem extends Item {
     
     @Override
     public void appendHoverText(ItemStack stack, Level level, List<Component> tooltipComponents, TooltipFlag isAdvanced) {
-        tooltipComponents.add(Component.translatable("item.indexer.custom_tag_filter.tooltip"));
-        tooltipComponents.add(Component.translatable("item.indexer.custom_tag_filter.description"));
+        tooltipComponents.add(Component.translatable("item.indexer.custom_tag_blocker.tooltip"));
+        tooltipComponents.add(Component.translatable("item.indexer.custom_tag_blocker.description"));
         
         CompoundTag tag = stack.getTag();
         if (tag != null && tag.contains("custom_tag")) {
             String customTag = tag.getString("custom_tag");
-            Component tagComponent = Component.translatable("item.indexer.custom_tag_filter.current_tag", 
+            Component tagComponent = Component.translatable("item.indexer.custom_tag_blocker.current_tag", 
                 Component.literal(customTag).withStyle(style -> style.withColor(0x5555FF))); // Azul
             tooltipComponents.add(tagComponent);
         } else {
-            tooltipComponents.add(Component.translatable("item.indexer.custom_tag_filter.no_tag"));
+            tooltipComponents.add(Component.translatable("item.indexer.custom_tag_blocker.no_tag"));
         }
         
         super.appendHoverText(stack, level, tooltipComponents, isAdvanced);

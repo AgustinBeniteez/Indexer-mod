@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " E ",
+    "EFE",
+    " B "
+  ],
+  "key": {
+    "E": {
+      "item": "minecraft:enchanted_book"
+    },
+    "F": {
+      "item": "indexer:base_filter"
+    },
+    "B": {
+      "item": "minecraft:experience_bottle"
+    }
+  },
+  "result": {
+    "item": "indexer:attribute_filter"
+  }
+}

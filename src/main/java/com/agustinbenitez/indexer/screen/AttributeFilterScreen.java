@@ -1,7 +1,7 @@
 package com.agustinbenitez.indexer.screen;
 
 import com.agustinbenitez.indexer.IndexerMod;
-import com.agustinbenitez.indexer.network.CustomTagFilterPacket;
+import com.agustinbenitez.indexer.network.AttributeFilterPacket;
 import com.agustinbenitez.indexer.network.ModNetworking;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -11,17 +11,18 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class CustomTagFilterScreen extends Screen {
+public class AttributeFilterScreen extends Screen {
     private static final int GUI_WIDTH = 300;
     private static final int GUI_HEIGHT = 200;
     
-    private EditBox tagEditBox;
+    private EditBox attributeEditBox;
     private Button confirmButton;
     private Button cancelButton;
     private final ItemStack filterItem;
@@ -31,8 +32,8 @@ public class CustomTagFilterScreen extends Screen {
     private int selectedSuggestion = -1;
     private boolean showSuggestions = false;
     
-    public CustomTagFilterScreen(ItemStack filterItem, int slotIndex) {
-        super(Component.translatable("gui.indexer.custom_tag_blocker.title"));
+    public AttributeFilterScreen(ItemStack filterItem, int slotIndex) {
+        super(Component.translatable("gui.indexer.attribute_filter.title"));
         this.filterItem = filterItem;
         this.slotIndex = slotIndex;
     }
@@ -42,68 +43,72 @@ public class CustomTagFilterScreen extends Screen {
         int guiLeft = (this.width - GUI_WIDTH) / 2;
         int guiTop = (this.height - GUI_HEIGHT) / 2;
         
-        // Campo de texto para el tag
-        this.tagEditBox = new EditBox(this.font, guiLeft + 20, guiTop + 60, GUI_WIDTH - 40, 20, 
-                Component.translatable("gui.indexer.custom_tag_blocker.tag_input"));
+        // Campo de texto para el atributo
+        this.attributeEditBox = new EditBox(this.font, guiLeft + 20, guiTop + 60, GUI_WIDTH - 40, 20, 
+                Component.translatable("gui.indexer.attribute_filter.attribute_input"));
         
         // Configurar el campo de texto para mejor visibilidad
-        this.tagEditBox.setBordered(true);
-        this.tagEditBox.setVisible(true);
-        this.tagEditBox.setEditable(true);
-        this.tagEditBox.setTextColor(0xFFFFFF); // Texto blanco
-        this.tagEditBox.setTextColorUneditable(0xA0A0A0);
-        this.tagEditBox.setMaxLength(100);
+        this.attributeEditBox.setBordered(true);
+        this.attributeEditBox.setVisible(true);
+        this.attributeEditBox.setEditable(true);
+        this.attributeEditBox.setTextColor(0xFFFFFF); // Texto blanco
+        this.attributeEditBox.setTextColorUneditable(0xA0A0A0);
+        this.attributeEditBox.setMaxLength(100);
         
-        // Establecer el valor actual del tag
-        if (this.filterItem.hasTag() && this.filterItem.getTag().contains("custom_tag")) {
-            this.tagEditBox.setValue(this.filterItem.getTag().getString("custom_tag"));
+        // Establecer el valor actual del atributo
+        if (this.filterItem.hasTag() && this.filterItem.getTag().contains("attribute_filter")) {
+            this.attributeEditBox.setValue(this.filterItem.getTag().getString("attribute_filter"));
         }
         
-        this.tagEditBox.setResponder(this::onTagChanged);
-        this.addRenderableWidget(this.tagEditBox);
+        this.attributeEditBox.setResponder(this::onAttributeChanged);
+        this.addRenderableWidget(this.attributeEditBox);
         
         // Botón confirmar
-        this.confirmButton = Button.builder(Component.translatable("gui.indexer.custom_tag_blocker.confirm"), 
-                button -> this.confirmTag())
+        this.confirmButton = Button.builder(Component.translatable("gui.indexer.attribute_filter.confirm"), 
+                button -> this.confirmAttribute())
                 .bounds(guiLeft + 20, guiTop + 150, 80, 20)
                 .build();
         this.addRenderableWidget(this.confirmButton);
         
         // Botón cancelar
-        this.cancelButton = Button.builder(Component.translatable("gui.indexer.custom_tag_blocker.cancel"), 
+        this.cancelButton = Button.builder(Component.translatable("gui.indexer.attribute_filter.cancel"), 
                 button -> this.onClose())
                 .bounds(guiLeft + 120, guiTop + 150, 80, 20)
                 .build();
         this.addRenderableWidget(this.cancelButton);
         
-        this.setInitialFocus(this.tagEditBox);
+        this.setFocused(this.attributeEditBox);
     }
     
-    private void onTagChanged(String text) {
+    private void onAttributeChanged(String text) {
         if (text.isEmpty()) {
             this.suggestions.clear();
             this.showSuggestions = false;
             return;
         }
         
-        // Generar sugerencias basadas en items registrados
-        this.suggestions = ForgeRegistries.ITEMS.getKeys().stream()
+        // Generar sugerencias basadas en encantamientos
+        this.suggestions = ForgeRegistries.ENCHANTMENTS.getKeys().stream()
                 .map(ResourceLocation::toString)
-                .filter(itemName -> itemName.toLowerCase().contains(text.toLowerCase()))
+                .filter(enchantName -> enchantName.toLowerCase().contains(text.toLowerCase()))
                 .limit(10)
                 .collect(Collectors.toList());
         
-        // También agregar sugerencias de tags comunes
-        List<String> commonTags = List.of(
-                "minecraft:logs", "minecraft:planks", "minecraft:stone_bricks",
-                "minecraft:wool", "minecraft:flowers", "minecraft:saplings",
-                "forge:ingots", "forge:gems", "forge:ores", "forge:dusts",
-                "forge:storage_blocks", "forge:tools", "forge:armor"
+        // También agregar sugerencias de atributos comunes
+        List<String> commonAttributes = List.of(
+                "minecraft:sharpness", "minecraft:efficiency", "minecraft:unbreaking",
+                "minecraft:fortune", "minecraft:silk_touch", "minecraft:mending",
+                "minecraft:protection", "minecraft:fire_protection", "minecraft:blast_protection",
+                "minecraft:projectile_protection", "minecraft:thorns", "minecraft:respiration",
+                "minecraft:aqua_affinity", "minecraft:depth_strider", "minecraft:frost_walker",
+                "minecraft:feather_falling", "minecraft:looting", "minecraft:knockback",
+                "minecraft:fire_aspect", "minecraft:sweeping", "minecraft:power",
+                "minecraft:punch", "minecraft:flame", "minecraft:infinity"
         );
         
-        for (String tag : commonTags) {
-            if (tag.toLowerCase().contains(text.toLowerCase()) && !this.suggestions.contains(tag)) {
-                this.suggestions.add(tag);
+        for (String attribute : commonAttributes) {
+            if (attribute.toLowerCase().contains(text.toLowerCase()) && !this.suggestions.contains(attribute)) {
+                this.suggestions.add(attribute);
             }
         }
         
@@ -113,7 +118,7 @@ public class CustomTagFilterScreen extends Screen {
     
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (this.tagEditBox.isFocused() && this.showSuggestions && !this.suggestions.isEmpty()) {
+        if (this.attributeEditBox.isFocused() && this.showSuggestions && !this.suggestions.isEmpty()) {
             if (keyCode == 264) { // Flecha abajo
                 this.selectedSuggestion = Math.min(this.selectedSuggestion + 1, this.suggestions.size() - 1);
                 return true;
@@ -122,7 +127,7 @@ public class CustomTagFilterScreen extends Screen {
                 return true;
             } else if (keyCode == 257 || keyCode == 335) { // Enter o Tab
                 if (this.selectedSuggestion >= 0 && this.selectedSuggestion < this.suggestions.size()) {
-                    this.tagEditBox.setValue(this.suggestions.get(this.selectedSuggestion));
+                    this.attributeEditBox.setValue(this.suggestions.get(this.selectedSuggestion));
                     this.showSuggestions = false;
                     return true;
                 }
@@ -144,20 +149,20 @@ public class CustomTagFilterScreen extends Screen {
         guiGraphics.fill(guiLeft + 1, guiTop + 1, guiLeft + GUI_WIDTH - 1, guiTop + GUI_HEIGHT - 1, 0xFF2D2D30);
         
         // Título
-        Component title = Component.translatable("gui.indexer.custom_tag_blocker.title");
+        Component title = Component.translatable("gui.indexer.attribute_filter.title");
         guiGraphics.drawCenteredString(this.font, title, guiLeft + GUI_WIDTH / 2, guiTop + 20, 0xFFFFFF);
         
         // Instrucciones
-        Component instructions = Component.translatable("gui.indexer.custom_tag_blocker.instructions");
+        Component instructions = Component.translatable("gui.indexer.attribute_filter.instructions");
         guiGraphics.drawString(this.font, instructions, guiLeft + 20, guiTop + 40, 0xCCCCCC, false);
         
         super.render(guiGraphics, mouseX, mouseY, partialTick);
         
         // Renderizar sugerencias
         if (this.showSuggestions && !this.suggestions.isEmpty()) {
-            int suggestionsX = this.tagEditBox.getX();
-            int suggestionsY = this.tagEditBox.getY() + this.tagEditBox.getHeight() + 2;
-            int suggestionsWidth = this.tagEditBox.getWidth();
+            int suggestionsX = this.attributeEditBox.getX();
+            int suggestionsY = this.attributeEditBox.getY() + this.attributeEditBox.getHeight() + 2;
+            int suggestionsWidth = this.attributeEditBox.getWidth();
             int suggestionHeight = 12;
             int maxSuggestions = Math.min(this.suggestions.size(), 8);
             
@@ -182,11 +187,10 @@ public class CustomTagFilterScreen extends Screen {
     
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        // Verificar si se hizo clic en una sugerencia
         if (this.showSuggestions && !this.suggestions.isEmpty()) {
-            int suggestionsX = this.tagEditBox.getX();
-            int suggestionsY = this.tagEditBox.getY() + this.tagEditBox.getHeight() + 2;
-            int suggestionsWidth = this.tagEditBox.getWidth();
+            int suggestionsX = this.attributeEditBox.getX();
+            int suggestionsY = this.attributeEditBox.getY() + this.attributeEditBox.getHeight() + 2;
+            int suggestionsWidth = this.attributeEditBox.getWidth();
             int suggestionHeight = 12;
             int maxSuggestions = Math.min(this.suggestions.size(), 8);
             
@@ -194,22 +198,24 @@ public class CustomTagFilterScreen extends Screen {
                 mouseY >= suggestionsY && mouseY <= suggestionsY + maxSuggestions * suggestionHeight) {
                 
                 int clickedIndex = (int) ((mouseY - suggestionsY) / suggestionHeight);
-                if (clickedIndex >= 0 && clickedIndex < this.suggestions.size()) {
-                    this.tagEditBox.setValue(this.suggestions.get(clickedIndex));
+                if (clickedIndex >= 0 && clickedIndex < maxSuggestions) {
+                    this.attributeEditBox.setValue(this.suggestions.get(clickedIndex));
                     this.showSuggestions = false;
                     return true;
                 }
+            } else {
+                this.showSuggestions = false;
             }
         }
         
         return super.mouseClicked(mouseX, mouseY, button);
     }
     
-    private void confirmTag() {
-        String tag = this.tagEditBox.getValue().trim();
-        if (!tag.isEmpty()) {
+    private void confirmAttribute() {
+        String attribute = this.attributeEditBox.getValue().trim();
+        if (!attribute.isEmpty()) {
             // Enviar packet al servidor para actualizar el filtro
-            ModNetworking.sendToServer(new CustomTagFilterPacket(this.slotIndex, tag));
+            ModNetworking.sendToServer(new AttributeFilterPacket(this.slotIndex, attribute));
         }
         this.onClose();
     }

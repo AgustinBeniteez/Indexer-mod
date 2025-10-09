@@ -62,26 +62,20 @@ public class ModItems {
     public static final RegistryObject<Item> FOOD_FILTER = ITEMS.register("food_filter",
             () -> new FoodFilterItem(new Item.Properties().stacksTo(64)));
             
-    public static final RegistryObject<Item> PICKAXE_FILTER = ITEMS.register("pickaxe_filter",
-            () -> new PickaxeFilterItem(new Item.Properties().stacksTo(64)));
-            
-    public static final RegistryObject<Item> CUSTOM_TAG_FILTER = ITEMS.register("custom_tag_filter",
+    public static final RegistryObject<Item> CUSTOM_TAG_BLOCKER = ITEMS.register("custom_tag_blocker",
             () -> new CustomTagFilterItem(new Item.Properties().stacksTo(64)));
     
     public static final RegistryObject<Item> FUEL_FILTER = ITEMS.register("fuel_filter",
             () -> new FuelFilterItem(new Item.Properties()));
-    
-    public static final RegistryObject<Item> ORES_FILTER = ITEMS.register("ores_filter",
-            () -> new OresFilterItem(new Item.Properties()));
-    
-    public static final RegistryObject<Item> BLOCKS_FILTER = ITEMS.register("blocks_filter",
-            () -> new BlocksFilterItem(new Item.Properties()));
-    
-    public static final RegistryObject<Item> WEAPONS_FILTER = ITEMS.register("weapons_filter",
-            () -> new WeaponsFilterItem(new Item.Properties()));
-    
-    public static final RegistryObject<Item> ARMOR_FILTER = ITEMS.register("armor_filter",
-            () -> new ArmorFilterItem(new Item.Properties()));
+            
+    public static final RegistryObject<Item> ATTRIBUTE_FILTER = ITEMS.register("attribute_filter",
+            () -> new AttributeFilterItem(new Item.Properties().stacksTo(64)));
+            
+    public static final RegistryObject<Item> NAME_FILTER = ITEMS.register("name_filter",
+            () -> new NameFilterItem(new Item.Properties().stacksTo(64)));
+            
+    public static final RegistryObject<Item> MOD_FILTER = ITEMS.register("mod_filter",
+            () -> new ModFilterItem(new Item.Properties().stacksTo(64)));
 
 
 

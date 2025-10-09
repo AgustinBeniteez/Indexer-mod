@@ -2,6 +2,7 @@ package com.agustinbenitez.indexer.block.entity;
 
 import com.agustinbenitez.indexer.block.IndexerConnectorBlock;
 import com.agustinbenitez.indexer.init.ModBlockEntities;
+import com.agustinbenitez.indexer.init.ModItems;
 import com.agustinbenitez.indexer.inventory.IndexerConnectorMenu;
 import com.agustinbenitez.indexer.util.FilterUtils;
 
@@ -259,26 +260,134 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
             return true;
         }
 
-        // Si no hay filtros configurados, acepta cualquier ítem
-        boolean hasAnyFilter = false;
+        // PRIORIDAD ABSOLUTA: Verificar si el item está bloqueado por un filtro de bloqueo
+        if (isItemBlocked(stack)) {
+            return false;
+        }
+
+        // Verificar si hay filtros positivos (no de bloqueo) configurados
+        boolean hasPositiveFilters = false;
         for (ItemStack filterItem : this.filterItems) {
-            if (!filterItem.isEmpty()) {
-                hasAnyFilter = true;
+            if (!filterItem.isEmpty() && filterItem.getItem() != ModItems.CUSTOM_TAG_BLOCKER.get()) {
+                hasPositiveFilters = true;
                 break;
             }
         }
         
-        if (!hasAnyFilter) {
+        // Si solo hay filtros de bloqueo (sin filtros positivos), acepta todo lo que no esté bloqueado
+        if (!hasPositiveFilters) {
             return true;
         }
 
-        // Verificar si el ítem coincide con alguno de los filtros usando la nueva lógica
+        // Sistema de filtros múltiples con lógica OR dentro de cada tipo
+        // y prioridad entre tipos de filtros
+        
+        // 1. Filtros de nombre (segunda prioridad más alta) - OR lógico entre múltiples nombres
+        boolean hasNameFilters = false;
+        boolean passesNameFilter = false;
         for (ItemStack filterItem : this.filterItems) {
-            if (!filterItem.isEmpty() && FilterUtils.passesFilter(stack, filterItem)) {
-                return true;
+            if (!filterItem.isEmpty() && filterItem.getItem() == ModItems.NAME_FILTER.get()) {
+                hasNameFilters = true;
+                System.out.println("[DEBUG] Evaluando filtro de nombre: " + filterItem.getTag());
+                System.out.println("[DEBUG] Item a evaluar: " + stack.getDisplayName().getString());
+                boolean passes = FilterUtils.passesFilter(stack, filterItem);
+                System.out.println("[DEBUG] ¿Pasa el filtro? " + passes);
+                if (passes) {
+                    passesNameFilter = true;
+                    break; // Si pasa uno, ya es suficiente (OR lógico)
+                }
             }
         }
         
+        if (hasNameFilters) {
+            System.out.println("[DEBUG] Resultado final filtros de nombre: " + passesNameFilter);
+            return passesNameFilter;
+        }
+
+        // 2. Filtros de atributos/encantamientos (tercera prioridad) - OR lógico entre múltiples
+        boolean hasAttributeFilters = false;
+        boolean passesAttributeFilter = false;
+        for (ItemStack filterItem : this.filterItems) {
+            if (!filterItem.isEmpty() && filterItem.getItem() == ModItems.ATTRIBUTE_FILTER.get()) {
+                hasAttributeFilters = true;
+                if (FilterUtils.passesFilter(stack, filterItem)) {
+                    passesAttributeFilter = true;
+                    break; // Si pasa uno, ya es suficiente (OR lógico)
+                }
+            }
+        }
+        
+        if (hasAttributeFilters) {
+            return passesAttributeFilter;
+        }
+        
+        // 3. Filtros específicos (herramientas, comida, combustible, mod) - OR lógico entre múltiples
+        boolean hasSpecificFilters = false;
+        boolean passesSpecificFilter = false;
+        for (ItemStack filterItem : this.filterItems) {
+            if (!filterItem.isEmpty() && 
+                (filterItem.getItem() == ModItems.TOOLS_FILTER.get() ||
+                 filterItem.getItem() == ModItems.FOOD_FILTER.get() ||
+                 filterItem.getItem() == ModItems.FUEL_FILTER.get() ||
+                 filterItem.getItem() == ModItems.MOD_FILTER.get())) {
+                hasSpecificFilters = true;
+                System.out.println("[CONNECTOR_DEBUG] Evaluando filtro específico: " + filterItem.getItem().getDescriptionId() + " para item: " + stack.getItem().getDescriptionId());
+                if (FilterUtils.passesFilter(stack, filterItem)) {
+                    passesSpecificFilter = true;
+                    System.out.println("[CONNECTOR_DEBUG] Item PASA el filtro específico!");
+                    break; // Si pasa uno, ya es suficiente (OR lógico)
+                } else {
+                    System.out.println("[CONNECTOR_DEBUG] Item NO pasa el filtro específico");
+                }
+            }
+        }
+        
+        if (hasSpecificFilters) {
+            System.out.println("[CONNECTOR_DEBUG] Resultado final filtros específicos: " + passesSpecificFilter);
+            return passesSpecificFilter;
+        }
+        
+        // 4. Filtros exactos (menor prioridad) - OR lógico entre múltiples ítems exactos
+        boolean hasExactFilters = false;
+        boolean passesExactFilter = false;
+        for (ItemStack filterItem : this.filterItems) {
+            if (!filterItem.isEmpty() && 
+                filterItem.getItem() != ModItems.NAME_FILTER.get() &&
+                filterItem.getItem() != ModItems.ATTRIBUTE_FILTER.get() &&
+                filterItem.getItem() != ModItems.TOOLS_FILTER.get() &&
+                filterItem.getItem() != ModItems.FOOD_FILTER.get() &&
+                filterItem.getItem() != ModItems.FUEL_FILTER.get() &&
+                filterItem.getItem() != ModItems.MOD_FILTER.get() &&
+                filterItem.getItem() != ModItems.CUSTOM_TAG_BLOCKER.get()) {
+                hasExactFilters = true;
+                if (FilterUtils.passesFilter(stack, filterItem)) {
+                    passesExactFilter = true;
+                    break; // Si pasa uno, ya es suficiente (OR lógico)
+                }
+            }
+        }
+        
+        if (hasExactFilters) {
+            return passesExactFilter;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Verifica si un item está bloqueado por algún filtro de bloqueo en este conector
+     * @param stack el ItemStack a verificar
+     * @return true si el item está bloqueado, false en caso contrario
+     */
+    public boolean isItemBlocked(ItemStack stack) {
+        for (ItemStack filterItem : this.filterItems) {
+            if (!filterItem.isEmpty() && FilterUtils.isBlockingFilter(filterItem)) {
+                // Para filtros de bloqueo: si passesFilter devuelve false, significa que el item está bloqueado
+                if (!FilterUtils.passesFilter(stack, filterItem)) {
+                    return true;
+                }
+            }
+        }
         return false;
     }
 
@@ -874,6 +983,7 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
                 container.setItem(i, newStack);
                 
                 remainder.shrink(toInsert);
+
                 
                 if (remainder.isEmpty()) {
                     break;
@@ -887,6 +997,8 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
                     int toInsert = Math.min(remainder.getCount(), space);
                     slotStack.grow(toInsert);
                     remainder.shrink(toInsert);
+                    
+
                     
                     if (remainder.isEmpty()) {
                         break;
