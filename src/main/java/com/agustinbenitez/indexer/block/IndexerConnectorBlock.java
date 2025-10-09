@@ -32,6 +32,10 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraftforge.network.NetworkHooks;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.Container;
+import net.minecraft.ChatFormatting;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -67,10 +71,31 @@ public class IndexerConnectorBlock extends BaseEntityBlock {
     public BlockState getStateForPlacement(BlockPlaceContext context) {
         Level level = context.getLevel();
         BlockPos pos = context.getClickedPos();
+        // Requerir contenedor lateral para poder colocar
+        if (!hasAdjacentContainer(level, pos)) {
+            Player player = context.getPlayer();
+            if (player != null && !level.isClientSide) {
+                player.sendSystemMessage(Component.translatable("message.indexer.connector.place_requires_container").withStyle(ChatFormatting.RED));
+            }
+            return null; // impedir colocación
+        }
         boolean isConnected = isConnectedToController(level, pos);
         return this.defaultBlockState()
                 .setValue(FACING, context.getHorizontalDirection().getOpposite())
                 .setValue(CONNECTED, isConnected);
+    }
+
+    // Impedir colocación si NO hay un contenedor lateral
+    @Override
+    public boolean canSurvive(BlockState state, LevelReader level, BlockPos pos) {
+        for (Direction direction : Direction.values()) {
+            if (!direction.getAxis().isHorizontal()) continue; // excluir arriba/abajo
+            BlockEntity adjacentEntity = level.getBlockEntity(pos.relative(direction));
+            if (adjacentEntity instanceof Container && !(adjacentEntity instanceof IndexerConnectorBlockEntity)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -142,6 +167,24 @@ public class IndexerConnectorBlock extends BaseEntityBlock {
         return new IndexerConnectorBlockEntity(pos, state);
     }
 
+    // Al colocar: vincular al contenedor inferior y avisar por chat
+    @Override
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable net.minecraft.world.entity.LivingEntity placer, net.minecraft.world.item.ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        if (level.isClientSide()) return;
+
+        BlockEntity entity = level.getBlockEntity(pos);
+        if (entity instanceof IndexerConnectorBlockEntity connector) {
+            // Forzar actualización: encontrará primero el contenedor de abajo si existe
+            connector.updateConnectedContainer();
+            if (connector.getConnectedContainerPos() != null) {
+                if (placer instanceof Player player) {
+                    player.sendSystemMessage(Component.translatable("message.indexer.connector.connected_container"));
+                }
+            }
+        }
+    }
+
     @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
@@ -182,9 +225,10 @@ public class IndexerConnectorBlock extends BaseEntityBlock {
         super.onRemove(state, level, pos, newState, isMoving);
     }
 
-    // Método para verificar si hay un contenedor adyacente
+    // Método para verificar si hay un contenedor adyacente (solo laterales)
     public static boolean hasAdjacentContainer(Level level, BlockPos pos) {
         for (Direction direction : Direction.values()) {
+            if (!direction.getAxis().isHorizontal()) continue; // excluir arriba/abajo
             BlockPos adjacentPos = pos.relative(direction);
             BlockEntity adjacentEntity = level.getBlockEntity(adjacentPos);
             // Verificar si es un contenedor pero NO un conector

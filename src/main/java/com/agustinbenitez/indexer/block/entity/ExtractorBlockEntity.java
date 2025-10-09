@@ -256,14 +256,24 @@ public class ExtractorBlockEntity extends BlockEntity {
         // Luego intentar extraer del slot de resultado
         if (FURNACE_RESULT_SLOT < container.getContainerSize()) {
             ItemStack stackInSlot = container.getItem(FURNACE_RESULT_SLOT);
-            
+
             if (!stackInSlot.isEmpty()) {
+                // Antes de extraer, verificar si hay algún destino disponible con capacidad
+                ItemStack testStack = stackInSlot.copy();
+                testStack.setCount(Math.min(itemsToExtract, stackInSlot.getCount()));
+
+                if (!canSendItemToPipeSystem(testStack, level, extractorPos)) {
+                    // No hay destino con espacio: no extraer todavía
+                    return false;
+                }
+
+                // Hay destino con espacio, proceder con la extracción real
                 ItemStack extractedStack = stackInSlot.copy();
                 extractedStack.setCount(Math.min(itemsToExtract, stackInSlot.getCount()));
-                
+
                 stackInSlot.shrink(extractedStack.getCount());
                 container.setItem(FURNACE_RESULT_SLOT, stackInSlot);
-                
+
                 if (sendItemToPipeSystem(extractedStack, level, extractorPos)) {
                     return true;
                 } else {
@@ -271,7 +281,7 @@ public class ExtractorBlockEntity extends BlockEntity {
                     ItemStack remainingStack = container.getItem(FURNACE_RESULT_SLOT);
                     if (remainingStack.isEmpty()) {
                         container.setItem(FURNACE_RESULT_SLOT, extractedStack);
-                    } else if (remainingStack.getItem() == extractedStack.getItem() && 
+                    } else if (remainingStack.getItem() == extractedStack.getItem() &&
                               remainingStack.getCount() + extractedStack.getCount() <= remainingStack.getMaxStackSize()) {
                         remainingStack.grow(extractedStack.getCount());
                         container.setItem(FURNACE_RESULT_SLOT, remainingStack);
@@ -501,6 +511,90 @@ public class ExtractorBlockEntity extends BlockEntity {
         }
         
         return false; // No hay espacio disponible para buckets
+    }
+
+    // Verifica si existe al menos un destino con capacidad para el item sin insertar realmente
+    private boolean canSendItemToPipeSystem(ItemStack stack, Level level, BlockPos extractorPos) {
+        int searchRadius = 16;
+
+        // Primero: conectores con filtro específico que acepte este item
+        for (int x = -searchRadius; x <= searchRadius; x++) {
+            for (int y = -searchRadius; y <= searchRadius; y++) {
+                for (int z = -searchRadius; z <= searchRadius; z++) {
+                    BlockPos checkPos = extractorPos.offset(x, y, z);
+                    BlockEntity entity = level.getBlockEntity(checkPos);
+
+                    if (entity instanceof IndexerConnectorBlockEntity connector) {
+                        ItemStack filterItem = connector.getFilterItem(0);
+                        if (!filterItem.isEmpty() && FilterUtils.passesFilter(stack, filterItem)) {
+                            // Verificar capacidad del contenedor conectado (solo cofres/barriles, evitar hornos)
+                            BlockPos containerPos = connector.getConnectedContainerPos();
+                            if (containerPos == null) continue;
+                            BlockEntity containerEntity = level.getBlockEntity(containerPos);
+                            if (!(containerEntity instanceof Container)) continue;
+
+                            // Evitar enviar items a hornos por esta ruta (la salida cocinada se guarda en cofres)
+                            String name = containerEntity.getClass().getName();
+                            boolean isFurnace = name.contains("FurnaceBlockEntity") || name.contains("BlastFurnaceBlockEntity") || name.contains("SmokerBlockEntity");
+                            if (isFurnace) continue;
+
+                            Container container = (Container) containerEntity;
+                            if (hasSpaceFor(container, stack)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Segundo: conectores sin filtro específico para este item
+        for (int x = -searchRadius; x <= searchRadius; x++) {
+            for (int y = -searchRadius; y <= searchRadius; y++) {
+                for (int z = -searchRadius; z <= searchRadius; z++) {
+                    BlockPos checkPos = extractorPos.offset(x, y, z);
+                    BlockEntity entity = level.getBlockEntity(checkPos);
+
+                    if (entity instanceof IndexerConnectorBlockEntity connector) {
+                        ItemStack filterItem = connector.getFilterItem(0);
+                        if (filterItem.isEmpty() || filterItem.getItem() != stack.getItem()) {
+                            BlockPos containerPos = connector.getConnectedContainerPos();
+                            if (containerPos == null) continue;
+                            BlockEntity containerEntity = level.getBlockEntity(containerPos);
+                            if (!(containerEntity instanceof Container)) continue;
+
+                            String name = containerEntity.getClass().getName();
+                            boolean isFurnace = name.contains("FurnaceBlockEntity") || name.contains("BlastFurnaceBlockEntity") || name.contains("SmokerBlockEntity");
+                            if (isFurnace) continue;
+
+                            Container container = (Container) containerEntity;
+                            if (hasSpaceFor(container, stack)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    // Comprueba si el contenedor tiene al menos un slot vacío o un stack compatible con espacio
+    private boolean hasSpaceFor(Container container, ItemStack stack) {
+        for (int i = 0; i < container.getContainerSize(); i++) {
+            ItemStack slotStack = container.getItem(i);
+            if (slotStack.isEmpty()) {
+                return true;
+            }
+            if (ItemStack.isSameItemSameTags(slotStack, stack)) {
+                int maxStackSize = Math.min(container.getMaxStackSize(), slotStack.getMaxStackSize());
+                if (slotStack.getCount() < maxStackSize) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public boolean hasConnectedContainer() {

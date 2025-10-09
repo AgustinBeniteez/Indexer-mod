@@ -204,22 +204,35 @@ public class FilterUtils {
             System.out.println("[MOD_FILTER_DEBUG] Filtro sin tag NBT");
             return false; // Sin mod configurado, no pasa nada
         }
-        
+
         String modIdFilter = filterItem.getTag().getString("mod_id");
         if (modIdFilter.isEmpty()) {
             System.out.println("[MOD_FILTER_DEBUG] Filtro sin mod_id configurado");
             return false; // Sin mod configurado, no pasa nada
         }
-        
-        // Obtener el mod ID del item a verificar
-        String itemModId = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(itemToCheck.getItem()).getNamespace();
-        
-        System.out.println("[MOD_FILTER_DEBUG] Item: " + itemToCheck.getItem().getDescriptionId() + 
-                          " | Item ModID: " + itemModId + 
-                          " | Filter ModID: " + modIdFilter + 
-                          " | Match: " + modIdFilter.equals(itemModId));
-        
-        // Verificar si coincide exactamente con el mod configurado
-        return modIdFilter.equals(itemModId);
+
+        // Obtener el resource location completo del item: namespace:path
+        var key = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(itemToCheck.getItem());
+        if (key == null) {
+            System.out.println("[MOD_FILTER_DEBUG] Item sin clave de registro");
+            return false;
+        }
+
+        String itemNamespace = key.getNamespace();
+        String itemPath = key.getPath();
+        String itemFullId = itemNamespace + ":" + itemPath; // ejemplo: indexer:drop_box
+
+        // Comparación robusta: coincide si el namespace es igual o si el id completo
+        // empieza por "<modId>:"
+        String modIdLc = modIdFilter.toLowerCase();
+        boolean match = itemNamespace.equalsIgnoreCase(modIdLc) ||
+                        itemFullId.toLowerCase().startsWith(modIdLc + ":");
+
+        System.out.println("[MOD_FILTER_DEBUG] ItemRL: " + itemFullId +
+                           " | Namespace: " + itemNamespace +
+                           " | Filter ModID: " + modIdFilter +
+                           " | Match: " + match);
+
+        return match;
     }
 }

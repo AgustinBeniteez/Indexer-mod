@@ -48,6 +48,8 @@
   "container.indexer.drop_box": "DropBox",
   "message.indexer.connector.filter_set": "Filtro establecido a: %s",
   "message.indexer.connector.filter_cleared": "Filtro eliminado",
+  "message.indexer.connector.place_requires_container": "No se puede colocar: necesita un contenedor lateral",
+  "item.indexer.indexer_connector.tooltip": "Mantén Shift y haz clic derecho a un cofre/contenedor para conectarlo",
   "message.indexer.controller.connected": "Controlador conectado a %d conector(es)",
   "message.indexer.controller.disconnected": "Controlador desconectado de todos los conectores",
   "message.indexer.controller.connection_changed": "Controlador ahora conectado a %d conector(es)",
@@ -134,5 +136,6 @@
   "item.indexer.custom_tag_blocker.description": "Bloquea items basándose en etiquetas personalizadas",
   "message.indexer.custom_filter.tag_updated": "Etiqueta de bloqueo actualizada a: %s",
   "message.indexer.attribute_filter.attribute_updated": "Filtro de atributos actualizado a: %s",
-  "message.indexer.name_filter.name_updated": "Filtro por nombre actualizado a: %s"
+  "message.indexer.name_filter.name_updated": "Filtro por nombre actualizado a: %s",
+  "message.indexer.connector.connected_container": "Conectado a contenedor"
 }

@@ -131,28 +131,35 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
         BlockPos oldContainerPos = this.connectedContainerPos;
         this.connectedContainerPos = null;
         
-        // Buscar cualquier tipo de inventario adyacente
+        // Buscar cualquier tipo de inventario adyacente (solo laterales)
         for (Direction direction : Direction.values()) {
+            if (!direction.getAxis().isHorizontal()) continue; // excluir arriba/abajo
             BlockPos adjacentPos = this.worldPosition.relative(direction);
             BlockEntity adjacentEntity = this.level.getBlockEntity(adjacentPos);
             
             // Verificar si es cualquier tipo de contenedor (barril, horno, etc.)
             // Pero excluir específicamente otros conectores
             if (adjacentEntity instanceof Container && !(adjacentEntity instanceof IndexerConnectorBlockEntity)) {
+                BlockPos targetContainerPos;
                 // Verificar si es un cofre y si forma parte de un cofre doble
                 if (isChestBlockEntity(adjacentEntity)) {
                     BlockPos doubleChestPos = findDoubleChestPartner(adjacentPos);
                     if (doubleChestPos != null) {
                         // Es un cofre doble, usar la posición del cofre "principal" (el de menor coordenada)
-                        this.connectedContainerPos = getMainChestPosition(adjacentPos, doubleChestPos);
+                        targetContainerPos = getMainChestPosition(adjacentPos, doubleChestPos);
                     } else {
                         // Es un cofre simple
-                        this.connectedContainerPos = adjacentPos;
+                        targetContainerPos = adjacentPos;
                     }
                 } else {
                     // No es un cofre, usar comportamiento normal
-                    this.connectedContainerPos = adjacentPos;
+                    targetContainerPos = adjacentPos;
                 }
+                // Impedir conectar si ya hay otro conector enlazado a este contenedor
+                if (isContainerAlreadyConnected(targetContainerPos)) {
+                    continue; // probar otra dirección
+                }
+                this.connectedContainerPos = targetContainerPos;
                 
                 this.setChanged();
                 return;
@@ -213,6 +220,22 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
         }
         
         return null;
+    }
+
+    // Verifica si un contenedor ya está conectado a otro conector adyacente
+    private boolean isContainerAlreadyConnected(BlockPos containerPos) {
+        if (this.level == null || containerPos == null) return false;
+        for (Direction dir : Direction.values()) {
+            BlockPos neighborPos = containerPos.relative(dir);
+            BlockEntity be = this.level.getBlockEntity(neighborPos);
+            if (be instanceof IndexerConnectorBlockEntity) {
+                IndexerConnectorBlockEntity other = (IndexerConnectorBlockEntity) be;
+                if (other != this && containerPos.equals(other.getConnectedContainerPos())) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
     
     // Método auxiliar para obtener la posición "principal" del cofre doble
@@ -568,6 +591,16 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
             // El slot de ingredientes en AbstractFurnaceBlockEntity es 0
             final int FURNACE_INPUT_SLOT = 0;
             
+            // Exigir filtro: si no hay filtro configurado en este conector, no insertar
+            ItemStack filterItem = getFilterItem(0);
+            if (filterItem.isEmpty()) {
+                return remainder; // no permitir inserción sin filtro
+            }
+            // Solo insertar si el ítem pasa el filtro
+            if (!com.agustinbenitez.indexer.util.FilterUtils.passesFilter(remainder, filterItem)) {
+                return remainder;
+            }
+
             if (FURNACE_INPUT_SLOT < container.getContainerSize()) {
                 ItemStack inputSlotStack = container.getItem(FURNACE_INPUT_SLOT);
                 
