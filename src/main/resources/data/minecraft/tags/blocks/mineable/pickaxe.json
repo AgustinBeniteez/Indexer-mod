@@ -1,0 +1,10 @@
+{
+  "replace": false,
+  "values": [
+    "indexer:indexer_controller",
+    "indexer:indexer_pipe",
+    "indexer:indexer_connector",
+    "indexer:drop_box",
+    "indexer:extractor"
+  ]
+}
