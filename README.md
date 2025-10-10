@@ -34,7 +34,7 @@ The system includes 5 speed upgrades with performance increases per level:
 
 - Copper — 10x
   
-  ![Copper Upgrade](src/main/resources/assets/indexer/textures/item/transfer_speed_upgrade_coper.png)
+  ![Copper Upgrade](src/main/resources/assets/indexer/textures/item/transfer_speed_upgrade_copper.png)
   
   Crafting: surround the Basic upgrade with copper ingots.
 
