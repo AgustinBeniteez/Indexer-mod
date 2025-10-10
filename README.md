@@ -124,20 +124,20 @@ There is no restriction on the number of connectors you can use in your system, 
 ### Intuitive Interface
 Easily configure your connector filters with a simple and straightforward interface. Just place the item you want to filter in the available slot.
 
-## Nueva UI del Indexer Controller
+## New Indexer Controller UI
 
-La pantalla de Red del Indexer Controller fue rediseñada para mostrar de forma clara todos los contenedores conectados y estadísticas del sistema.
+The Indexer Controller Network screen was redesigned to clearly show all connected containers and system statistics.
 
-- Lista de contenedores: muestra posición, tipo y filtros configurados. Incluye buscador y botón de actualización.
-- Preview de contenido: al pasar el mouse sobre una card se muestra un overlay con los ítems y cantidades (si el contenedor no está vacío). Si hay más de los mostrados, aparece `...`.
-- Icono de tipo: cada card muestra el icono del tipo de contenedor (Cofre, Barril, Horno, etc.). Se oculta automáticamente cuando el modal de detalle está abierto.
-- Estadísticas de red: panel con información de conexión (DropBox), cantidad de contenedores conectados y barra de ocupación con porcentaje (ejemplo: 29%).
-- Vista detallada: al hacer clic en una card se abre un modal con posición, tipo, capacidad, porcentaje de llenado con barra, filtros y sección de ítems con scroll (mínimo 2 filas visibles y rueda del mouse habilitada).
+- Container list: shows position, type, and configured filters. Includes search and refresh button.
+- Content preview: hovering a card shows an overlay with items and quantities (if the container is not empty). If there are more items than displayed, `...` appears.
+- Type icon: each card shows the icon of the container type (Chest, Barrel, Furnace, etc.). It automatically hides when the detail modal is open.
+- Network statistics: panel with connection info (DropBox), number of connected containers, and occupancy bar with percentage (example: 29%).
+- Detailed view: clicking a card opens a modal with position, type, capacity, fill percentage with bar, filters, and an items section with scroll (minimum 2 visible rows and mouse wheel enabled).
 
-### Cómo usar
-- Abre la pantalla de red del Indexer Controller.
-- Usa el buscador para filtrar contenedores o pasa el mouse sobre una card para ver su contenido.
-- Haz clic en una card para abrir la vista detallada y desplázate por los ítems con la rueda del mouse.
+### How to Use
+- Open the Indexer Controller network screen.
+- Use the search to filter containers or hover a card to preview its contents.
+- Click a card to open the detailed view and scroll the items using the mouse wheel.
 
 ## Language Support
 
