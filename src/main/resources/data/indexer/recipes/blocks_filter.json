@@ -2,7 +2,7 @@
   "type": "minecraft:crafting_shaped",
   "pattern": [
     "LSL",
-    "CDC",
+    "CFC",
     "LOL"
   ],
   "key": {
@@ -15,8 +15,8 @@
     "C": {
       "item": "minecraft:cobblestone"
     },
-    "D": {
-      "item": "minecraft:dirt"
+    "F": {
+      "item": "indexer:base_filter"
     },
     "O": {
       "item": "minecraft:oak_log"

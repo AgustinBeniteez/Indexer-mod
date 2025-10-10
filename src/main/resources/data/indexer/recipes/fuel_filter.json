@@ -13,7 +13,7 @@
       "item": "minecraft:coal"
     },
     "F": {
-      "item": "minecraft:lava_bucket"
+      "item": "indexer:base_filter"
     },
     "B": {
       "item": "minecraft:charcoal"

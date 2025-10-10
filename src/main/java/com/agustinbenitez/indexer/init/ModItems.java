@@ -74,8 +74,7 @@ public class ModItems {
     public static final RegistryObject<Item> NAME_FILTER = ITEMS.register("name_filter",
             () -> new NameFilterItem(new Item.Properties().stacksTo(64)));
             
-    public static final RegistryObject<Item> MOD_FILTER = ITEMS.register("mod_filter",
-            () -> new ModFilterItem(new Item.Properties().stacksTo(64)));
+    // MOD_FILTER eliminado
 
 
 

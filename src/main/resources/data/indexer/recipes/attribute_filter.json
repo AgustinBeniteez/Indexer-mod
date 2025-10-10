@@ -2,8 +2,8 @@
   "type": "minecraft:crafting_shaped",
   "pattern": [
     " E ",
-    "EFE",
-    " B "
+    " F ",
+    " N "
   ],
   "key": {
     "E": {
@@ -12,8 +12,8 @@
     "F": {
       "item": "indexer:base_filter"
     },
-    "B": {
-      "item": "minecraft:experience_bottle"
+    "N": {
+      "item": "minecraft:name_tag"
     }
   },
   "result": {

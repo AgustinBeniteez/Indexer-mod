@@ -351,8 +351,7 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
             if (!filterItem.isEmpty() && 
                 (filterItem.getItem() == ModItems.TOOLS_FILTER.get() ||
                  filterItem.getItem() == ModItems.FOOD_FILTER.get() ||
-                 filterItem.getItem() == ModItems.FUEL_FILTER.get() ||
-                 filterItem.getItem() == ModItems.MOD_FILTER.get())) {
+                 filterItem.getItem() == ModItems.FUEL_FILTER.get())) {
                 hasSpecificFilters = true;
                 System.out.println("[CONNECTOR_DEBUG] Evaluando filtro específico: " + filterItem.getItem().getDescriptionId() + " para item: " + stack.getItem().getDescriptionId());
                 if (FilterUtils.passesFilter(stack, filterItem)) {
@@ -380,7 +379,6 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
                 filterItem.getItem() != ModItems.TOOLS_FILTER.get() &&
                 filterItem.getItem() != ModItems.FOOD_FILTER.get() &&
                 filterItem.getItem() != ModItems.FUEL_FILTER.get() &&
-                filterItem.getItem() != ModItems.MOD_FILTER.get() &&
                 filterItem.getItem() != ModItems.CUSTOM_TAG_BLOCKER.get()) {
                 hasExactFilters = true;
                 if (FilterUtils.passesFilter(stack, filterItem)) {

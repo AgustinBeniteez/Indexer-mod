@@ -1,13 +1,16 @@
 {
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    "LLL",
+    "LFL",
     "PAH",
     "LLL"
   ],
   "key": {
     "L": {
       "item": "minecraft:leather"
+    },
+    "F": {
+      "item": "indexer:base_filter"
     },
     "P": {
       "item": "minecraft:iron_pickaxe"

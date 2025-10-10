@@ -363,7 +363,16 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         boolean checkFurnaces = (level.getGameTime() % 40 == 0);
         
         if (entity.dropBoxHasItems || checkNetwork || checkFurnaces) {
-            boolean didTransfer = entity.transferItemsFromDropContainer();
+            boolean didTransfer = false;
+
+            if (entity.hasDropContainer()) {
+                // Si hay DropBox, usar el flujo habitual de transferencia
+                didTransfer = entity.transferItemsFromDropContainer();
+            } else if (checkFurnaces) {
+                // Sin DropBox: realizar mantenimiento de hornos para tomar materiales de cofres
+                entity.checkFurnacesOnly();
+                // No aplicar cooldown por mantenimiento de hornos
+            }
 
             if (didTransfer) {
                 entity.transferCooldown = TRANSFER_COOLDOWN_MAX;

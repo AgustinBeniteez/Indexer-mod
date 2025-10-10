@@ -39,7 +39,6 @@ public class ModCreativeTabs {
                         output.accept(ModItems.CUSTOM_TAG_BLOCKER.get());
                         output.accept(ModItems.ATTRIBUTE_FILTER.get());
                         output.accept(ModItems.NAME_FILTER.get());
-                        output.accept(ModItems.MOD_FILTER.get());
                     })
                     .build());
 

@@ -44,10 +44,7 @@ public class FilterUtils {
             return passesNameFilter(itemToCheck, filterItem);
         }
         
-        // Filtro por mod específico
-        if (filterType == ModItems.MOD_FILTER.get()) {
-            return passesModFilter(itemToCheck, filterItem);
-        }
+        // Filtro por mod específico eliminado
         
         // Filtro exacto (comportamiento original)
         return itemToCheck.getItem() == filterItem.getItem();
@@ -199,40 +196,5 @@ public class FilterUtils {
      * Verifica si un item pasa el filtro por mod específico.
      * Solo permite pasar items que provengan del mod configurado.
      */
-    private static boolean passesModFilter(ItemStack itemToCheck, ItemStack filterItem) {
-        if (!filterItem.hasTag()) {
-            System.out.println("[MOD_FILTER_DEBUG] Filtro sin tag NBT");
-            return false; // Sin mod configurado, no pasa nada
-        }
-
-        String modIdFilter = filterItem.getTag().getString("mod_id");
-        if (modIdFilter.isEmpty()) {
-            System.out.println("[MOD_FILTER_DEBUG] Filtro sin mod_id configurado");
-            return false; // Sin mod configurado, no pasa nada
-        }
-
-        // Obtener el resource location completo del item: namespace:path
-        var key = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(itemToCheck.getItem());
-        if (key == null) {
-            System.out.println("[MOD_FILTER_DEBUG] Item sin clave de registro");
-            return false;
-        }
-
-        String itemNamespace = key.getNamespace();
-        String itemPath = key.getPath();
-        String itemFullId = itemNamespace + ":" + itemPath; // ejemplo: indexer:drop_box
-
-        // Comparación robusta: coincide si el namespace es igual o si el id completo
-        // empieza por "<modId>:"
-        String modIdLc = modIdFilter.toLowerCase();
-        boolean match = itemNamespace.equalsIgnoreCase(modIdLc) ||
-                        itemFullId.toLowerCase().startsWith(modIdLc + ":");
-
-        System.out.println("[MOD_FILTER_DEBUG] ItemRL: " + itemFullId +
-                           " | Namespace: " + itemNamespace +
-                           " | Filter ModID: " + modIdFilter +
-                           " | Match: " + match);
-
-        return match;
-    }
+    // Método passesModFilter eliminado
 }
