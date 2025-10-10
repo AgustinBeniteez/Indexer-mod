@@ -18,8 +18,8 @@ public class IndexerConnectorMenu extends AbstractContainerMenu {
     private final IndexerConnectorBlockEntity blockEntity;
     private final ContainerLevelAccess access;
 
-    // Constants for filter slots (3x3 grid)
-    private static final int FILTER_SLOTS = 9;
+    // Base filter slots (3x3 grid)
+    private static final int BASE_FILTER_SLOTS = 9;
     private static final int FILTER_START_X = 44;
     private static final int FILTER_START_Y = 18;
     
@@ -35,24 +35,48 @@ public class IndexerConnectorMenu extends AbstractContainerMenu {
         this.blockEntity = blockEntity;
         this.access = blockEntity != null ? ContainerLevelAccess.create(blockEntity.getLevel(), blockEntity.getBlockPos()) : ContainerLevelAccess.NULL;
 
-        // Slots para los filtros en una cuadrícula 3x3
+        // Slots para los filtros - siempre 3x3 base, más 3x3 adicionales a la derecha si está mejorado
+        int filterSlots = (this.blockEntity != null) ? this.blockEntity.getCurrentFilterSlots() : BASE_FILTER_SLOTS;
+        
+        // Primeros 9 slots (3x3 izquierda) - siempre presentes
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 3; col++) {
                 int slotIndex = col + row * 3;
-                this.addSlot(new Slot(container, slotIndex, 
-                        FILTER_START_X + col * SLOT_SIZE, 
+                this.addSlot(new Slot(container, slotIndex,
+                        FILTER_START_X + col * SLOT_SIZE,
                         FILTER_START_Y + row * SLOT_SIZE) {
                     @Override
                     public boolean mayPlace(ItemStack stack) {
-                        // Permitir colocar cualquier ítem como filtro
                         return true;
                     }
                     
                     @Override
                     public int getMaxStackSize() {
-                        return 1; // Solo permitir un ítem como filtro
+                        return 1;
                     }
                 });
+            }
+        }
+        
+        // Slots adicionales (3x3 derecha) - juntos, sin separación
+        if (filterSlots == 18) {
+            for (int row = 0; row < 3; row++) {
+                for (int col = 0; col < 3; col++) {
+                    int slotIndex = 9 + col + row * 3; // Índices 9-17
+                    this.addSlot(new Slot(container, slotIndex,
+                            FILTER_START_X + (col + 3) * SLOT_SIZE,
+                            FILTER_START_Y + row * SLOT_SIZE) {
+                        @Override
+                        public boolean mayPlace(ItemStack stack) {
+                            return true;
+                        }
+                        
+                        @Override
+                        public int getMaxStackSize() {
+                            return 1;
+                        }
+                    });
+                }
             }
         }
         
@@ -74,7 +98,11 @@ public class IndexerConnectorMenu extends AbstractContainerMenu {
     }
 
     public IndexerConnectorMenu(int id, Inventory playerInventory) {
-        this(id, playerInventory, new SimpleContainer(FILTER_SLOTS), null);
+        this(id, playerInventory, new SimpleContainer(BASE_FILTER_SLOTS), null);
+    }
+
+    public int getFilterSlots() {
+        return (this.blockEntity != null) ? this.blockEntity.getCurrentFilterSlots() : BASE_FILTER_SLOTS;
     }
 
     @Override
@@ -86,14 +114,18 @@ public class IndexerConnectorMenu extends AbstractContainerMenu {
             ItemStack slotStack = slot.getItem();
             itemstack = slotStack.copy();
             
-            if (index < FILTER_SLOTS) {
+            // Obtener el número real de slots de filtro (9 o 18)
+            int filterSlots = (this.blockEntity != null) ? this.blockEntity.getCurrentFilterSlots() : BASE_FILTER_SLOTS;
+            
+            if (index < filterSlots) {
                 // Si es un slot de filtro, mover al inventario del jugador
-                if (!this.moveItemStackTo(slotStack, FILTER_SLOTS, this.slots.size(), true)) {
+                // Los slots del inventario del jugador empiezan después de todos los slots de filtro
+                if (!this.moveItemStackTo(slotStack, filterSlots, this.slots.size(), true)) {
                     return ItemStack.EMPTY;
                 }
             } else {
                 // Si es un slot del inventario del jugador, intentar mover a los slots de filtro
-                if (!this.moveItemStackTo(slotStack, 0, FILTER_SLOTS, false)) {
+                if (!this.moveItemStackTo(slotStack, 0, filterSlots, false)) {
                     return ItemStack.EMPTY;
                 }
             }

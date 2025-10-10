@@ -33,6 +33,10 @@ public class ModItems {
     public static final RegistryObject<Item> INDEXER_MANUAL = ITEMS.register("indexer_manual",
             () -> new IndexerManualItem(new Item.Properties().stacksTo(1)));
             
+    // Connector capacity upgrade (increases filter slots)
+    public static final RegistryObject<Item> CONNECTOR_CAPACITY_UPGRADE = ITEMS.register("connector_capacity_upgrade",
+            () -> new ConnectorCapacityUpgradeItem(new Item.Properties().stacksTo(1).durability(5)));
+
     // Transfer speed upgrades
     public static final RegistryObject<Item> TRANSFER_SPEED_UPGRADE_ZERO = ITEMS.register("transfer_speed_upgrade_zero",
             () -> new TransferSpeedUpgradeItem(new Item.Properties().stacksTo(16), 0, 1));

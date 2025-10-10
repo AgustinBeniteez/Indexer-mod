@@ -90,4 +90,12 @@
   "gui.indexer.manual.wiki": "Wiki",
   "gui.indexer.manual.search_placeholder": "Search by name",
   "gui.indexer.manual.error_image": "Error loading image"
+  ,
+"item.indexer.connector_capacity_upgrade.tooltip": "Upgrades Connector to 18 filter slots (Lvl 2)",
+  "item.indexer.connector_capacity_upgrade": "Connector Capacity Upgrade",
+  "item.indexer.connector_capacity_upgrade.uses_info": "Uses remaining: %s",
+  "message.indexer.connector_upgrade.only_connector": "Can only be applied to an Indexer Connector",
+  "message.indexer.connector_upgrade.already_applied": "Connector already upgraded",
+  "message.indexer.connector_upgrade.success": "Connector upgraded to Level 2 (18 filter slots)",
+  "item.indexer.indexer_connector.level2": "Connector Lvl2"
 }

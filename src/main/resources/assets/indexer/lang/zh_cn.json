@@ -93,5 +93,11 @@
   "gui.indexer.manual.tutorial": "教程",
   "gui.indexer.manual.wiki": "百科",
   "gui.indexer.manual.search_placeholder": "按名称搜索",
-  "gui.indexer.manual.error_image": "加载图片错误"
+  "gui.indexer.manual.error_image": "加载图片错误",
+"item.indexer.connector_capacity_upgrade.tooltip": "将连接器升级到18个过滤槽（等级2）",
+  "item.indexer.connector_capacity_upgrade.uses_info": "剩余使用次数：%s",
+  "message.indexer.connector_upgrade.only_connector": "只能应用于索引器连接器",
+  "message.indexer.connector_upgrade.already_applied": "连接器已升级",
+  "message.indexer.connector_upgrade.success": "连接器已升级至等级2（18个过滤槽）",
+  "item.indexer.indexer_connector.level2": "连接器 等级2"
 }

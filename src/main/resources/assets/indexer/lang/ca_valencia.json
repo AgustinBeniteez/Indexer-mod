@@ -138,5 +138,12 @@
   "gui.indexer.manual.tutorial": "Tutorial",
   "gui.indexer.manual.wiki": "Wiki",
   "gui.indexer.manual.search_placeholder": "Cercar per nom",
-  "gui.indexer.manual.error_image": "Error en carregar la imatge"
+  "gui.indexer.manual.error_image": "Error en carregar la imatge",
+  "item.indexer.connector_capacity_upgrade.tooltip": "Millora el Connector a 18 slots de filtre (Nivell 2)",
+  "item.indexer.connector_capacity_upgrade.uses_info": "Usos restants: %s",
+  "item.indexer.connector_capacity_upgrade": "Millora de capacitat del connector",
+  "message.indexer.connector_upgrade.only_connector": "Només es pot aplicar a un Connector Indexer",
+  "message.indexer.connector_upgrade.already_applied": "El connector ja està millorat",
+  "message.indexer.connector_upgrade.success": "Connector millorat a Nivell 2 (18 slots de filtre)",
+  "item.indexer.indexer_connector.level2": "Connector Nivell 2"
 }

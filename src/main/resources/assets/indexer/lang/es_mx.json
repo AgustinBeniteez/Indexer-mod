@@ -91,4 +91,11 @@
   "gui.indexer.manual.wiki": "Wiki",
   "gui.indexer.manual.search_placeholder": "Buscar por nombre",
   "gui.indexer.manual.error_image": "Error al cargar imagen"
+  ,
+"item.indexer.connector_capacity_upgrade.tooltip": "Mejora el Conector a 18 slots de filtro (Nivel 2)",
+  "item.indexer.connector_capacity_upgrade.uses_info": "Usos restantes: %s",
+  "message.indexer.connector_upgrade.only_connector": "Solo se puede aplicar a un Conector Indexer",
+  "message.indexer.connector_upgrade.already_applied": "El conector ya está mejorado",
+  "message.indexer.connector_upgrade.success": "Conector mejorado a Nivel 2 (18 slots de filtro)",
+  "item.indexer.indexer_connector.level2": "Conector Lvl2"
 }

@@ -19,6 +19,15 @@ public class IndexerConnectorItem extends BlockItem {
     @Override
     public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("item.indexer.indexer_connector.tooltip"));
+        if (stack.hasTag()) {
+            net.minecraft.nbt.CompoundTag nbt = stack.getTag();
+            if (nbt.contains("ConnectorLevel")) {
+                int connectorLevel = nbt.getInt("ConnectorLevel");
+                if (connectorLevel >= 2) {
+                    tooltip.add(Component.translatable("item.indexer.indexer_connector.level2").withStyle(net.minecraft.ChatFormatting.GREEN));
+                }
+            }
+        }
         super.appendHoverText(stack, level, tooltip, flag);
     }
 }

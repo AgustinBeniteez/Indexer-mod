@@ -182,6 +182,15 @@ public class IndexerConnectorBlock extends BaseEntityBlock {
                     player.sendSystemMessage(Component.translatable("message.indexer.connector.connected_container"));
                 }
             }
+
+            // Restaurar nivel del conector desde el NBT del item si existe
+            if (stack.hasTag()) {
+                net.minecraft.nbt.CompoundTag nbt = stack.getTag();
+                if (nbt.contains("ConnectorLevel")) {
+                    int levelVal = nbt.getInt("ConnectorLevel");
+                    connector.setConnectorLevel(levelVal);
+                }
+            }
         }
     }
 
@@ -219,6 +228,14 @@ public class IndexerConnectorBlock extends BaseEntityBlock {
                 
                 // Dropear el ítem del conector
                 net.minecraft.world.item.ItemStack itemStack = new net.minecraft.world.item.ItemStack(this);
+                if (blockEntity instanceof IndexerConnectorBlockEntity connectorEntity) {
+                    // Guardar nivel del conector en el NBT del item
+                    int connectorLevel = connectorEntity.getConnectorLevel();
+                    if (connectorLevel > 1) {
+                        net.minecraft.nbt.CompoundTag nbt = itemStack.getOrCreateTag();
+                        nbt.putInt("ConnectorLevel", connectorLevel);
+                    }
+                }
                 net.minecraft.world.Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), itemStack);
             }
         }

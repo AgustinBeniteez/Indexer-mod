@@ -31,15 +31,17 @@ import java.util.ArrayList;
 import javax.annotation.Nullable;
 
 public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntity {
-    private static final int FILTER_SLOTS = 9; // 3x3 grid of filter slots
+    private static final int BASE_FILTER_SLOTS = 9; // 3x3 grid of filter slots
+    private static final int UPGRADED_FILTER_SLOTS = 18; // 6x3 when upgraded
+    private int connectorLevel = 1;
     private List<ItemStack> filterItems = new ArrayList<>();
     private BlockPos connectedContainerPos = null;
-    private net.minecraft.core.NonNullList<ItemStack> items = net.minecraft.core.NonNullList.withSize(FILTER_SLOTS, ItemStack.EMPTY);
+    private net.minecraft.core.NonNullList<ItemStack> items = net.minecraft.core.NonNullList.withSize(BASE_FILTER_SLOTS, ItemStack.EMPTY);
 
     public IndexerConnectorBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.INDEXER_CONNECTOR.get(), pos, state);
         // Initialize filter items list with empty stacks
-        for (int i = 0; i < FILTER_SLOTS; i++) {
+        for (int i = 0; i < BASE_FILTER_SLOTS; i++) {
             filterItems.add(ItemStack.EMPTY);
         }
     }
@@ -56,18 +58,26 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
 
     @Override
     public int getContainerSize() {
-        return FILTER_SLOTS; // Multiple slots for filters
+        return getCurrentFilterSlots(); // Multiple slots for filters
     }
 
     @Override
     public void load(CompoundTag tag) {
         super.load(tag);
+        // Load connector level
+        if (tag.contains("ConnectorLevel")) {
+            this.connectorLevel = tag.getInt("ConnectorLevel");
+        } else {
+            this.connectorLevel = 1;
+        }
+        ensureFilterCapacity();
         
         // Load filter items
         this.filterItems.clear();
         if (tag.contains("FilterItems")) {
             CompoundTag filterItemsTag = tag.getCompound("FilterItems");
-            for (int i = 0; i < FILTER_SLOTS; i++) {
+            int maxRead = UPGRADED_FILTER_SLOTS;
+            for (int i = 0; i < maxRead; i++) {
                 if (filterItemsTag.contains("Item" + i)) {
                     this.filterItems.add(ItemStack.of(filterItemsTag.getCompound("Item" + i)));
                 } else {
@@ -76,10 +86,11 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
             }
         } else {
             // Initialize with empty stacks if no data
-            for (int i = 0; i < FILTER_SLOTS; i++) {
+            for (int i = 0; i < getCurrentFilterSlots(); i++) {
                 this.filterItems.add(ItemStack.EMPTY);
             }
         }
+        ensureFilterCapacity();
         
         // Load connected container position
         if (tag.contains("ContainerX") && tag.contains("ContainerY") && tag.contains("ContainerZ")) {
@@ -94,10 +105,11 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
     @Override
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
+        tag.putInt("ConnectorLevel", this.connectorLevel);
         
         // Save filter items
         CompoundTag filterItemsTag = new CompoundTag();
-        for (int i = 0; i < this.filterItems.size() && i < FILTER_SLOTS; i++) {
+        for (int i = 0; i < this.filterItems.size() && i < getCurrentFilterSlots(); i++) {
             ItemStack filterItem = this.filterItems.get(i);
             if (!filterItem.isEmpty()) {
                 CompoundTag itemTag = new CompoundTag();
@@ -1057,7 +1069,7 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
     }
 
     public void setFilterItem(int slot, ItemStack stack) {
-        if (slot >= 0 && slot < FILTER_SLOTS) {
+        if (slot >= 0 && slot < getCurrentFilterSlots()) {
             while (this.filterItems.size() <= slot) {
                 this.filterItems.add(ItemStack.EMPTY);
             }
@@ -1080,7 +1092,7 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
 
     @Override
     public ItemStack getItem(int slot) {
-        if (slot >= 0 && slot < FILTER_SLOTS && slot < this.filterItems.size()) {
+        if (slot >= 0 && slot < getCurrentFilterSlots() && slot < this.filterItems.size()) {
             return this.filterItems.get(slot);
         }
         return ItemStack.EMPTY;
@@ -1088,7 +1100,7 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
 
     @Override
     public ItemStack removeItem(int slot, int amount) {
-        if (slot >= 0 && slot < FILTER_SLOTS && slot < this.filterItems.size() && !this.filterItems.get(slot).isEmpty()) {
+        if (slot >= 0 && slot < getCurrentFilterSlots() && slot < this.filterItems.size() && !this.filterItems.get(slot).isEmpty()) {
             ItemStack result = this.filterItems.get(slot).copy();
             this.filterItems.set(slot, ItemStack.EMPTY);
             this.setChanged();
@@ -1099,7 +1111,7 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
 
     @Override
     public ItemStack removeItemNoUpdate(int slot) {
-        if (slot >= 0 && slot < FILTER_SLOTS && slot < this.filterItems.size()) {
+        if (slot >= 0 && slot < getCurrentFilterSlots() && slot < this.filterItems.size()) {
             ItemStack result = this.filterItems.get(slot);
             this.filterItems.set(slot, ItemStack.EMPTY);
             return result;
@@ -1109,7 +1121,7 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
 
     @Override
     public void setItem(int slot, ItemStack stack) {
-        if (slot >= 0 && slot < FILTER_SLOTS) {
+        if (slot >= 0 && slot < getCurrentFilterSlots()) {
             while (this.filterItems.size() <= slot) {
                 this.filterItems.add(ItemStack.EMPTY);
             }
@@ -1165,12 +1177,12 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
      */
     private boolean isItemAlreadyInFilter(ItemStack stack, int excludeSlot) {
         // Asegurar que la lista tenga el tamaño correcto
-        while (this.filterItems.size() < FILTER_SLOTS) {
+        while (this.filterItems.size() < getCurrentFilterSlots()) {
             this.filterItems.add(ItemStack.EMPTY);
         }
         
         // Verificar cada slot del filtro
-        for (int i = 0; i < FILTER_SLOTS; i++) {
+        for (int i = 0; i < getCurrentFilterSlots(); i++) {
             if (i == excludeSlot) {
                 continue; // Saltar el slot excluido
             }
@@ -1188,12 +1200,12 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
      */
     private int findNearestEmptySlot() {
         // Asegurar que la lista tenga el tamaño correcto
-        while (this.filterItems.size() < FILTER_SLOTS) {
+        while (this.filterItems.size() < getCurrentFilterSlots()) {
             this.filterItems.add(ItemStack.EMPTY);
         }
         
         // Buscar desde el slot 0 hacia adelante
-        for (int i = 0; i < FILTER_SLOTS; i++) {
+        for (int i = 0; i < getCurrentFilterSlots(); i++) {
             if (this.filterItems.get(i).isEmpty()) {
                 return i;
             }
@@ -1212,7 +1224,7 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
 
     @Override
     public boolean canPlaceItem(int slot, ItemStack stack) {
-        if (slot >= 0 && slot < FILTER_SLOTS) {
+        if (slot >= 0 && slot < getCurrentFilterSlots()) {
             // No permitir colocar items vacíos
             if (stack.isEmpty()) {
                 return true; // Permitir limpiar slots
@@ -1231,7 +1243,7 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
     @Override
     public void clearContent() {
         this.filterItems.clear();
-        for (int i = 0; i < FILTER_SLOTS; i++) {
+        for (int i = 0; i < getCurrentFilterSlots(); i++) {
             this.filterItems.add(ItemStack.EMPTY);
         }
         this.items.clear();
@@ -1246,5 +1258,64 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
     protected void setItems(net.minecraft.core.NonNullList<ItemStack> items) {
         this.items = items;
         // Los filtros se manejan por separado, no necesitamos actualizar filterItems aquí
+    }
+
+    // Upgrade API
+    public int getConnectorLevel() {
+        return this.connectorLevel;
+    }
+
+    public void setConnectorLevel(int level) {
+        this.connectorLevel = Math.max(1, level);
+        ensureFilterCapacity();
+        this.setChanged();
+        // Sync to client so GUI knows the new level/slot count
+        if (this.level != null) {
+            this.level.sendBlockUpdated(this.getBlockPos(), this.getBlockState(), this.getBlockState(), 3);
+        }
+    }
+
+    public int getCurrentFilterSlots() {
+        return this.connectorLevel >= 2 ? UPGRADED_FILTER_SLOTS : BASE_FILTER_SLOTS;
+    }
+
+    // --- Client sync overrides ---
+    @Override
+    public net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket getUpdatePacket() {
+        return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    @Override
+    public net.minecraft.nbt.CompoundTag getUpdateTag() {
+        net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
+        saveAdditional(tag);
+        return tag;
+    }
+
+    @Override
+    public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket pkt) {
+        net.minecraft.nbt.CompoundTag tag = pkt.getTag();
+        if (tag != null) {
+            load(tag);
+        }
+    }
+
+    public void ensureFilterCapacity() {
+        int desired = getCurrentFilterSlots();
+        // Resize items NonNullList to desired
+        if (this.items.size() != desired) {
+            net.minecraft.core.NonNullList<ItemStack> newItems = net.minecraft.core.NonNullList.withSize(desired, ItemStack.EMPTY);
+            for (int i = 0; i < Math.min(this.items.size(), desired); i++) {
+                newItems.set(i, this.items.get(i));
+            }
+            this.items = newItems;
+        }
+        // Ensure filterItems size
+        while (this.filterItems.size() < desired) {
+            this.filterItems.add(ItemStack.EMPTY);
+        }
+        if (this.filterItems.size() > desired) {
+            this.filterItems = new ArrayList<>(this.filterItems.subList(0, desired));
+        }
     }
 }
