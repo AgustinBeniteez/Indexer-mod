@@ -48,7 +48,7 @@ public class IndexerManualScreen extends Screen {
     
     // Estado de la pantalla
     private int currentPage = 0;
-    private final int totalPages = 9; // Número total de páginas disponibles
+    private final int totalPages = 12; // Número total de páginas disponibles
     
     // Recursos para las imágenes de cada página
     private final ResourceLocation[] pageImages = new ResourceLocation[totalPages];

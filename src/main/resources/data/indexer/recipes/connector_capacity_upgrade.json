@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "GEG",
+    "ECE",
+    "GEG"
+  ],
+  "key": {
+    "G": {
+      "item": "minecraft:gold_ingot"
+    },
+    "E": {
+      "item": "minecraft:emerald"
+    },
+    "C": {
+      "item": "indexer:indexer_connector"
+    }
+  },
+  "result": {
+    "item": "indexer:connector_capacity_upgrade",
+    "count": 1
+  }
+}
