@@ -9,6 +9,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.Items;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
@@ -45,10 +46,16 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
     private int scrollOffset = 0;
     private int maxVisibleContainers = 5; // Reducido de 6 a 5 para evitar que el último elemento se corte
     private ContainerInfo selectedContainer = null;
-    
+
     // Vista detallada
     private boolean showDetailedView = false;
     private ContainerInfo detailedContainer = null;
+    // Área y scroll para items del detalle
+    private int detailedItemsAreaX = 0;
+    private int detailedItemsAreaY = 0;
+    private int detailedItemsAreaWidth = 0;
+    private int detailedItemsAreaHeight = 0;
+    private int detailedItemsScrollRowOffset = 0;
     
     // Búsqueda
     private EditBox searchBox;
@@ -325,6 +332,10 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
             
             if (isHovered && !showDetailedView) { // Solo mostrar hover si no estamos en vista detallada
                 guiGraphics.fill(LEFT_PANEL_X + 2, itemY, LEFT_PANEL_X + LEFT_PANEL_WIDTH - 20, itemY + itemHeight - 5, 0xFF555555);
+                // Renderizar preview flotante de contenido del contenedor solo si tiene ítems
+                if (container.uniqueItems != null && !container.uniqueItems.isEmpty()) {
+                    renderContainerPreviewOverlay(guiGraphics, container, itemY, mouseX, mouseY);
+                }
             }
             
             // Información del contenedor - posición
@@ -335,6 +346,30 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
             String translatedType = getTranslatedContainerType(container.containerType);
             String typeText = translatedType + " (" + container.itemCount + "/" + container.maxSlots + ")";
             guiGraphics.drawString(this.font, typeText, LEFT_PANEL_X + 5, itemY + 12, 0xAAAAAA, false);
+
+            // Icono del tipo de contenedor a la derecha de la card
+            // No mostrar cuando el modal de detalle está abierto
+            if (!showDetailedView) {
+                ItemStack typeIcon = getContainerTypeIcon(container.containerType);
+                int iconSize = 16;
+                int iconX = LEFT_PANEL_X + LEFT_PANEL_WIDTH - 20 - iconSize; // cerca del borde derecho
+                int iconY = itemY + 6; // alineado verticalmente con el contenido
+                
+                // Render de fondo del slot para consistencia visual
+                guiGraphics.fill(iconX - 1, iconY - 1, iconX + iconSize + 1, iconY + iconSize + 1, 0xFF1A1A1A);
+                guiGraphics.fill(iconX, iconY, iconX + iconSize, iconY + iconSize, 0xFF2D2D30);
+                
+                if (!typeIcon.isEmpty()) {
+                    guiGraphics.renderItem(typeIcon, iconX, iconY);
+                } else {
+                    // Desconocido: mostrar un signo de interrogación centrado
+                    String q = "?";
+                    int tw = this.font.width(q);
+                    int tx = iconX + (iconSize - tw) / 2;
+                    int ty = iconY + 4;
+                    guiGraphics.drawString(this.font, q, tx, ty, 0xFFFFFF, false);
+                }
+            }
             
             // Mostrar filtros del contenedor solo si no estamos en vista detallada
             if (!showDetailedView) {
@@ -383,6 +418,116 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
         if (filteredContainers.size() > maxVisibleContainers) {
             renderScrollbar(guiGraphics, filteredContainers.size());
         }
+    }
+
+    private void renderContainerPreviewOverlay(GuiGraphics guiGraphics, ContainerInfo container, int baseItemY, int mouseX, int mouseY) {
+        // Dimensiones del overlay
+        int overlayWidth = 140;
+        int itemsPerRow = 4;
+        int itemSize = 16;
+        int itemSpacing = 22;
+        int headerHeight = 16;
+        int padding = 8;
+        int maxItems = itemsPerRow * 2; // mostrar hasta 2 filas
+
+        // Calcular alto en función de si hay items
+        int shownItems = Math.min(container.uniqueItems.size(), maxItems);
+        int rows = Math.max(1, (int) Math.ceil(shownItems / (float) itemsPerRow));
+        int overlayHeight = padding * 2 + headerHeight + rows * itemSpacing;
+
+        // Posición del overlay a la derecha del panel izquierdo
+        // Posición del overlay: dentro del panel izquierdo, pegado al borde derecho
+        int overlayX = LEFT_PANEL_X + LEFT_PANEL_WIDTH - overlayWidth - 12;
+        int overlayY = baseItemY - 4;
+
+        // Asegurar que no se salga por abajo
+        int maxY = LEFT_PANEL_Y + LEFT_PANEL_HEIGHT - overlayHeight - 4;
+        if (overlayY > maxY) overlayY = maxY;
+
+        // Elevar z-index del overlay para asegurar que quede sobre textos
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0, 0, 500);
+        
+        // Fondo y borde
+        guiGraphics.fill(overlayX, overlayY, overlayX + overlayWidth, overlayY + overlayHeight, 0xCC2D2D30);
+        guiGraphics.fill(overlayX, overlayY, overlayX + overlayWidth, overlayY + 1, 0xFF404040);
+        guiGraphics.fill(overlayX, overlayY + overlayHeight - 1, overlayX + overlayWidth, overlayY + overlayHeight, 0xFF404040);
+        guiGraphics.fill(overlayX, overlayY, overlayX + 1, overlayY + overlayHeight, 0xFF404040);
+        guiGraphics.fill(overlayX + overlayWidth - 1, overlayY, overlayX + overlayWidth, overlayY + overlayHeight, 0xFF404040);
+
+        // Título
+        Component itemsTitle = Component.translatable("gui.indexer.controller.detailed_view.items");
+        int titleWidth = this.font.width(itemsTitle);
+        guiGraphics.drawString(this.font, itemsTitle, overlayX + (overlayWidth - titleWidth) / 2, overlayY + 4, 0xFFFFFF, false);
+
+        // Si está vacío
+        if (container.uniqueItems.isEmpty()) {
+            String emptyText = Component.translatable("gui.indexer.controller.container_empty").getString();
+            int emptyWidth = this.font.width(emptyText);
+            guiGraphics.drawString(this.font, emptyText, overlayX + (overlayWidth - emptyWidth) / 2, overlayY + headerHeight + padding, 0xAAAAAA, false);
+            guiGraphics.pose().popPose();
+            return;
+        }
+
+        // Ordenar por cantidad y limitar
+        List<Map.Entry<String, Integer>> entries = new ArrayList<>(container.uniqueItems.entrySet());
+        entries.sort((a, b) -> Integer.compare(b.getValue(), a.getValue()));
+        boolean hasMoreItems = entries.size() > maxItems;
+        if (hasMoreItems) entries = entries.subList(0, maxItems);
+
+        int gridX = overlayX + padding;
+        int gridY = overlayY + headerHeight + padding;
+
+        int index = 0;
+        for (Map.Entry<String, Integer> entry : entries) {
+            int row = index / itemsPerRow;
+            int col = index % itemsPerRow;
+            int itemX = gridX + col * itemSpacing;
+            int itemY = gridY + row * itemSpacing;
+
+            // Render slot de fondo
+            guiGraphics.fill(itemX - 1, itemY - 1, itemX + itemSize + 1, itemY + itemSize + 1, 0xFF1A1A1A);
+            guiGraphics.fill(itemX, itemY, itemX + itemSize, itemY + itemSize, 0xFF2D2D30);
+
+            ItemStack displayItem = createItemStackFromName(entry.getKey());
+            if (!displayItem.isEmpty()) {
+                guiGraphics.renderItem(displayItem, itemX, itemY);
+
+                // Cantidad formateada en pequeño en la esquina
+                String qty = formatNumber(entry.getValue());
+                guiGraphics.pose().pushPose();
+                guiGraphics.pose().translate(0, 0, 200);
+                guiGraphics.pose().scale(0.7f, 0.7f, 1.0f);
+
+                float scaledX = (itemX + itemSize - 2) / 0.7f;
+                float scaledY = (itemY + itemSize - 6) / 0.7f;
+                guiGraphics.drawString(this.font, qty, (int) scaledX - this.font.width(qty), (int) scaledY, 0xFFFFFF, true);
+                guiGraphics.pose().popPose();
+
+                // Tooltip al pasar sobre el item dentro del overlay
+                if (mouseX >= itemX && mouseX < itemX + itemSize && mouseY >= itemY && mouseY < itemY + itemSize) {
+                    List<Component> tooltip = new ArrayList<>();
+                    tooltip.add(displayItem.getHoverName());
+                    tooltip.add(Component.literal("Cantidad: " + formatNumber(entry.getValue())));
+                    guiGraphics.renderComponentTooltip(this.font, tooltip, mouseX, mouseY);
+                }
+            }
+            index++;
+        }
+        
+        // Indicador de más elementos si se truncó la lista
+        if (hasMoreItems) {
+            String moreText = "...";
+            int moreWidth = this.font.width(moreText);
+            guiGraphics.drawString(this.font, moreText,
+                overlayX + overlayWidth - padding - moreWidth,
+                overlayY + overlayHeight - padding - 9,
+                0xAAAAAA,
+                false);
+        }
+
+        // Cerrar pose elevada
+        guiGraphics.pose().popPose();
     }
     
     private void renderScrollbar(GuiGraphics guiGraphics, int totalItems) {
@@ -601,13 +746,34 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
         if (detailedContainer.uniqueItems.isEmpty()) {
             guiGraphics.drawString(this.font, Component.translatable("gui.indexer.controller.container_empty").getString(), panelX + 10, yOffset, 0x888888, false);
         } else {
-            // Mostrar items únicos con sus cantidades
-            int itemX = panelX + 10;
-            int itemY = yOffset;
+            // Área con scroll para Items
             int itemSize = 16;
             int itemSpacing = 20;
-            int itemsPerRow = (panelWidth - 20) / itemSpacing;
-            
+
+            // Definir viewport para items dentro del panel
+            detailedItemsAreaX = panelX + 10;
+            detailedItemsAreaY = yOffset;
+            detailedItemsAreaWidth = panelWidth - 20;
+            // Reservar ~40px al fondo para el texto de cierre y margen, pero asegurar mínimo 2 filas visibles
+            detailedItemsAreaHeight = panelY + panelHeight - detailedItemsAreaY - 40;
+            detailedItemsAreaHeight = Math.max(itemSpacing * 2 + 8, detailedItemsAreaHeight);
+
+            // Fondo del área
+            guiGraphics.fill(detailedItemsAreaX, detailedItemsAreaY,
+                             detailedItemsAreaX + detailedItemsAreaWidth,
+                             detailedItemsAreaY + detailedItemsAreaHeight,
+                             0xFF232323);
+
+            int itemsPerRow = Math.max(1, detailedItemsAreaWidth / itemSpacing);
+            int visibleRows = Math.max(2, detailedItemsAreaHeight / itemSpacing);
+            int totalItems = detailedContainer.uniqueItems.size();
+            int totalRows = (int) Math.ceil(totalItems / (double) itemsPerRow);
+
+            // Clamp del offset de filas
+            int maxRowOffset = Math.max(0, totalRows - visibleRows);
+            if (detailedItemsScrollRowOffset > maxRowOffset) detailedItemsScrollRowOffset = maxRowOffset;
+            if (detailedItemsScrollRowOffset < 0) detailedItemsScrollRowOffset = 0;
+
             int itemIndex = 0;
             for (Map.Entry<String, Integer> entry : detailedContainer.uniqueItems.entrySet()) {
                 String itemName = entry.getKey();
@@ -615,8 +781,16 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
                 
                 int row = itemIndex / itemsPerRow;
                 int col = itemIndex % itemsPerRow;
-                int currentItemX = itemX + col * itemSpacing;
-                int currentItemY = itemY + row * itemSpacing;
+
+                // Renderizar solo las filas visibles dentro del viewport
+                if (row < detailedItemsScrollRowOffset || row >= detailedItemsScrollRowOffset + visibleRows) {
+                    itemIndex++;
+                    continue;
+                }
+
+                int visibleRowIndex = row - detailedItemsScrollRowOffset;
+                int currentItemX = detailedItemsAreaX + col * itemSpacing;
+                int currentItemY = detailedItemsAreaY + visibleRowIndex * itemSpacing;
                 
                 // Fondo para el slot del item
                 guiGraphics.fill(currentItemX - 1, currentItemY - 1, currentItemX + itemSize + 1, currentItemY + itemSize + 1, 0xFF1A1A1A);
@@ -652,7 +826,9 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
                     
                     // Tooltip si el mouse está sobre el item
                     if (mouseX >= currentItemX && mouseX < currentItemX + itemSize &&
-                        mouseY >= currentItemY && mouseY < currentItemY + itemSize) {
+                        mouseY >= currentItemY && mouseY < currentItemY + itemSize &&
+                        mouseX >= detailedItemsAreaX && mouseX < detailedItemsAreaX + detailedItemsAreaWidth &&
+                        mouseY >= detailedItemsAreaY && mouseY < detailedItemsAreaY + detailedItemsAreaHeight) {
                         List<Component> tooltip = new ArrayList<>();
                         tooltip.add(displayItem.getHoverName());
                         tooltip.add(Component.literal("Cantidad: " + formatNumber(quantity)));
@@ -661,6 +837,22 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
                 }
                 
                 itemIndex++;
+            }
+
+            // Scrollbar vertical si hay más filas que visibles
+            if (totalRows > visibleRows) {
+                int scrollbarWidth = 6;
+                int scrollbarX = detailedItemsAreaX + detailedItemsAreaWidth - scrollbarWidth;
+                int scrollbarY = detailedItemsAreaY;
+                int scrollbarHeight = detailedItemsAreaHeight;
+
+                // Fondo del scrollbar
+                guiGraphics.fill(scrollbarX, scrollbarY, scrollbarX + scrollbarWidth, scrollbarY + scrollbarHeight, 0xFF3A3A3A);
+
+                // Thumb
+                int thumbHeight = Math.max(10, (visibleRows * scrollbarHeight) / totalRows);
+                int thumbY = scrollbarY + (detailedItemsScrollRowOffset * (scrollbarHeight - thumbHeight)) / (totalRows - visibleRows);
+                guiGraphics.fill(scrollbarX + 1, thumbY, scrollbarX + scrollbarWidth - 1, thumbY + thumbHeight, 0xFF888888);
             }
         }
         
@@ -728,6 +920,22 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
             scrollOffset = Math.max(0, Math.min(maxScroll, scrollOffset - (int)delta));
             return true;
         }
+
+        // Scroll en el área de items del detalle
+        if (showDetailedView && detailedContainer != null &&
+            mouseX >= detailedItemsAreaX && mouseX <= detailedItemsAreaX + detailedItemsAreaWidth &&
+            mouseY >= detailedItemsAreaY && mouseY <= detailedItemsAreaY + detailedItemsAreaHeight) {
+
+            int itemSpacing = 20;
+            int itemsPerRow = Math.max(1, detailedItemsAreaWidth / itemSpacing);
+            int visibleRows = Math.max(2, detailedItemsAreaHeight / itemSpacing);
+            int totalItems = detailedContainer.uniqueItems.size();
+            int totalRows = (int) Math.ceil(totalItems / (double) itemsPerRow);
+            int maxRowOffset = Math.max(0, totalRows - visibleRows);
+
+            detailedItemsScrollRowOffset = Math.max(0, Math.min(maxRowOffset, detailedItemsScrollRowOffset - (int)delta));
+            return true;
+        }
         
         return super.mouseScrolled(mouseX, mouseY, delta);
     }
@@ -772,6 +980,33 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
                 return Component.translatable("gui.indexer.controller.container_type.brewing_stand").getString();
             default:
                 return Component.translatable("gui.indexer.controller.container_type.other").getString();
+        }
+    }
+
+    private ItemStack getContainerTypeIcon(String containerType) {
+        switch (containerType.toLowerCase()) {
+            case "chest":
+                return new ItemStack(Items.CHEST);
+            case "barrel":
+                return new ItemStack(Items.BARREL);
+            case "hopper":
+                return new ItemStack(Items.HOPPER);
+            case "furnace":
+                return new ItemStack(Items.FURNACE);
+            case "blast_furnace":
+                return new ItemStack(Items.BLAST_FURNACE);
+            case "smoker":
+                return new ItemStack(Items.SMOKER);
+            case "dispenser":
+                return new ItemStack(Items.DISPENSER);
+            case "dropper":
+                return new ItemStack(Items.DROPPER);
+            case "brewing_stand":
+                return new ItemStack(Items.BREWING_STAND);
+            case "shulker_box":
+                return new ItemStack(Items.SHULKER_BOX);
+            default:
+                return ItemStack.EMPTY; // desconocido, mostramos "?"
         }
     }
     
