@@ -193,7 +193,7 @@ The MIT License is a permissive license that allows you to do almost anything wi
 If you find any problem or have a suggestion to improve the mod, please create an issue in the GitHub repository by following these steps:
 
 1. Go to the [project repository](https://github.com/Agustinbeniteez/Indexer-mod) on GitHub.
-2. Click on the "Issues" tab.
+2. Click on the "Issues" tab or use the quick link: [+ issues](https://github.com/Agustinbeniteez/Indexer-mod/issues)
 3. Click on the "New Issue" button.
 4. Provide a descriptive title for the issue.
 5. Describe the problem or suggestion in detail. Include:
