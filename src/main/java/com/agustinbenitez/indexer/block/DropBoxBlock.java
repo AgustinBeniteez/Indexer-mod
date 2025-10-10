@@ -49,8 +49,8 @@ public class DropBoxBlock extends BaseEntityBlock {
     public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
         if (!level.isClientSide()) {
             BlockEntity entity = level.getBlockEntity(pos);
-            if (entity instanceof DropBoxBlockEntity) {
-                NetworkHooks.openScreen((ServerPlayer) player, (DropBoxBlockEntity) entity, pos);
+            if (entity instanceof DropBoxBlockEntity dropBox) {
+                NetworkHooks.openScreen((ServerPlayer) player, dropBox, pos);
             } else {
                 throw new IllegalStateException("Our Container provider is missing!");
             }
@@ -72,6 +72,11 @@ public class DropBoxBlock extends BaseEntityBlock {
         }
         return createTickerHelper(type, ModBlockEntities.DROP_BOX.get(),
                 (level1, pos, state1, blockEntity) -> blockEntity.tick(level1, pos, state1));
+    }
+
+    @Override
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable net.minecraft.world.entity.LivingEntity placer, net.minecraft.world.item.ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
     }
 
     @Override

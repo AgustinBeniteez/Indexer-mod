@@ -26,8 +26,11 @@ public class ToggleControllerPacket {
         NetworkEvent.Context context = supplier.get();
         context.enqueueWork(() -> {
             ServerPlayer player = context.getSender();
-            if (player != null && player.containerMenu instanceof com.agustinbenitez.indexer.menu.IndexerControllerMenu menu) {
-                menu.toggleEnabled();
+            if (player != null && player.containerMenu instanceof com.agustinbenitez.indexer.menu.IndexerControllerNetworkMenu menu) {
+                // El nuevo menú no tiene método toggleEnabled, necesitamos acceder directamente al BlockEntity
+                if (menu.getBlockEntity() != null) {
+                    menu.getBlockEntity().toggleEnabled();
+                }
             }
         });
         return true;

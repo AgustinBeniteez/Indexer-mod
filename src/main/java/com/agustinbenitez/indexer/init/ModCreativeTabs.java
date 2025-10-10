@@ -26,9 +26,20 @@ public class ModCreativeTabs {
                         output.accept(ModItems.DROP_BOX_ITEM.get());
                         output.accept(ModItems.EXTRACTOR_ITEM.get());
                         output.accept(ModItems.INDEXER_MANUAL.get());
+                        output.accept(ModItems.CONNECTOR_CAPACITY_UPGRADE.get());
                         output.accept(ModItems.TRANSFER_SPEED_UPGRADE_BASIC.get());
+                        output.accept(ModItems.TRANSFER_SPEED_UPGRADE_COPPER.get());
                         output.accept(ModItems.TRANSFER_SPEED_UPGRADE_ADVANCED.get());
                         output.accept(ModItems.TRANSFER_SPEED_UPGRADE_ELITE.get());
+                        output.accept(ModItems.TRANSFER_SPEED_UPGRADE_DEFINITIVE.get());
+                        // Filter items
+                        output.accept(ModItems.BASE_FILTER.get());
+                        output.accept(ModItems.TOOLS_FILTER.get());
+                        output.accept(ModItems.FOOD_FILTER.get());
+                        output.accept(ModItems.FUEL_FILTER.get());
+                        output.accept(ModItems.CUSTOM_TAG_BLOCKER.get());
+                        output.accept(ModItems.ATTRIBUTE_FILTER.get());
+                        output.accept(ModItems.NAME_FILTER.get());
                     })
                     .build());
 

@@ -3,15 +3,18 @@ package com.agustinbenitez.indexer.block.entity;
 import com.agustinbenitez.indexer.IndexerMod;
 import com.agustinbenitez.indexer.block.DropBoxBlock;
 import com.agustinbenitez.indexer.block.IndexerConnectorBlock;
+import com.agustinbenitez.indexer.block.IndexerControllerBlock;
 import com.agustinbenitez.indexer.block.IndexerPipeBlock;
 import com.agustinbenitez.indexer.init.ModBlockEntities;
 import com.agustinbenitez.indexer.init.ModBlocks;
-import com.agustinbenitez.indexer.menu.IndexerControllerMenu;
+import com.agustinbenitez.indexer.menu.IndexerControllerNetworkMenu;
+import com.agustinbenitez.indexer.util.FilterUtils;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.Container;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
@@ -35,7 +38,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
     private static final int SEARCH_RANGE = 250; // Aumentado de 10 a 50 para permitir más conectores
     
     private int itemsPerTransfer = DEFAULT_ITEMS_PER_TRANSFER; // Número de items a transferir por ciclo
-    private int currentUpgradeLevel = 0; // Nivel actual de mejora (0=sin mejora, 1=básica, 2=avanzada, 3=élite)
+    private int currentUpgradeLevel = 0; // Nivel actual de mejora (0=sin mejora, 1=básica, 2=cobre, 3=avanzada, 4=élite, 5=definitiva)
     
     private boolean enabled = true;
     private int transferCooldown = 0;
@@ -60,6 +63,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                     case 4 -> IndexerControllerBlockEntity.this.getItemsPerTransfer();
                     case 5 -> IndexerControllerBlockEntity.this.getTotalCapacity();
                     case 6 -> IndexerControllerBlockEntity.this.getOccupiedSlots();
+                    case 7 -> IndexerControllerBlockEntity.this.getCurrentUpgradeLevel();
                     default -> 0;
                 };
             }
@@ -74,19 +78,19 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
 
             @Override
             public int getCount() {
-                return 7;
+                return 8;
             }
         };
     }
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable("container.indexer.controller");
+        return Component.translatable("container.indexer.controller.network");
     }
 
     @Override
     public AbstractContainerMenu createMenu(int id, Inventory inventory, Player player) {
-        return new IndexerControllerMenu(id, inventory, this, this.data);
+        return new IndexerControllerNetworkMenu(id, inventory, this, this.data);
     }
     
     public boolean stillValid(Player player) {
@@ -168,7 +172,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
     }
     
     public void setCurrentUpgradeLevel(int level) {
-        this.currentUpgradeLevel = Math.max(0, Math.min(3, level)); // Asegurar que esté entre 0 y 3
+        this.currentUpgradeLevel = Math.max(0, Math.min(5, level)); // Asegurar que esté entre 0 y 5
         this.setChanged();
     }
     
@@ -354,9 +358,21 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
 
         // Solo intentar transferir ítems si:
         // 1. El DropBox tiene ítems, o
-        // 2. Acabamos de verificar la red (para asegurarnos de que no nos perdemos nada)
-        if (entity.dropBoxHasItems || checkNetwork) {
-            boolean didTransfer = entity.transferItemsFromDropContainer();
+        // 2. Acabamos de verificar la red (para asegurarnos de que no nos perdemos nada), o
+        // 3. Cada 40 ticks (2 segundos) para verificar hornos independientemente del dropbox
+        boolean checkFurnaces = (level.getGameTime() % 40 == 0);
+        
+        if (entity.dropBoxHasItems || checkNetwork || checkFurnaces) {
+            boolean didTransfer = false;
+
+            if (entity.hasDropContainer()) {
+                // Si hay DropBox, usar el flujo habitual de transferencia
+                didTransfer = entity.transferItemsFromDropContainer();
+            } else if (checkFurnaces) {
+                // Sin DropBox: realizar mantenimiento de hornos para tomar materiales de cofres
+                entity.checkFurnacesOnly();
+                // No aplicar cooldown por mantenimiento de hornos
+            }
 
             if (didTransfer) {
                 entity.transferCooldown = TRANSFER_COOLDOWN_MAX;
@@ -392,6 +408,9 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         
         // Primero, verificar si hay hornos que necesiten rellenar su combustible
         transferred = checkAndRefillFurnaceFuel(connectors, dropContainer) || transferred;
+        
+        // Segundo, verificar si hay hornos que necesiten items de entrada desde DropBox o cofres conectados
+        transferred = checkAndRefillFurnaceInput(connectors, dropContainer) || transferred;
 
         // Contador para limitar la cantidad de items transferidos por ciclo
         int itemsTransferredThisCycle = 0;
@@ -410,13 +429,29 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
             }
             
             // Separar conectores en dos grupos: los que tienen filtro específico y los que no tienen filtro
+            // Ahora también excluimos los conectores que bloquean este item específico
             List<IndexerConnectorBlockEntity> connectorsWithFilter = new ArrayList<>();
             List<IndexerConnectorBlockEntity> connectorsWithoutFilter = new ArrayList<>();
             
             for (IndexerConnectorBlockEntity connector : connectors) {
+                // Si este conector bloquea el item, no lo incluimos en ninguna lista
+                if (connector.isItemBlocked(stack)) {
+                    continue; // Saltar este conector específico, pero continuar con otros
+                }
+                
                 if (connector.canAcceptItem(stack)) {
-                    // Verificar si el conector tiene un filtro específico para este ítem
-                    if (!connector.getFilterItem(0).isEmpty() && connector.getFilterItem(0).getItem() == stack.getItem()) {
+                    // Verificar si el conector tiene un filtro específico configurado
+                    boolean hasSpecificFilter = false;
+                    
+                    // Verificar todos los slots de filtro para determinar si hay un filtro específico
+                    for (ItemStack filterItem : connector.getFilterItems()) {
+                        if (!filterItem.isEmpty()) {
+                            hasSpecificFilter = true;
+                            break;
+                        }
+                    }
+                    
+                    if (hasSpecificFilter) {
                         connectorsWithFilter.add(connector);
                     } else {
                         connectorsWithoutFilter.add(connector);
@@ -472,8 +507,16 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                 }
             }
             
-            // Si todavía quedan ítems y no hemos alcanzado el límite, intentar con los conectores sin filtro
-            if (!remainder.isEmpty() && !connectorsWithoutFilter.isEmpty() && itemsTransferredThisCycle < this.itemsPerTransfer) {
+            // COMPORTAMIENTO CORREGIDO: NO usar conectores sin filtro como fallback
+            // Si hay conectores con filtros específicos, SOLO usar esos conectores
+            // Los items que no puedan ir a conectores con filtros deben quedarse en el dropbox
+            // Solo usar conectores sin filtro si NO HAY conectores con filtros para este item
+            
+            // Solo intentar con conectores sin filtro si NO había conectores con filtros específicos
+            // que pudieran aceptar este item
+            if (!remainder.isEmpty() && !connectorsWithoutFilter.isEmpty() && 
+                connectorsWithFilter.isEmpty() && itemsTransferredThisCycle < this.itemsPerTransfer) {
+                
                 for (IndexerConnectorBlockEntity connector : connectorsWithoutFilter) {
                     if (isBeingUsed) {
 
@@ -610,7 +653,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
     }
 
     /**
-     * Verifica si hay hornos conectados que necesiten rellenar su combustible y los rellena con carbón del DropBox
+     * Verifica si hay hornos conectados que necesiten rellenar su combustible y los rellena con carbón o lava del DropBox
      * o de cofres conectados al sistema
      * @param connectors Lista de conectores encontrados
      * @param dropContainer El contenedor de origen (DropBox)
@@ -637,7 +680,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                 if (FURNACE_FUEL_SLOT < furnace.getContainerSize()) {
                     ItemStack fuelSlotStack = furnace.getItem(FURNACE_FUEL_SLOT);
                     
-                    // Verificar si el slot de combustible está vacío o tiene menos de 64 ítems
+                    // Verificar si el slot de combustible está vacío o tiene combustible compatible
                     boolean needsRefill = fuelSlotStack.isEmpty() || 
                                          (fuelSlotStack.getItem().getDescriptionId().equals("item.minecraft.coal") || 
                                           fuelSlotStack.getItem().getDescriptionId().equals("item.minecraft.charcoal")) && 
@@ -648,60 +691,97 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
 
                         }
                         
-                        // Primero intentar buscar carbón en el DropBox
-                        boolean foundCoalInDropBox = false;
-                        for (int i = 0; i < dropContainer.getContainerSize(); i++) {
+                        // Primero intentar buscar combustible en el DropBox (carbón, carbón vegetal o lava bucket)
+                        boolean foundFuelInDropBox = false;
+                        if (dropContainer != null) {
+                            for (int i = 0; i < dropContainer.getContainerSize(); i++) {
                             ItemStack stack = dropContainer.getItem(i);
                             if (stack.isEmpty()) continue;
                             
                             boolean isCoalOrCharcoal = stack.getItem().getDescriptionId().equals("item.minecraft.coal") || 
                                                      stack.getItem().getDescriptionId().equals("item.minecraft.charcoal");
+                            boolean isLavaBucket = stack.getItem().getDescriptionId().equals("item.minecraft.lava_bucket");
                             
-                            if (isCoalOrCharcoal) {
-                                // Calcular cuánto carbón necesitamos transferir
-                                int spaceInFurnace = fuelSlotStack.isEmpty() ? 64 : 64 - fuelSlotStack.getCount();
-                                int toTransfer = Math.min(stack.getCount(), spaceInFurnace);
-                                
-                                if (toTransfer > 0) {
-                                    // Transferir el carbón al horno
+                            if (isCoalOrCharcoal || isLavaBucket) {
+                                // Para lava buckets, solo transferir uno a la vez
+                                if (isLavaBucket) {
+                                    // Solo transferir si el slot está vacío (lava buckets no se apilan)
                                     if (fuelSlotStack.isEmpty()) {
-                                        // Slot vacío, crear nuevo stack
+                                        // Transferir el lava bucket al horno
                                         ItemStack newStack = stack.copy();
-                                        newStack.setCount(toTransfer);
+                                        newStack.setCount(1);
                                         furnace.setItem(FURNACE_FUEL_SLOT, newStack);
-                                    } else {
-                                        // Añadir al stack existente
-                                        fuelSlotStack.grow(toTransfer);
-                                    }
-                                    
-                                    // Actualizar el stack en el DropBox
-                                    stack.shrink(toTransfer);
-                                    if (stack.isEmpty()) {
-                                        dropContainer.setItem(i, ItemStack.EMPTY);
-                                    } else {
-                                        dropContainer.setItem(i, stack);
-                                    }
-                                    
-                                    // Marcar como cambiados
-                                    if (containerEntity instanceof BlockEntity) {
-                                        ((BlockEntity) containerEntity).setChanged();
-                                    }
-                                    if (dropContainerEntity instanceof BlockEntity) {
-                                        ((BlockEntity) dropContainerEntity).setChanged();
-                                    }
-                                    
-                                    if (isBeingUsed) {
+                                        
+                                        // Remover el lava bucket del DropBox
+                                        stack.shrink(1);
+                                        if (stack.isEmpty()) {
+                                            dropContainer.setItem(i, ItemStack.EMPTY);
+                                        } else {
+                                            dropContainer.setItem(i, stack);
+                                        }
+                                        
+                                        // Marcar como cambiados
+                                        if (containerEntity instanceof BlockEntity) {
+                                            ((BlockEntity) containerEntity).setChanged();
+                                        }
+                                        if (dropContainerEntity instanceof BlockEntity) {
+                                            ((BlockEntity) dropContainerEntity).setChanged();
+                                        }
+                                        
+                                        if (isBeingUsed) {
 
+                                        }
+                                        transferred = true;
+                                        foundFuelInDropBox = true;
+                                        break; // Salir del bucle de ítems del DropBox
                                     }
-                                    transferred = true;
-                                    foundCoalInDropBox = true;
-                                    break; // Salir del bucle de ítems del DropBox
+                                } else if (isCoalOrCharcoal) {
+                                    // Calcular cuánto carbón necesitamos transferir
+                                    int spaceInFurnace = fuelSlotStack.isEmpty() ? 64 : 64 - fuelSlotStack.getCount();
+                                    int toTransfer = Math.min(stack.getCount(), spaceInFurnace);
+                                    
+                                    if (toTransfer > 0) {
+                                        // Transferir el carbón al horno
+                                        if (fuelSlotStack.isEmpty()) {
+                                            // Slot vacío, crear nuevo stack
+                                            ItemStack newStack = stack.copy();
+                                            newStack.setCount(toTransfer);
+                                            furnace.setItem(FURNACE_FUEL_SLOT, newStack);
+                                        } else {
+                                            // Añadir al stack existente
+                                            fuelSlotStack.grow(toTransfer);
+                                        }
+                                        
+                                        // Actualizar el stack en el DropBox
+                                        stack.shrink(toTransfer);
+                                        if (stack.isEmpty()) {
+                                            dropContainer.setItem(i, ItemStack.EMPTY);
+                                        } else {
+                                            dropContainer.setItem(i, stack);
+                                        }
+                                        
+                                        // Marcar como cambiados
+                                        if (containerEntity instanceof BlockEntity) {
+                                            ((BlockEntity) containerEntity).setChanged();
+                                        }
+                                        if (dropContainerEntity instanceof BlockEntity) {
+                                            ((BlockEntity) dropContainerEntity).setChanged();
+                                        }
+                                        
+                                        if (isBeingUsed) {
+
+                                        }
+                                        transferred = true;
+                                        foundFuelInDropBox = true;
+                                        break; // Salir del bucle de ítems del DropBox
+                                    }
                                 }
                             }
                         }
+                        }
                         
-                        // Si no se encontró carbón en el DropBox, buscar en cofres conectados
-                        if (!foundCoalInDropBox) {
+                        // Si no se encontró combustible en el DropBox, buscar en cofres conectados
+                        if (!foundFuelInDropBox) {
                             // Buscar conectores que estén conectados a cofres
                             for (IndexerConnectorBlockEntity chestConnector : connectors) {
                                 BlockPos chestPos = chestConnector.getConnectedContainerPos();
@@ -714,54 +794,93 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                                 if (chestEntity instanceof Container chest && 
                                     !chestEntity.getClass().getName().contains("FurnaceBlockEntity")) {
                                     
-                                    // Buscar carbón o carbón vegetal en el cofre
+                                    // Buscar carbón, carbón vegetal o lava buckets en el cofre
                                     for (int i = 0; i < chest.getContainerSize(); i++) {
                                         ItemStack stack = chest.getItem(i);
                                         if (stack.isEmpty()) continue;
                                         
                                         boolean isCoalOrCharcoal = stack.getItem().getDescriptionId().equals("item.minecraft.coal") || 
                                                                  stack.getItem().getDescriptionId().equals("item.minecraft.charcoal");
+                                        boolean isLavaBucket = stack.getItem().getDescriptionId().equals("item.minecraft.lava_bucket");
                                         
-                                        if (isCoalOrCharcoal) {
-                                            // Calcular cuánto carbón necesitamos transferir
-                                            int spaceInFurnace = fuelSlotStack.isEmpty() ? 64 : 64 - fuelSlotStack.getCount();
-                                            int toTransfer = Math.min(stack.getCount(), spaceInFurnace);
-                                            
-                                            if (toTransfer > 0) {
-                                                // Transferir el carbón al horno
+                                        if (isCoalOrCharcoal || isLavaBucket) {
+                                            // Para lava buckets, solo transferir uno a la vez
+                                            if (isLavaBucket) {
+                                                // Solo transferir si el slot está vacío (lava buckets no se apilan)
                                                 if (fuelSlotStack.isEmpty()) {
-                                                    // Slot vacío, crear nuevo stack
+                                                    // Transferir el lava bucket al horno
                                                     ItemStack newStack = stack.copy();
-                                                    newStack.setCount(toTransfer);
+                                                    newStack.setCount(1);
                                                     furnace.setItem(FURNACE_FUEL_SLOT, newStack);
-                                                } else {
-                                                    // Añadir al stack existente
-                                                    fuelSlotStack.grow(toTransfer);
-                                                }
-                                                
-                                                // Actualizar el stack en el cofre
-                                                stack.shrink(toTransfer);
-                                                if (stack.isEmpty()) {
-                                                    chest.setItem(i, ItemStack.EMPTY);
-                                                } else {
-                                                    chest.setItem(i, stack);
-                                                }
-                                                
-                                                // Marcar como cambiados
-                                                if (containerEntity instanceof BlockEntity) {
-                                                    ((BlockEntity) containerEntity).setChanged();
-                                                }
-                                                if (chestEntity instanceof BlockEntity) {
-                                                    ((BlockEntity) chestEntity).setChanged();
-                                                }
-                                                
-                                                if (isBeingUsed) {
+                                                    
+                                                    // Remover el lava bucket del cofre
+                                                    stack.shrink(1);
+                                                    if (stack.isEmpty()) {
+                                                        chest.setItem(i, ItemStack.EMPTY);
+                                                    } else {
+                                                        chest.setItem(i, stack);
+                                                    }
+                                                    
+                                                    // Marcar como cambiados
+                                                    if (containerEntity instanceof BlockEntity) {
+                                                        ((BlockEntity) containerEntity).setChanged();
+                                                    }
+                                                    if (chestEntity instanceof BlockEntity) {
+                                                        ((BlockEntity) chestEntity).setChanged();
+                                                    }
+                                                    
+                                                    if (isBeingUsed) {
 
+                                                    }
+                                                    transferred = true;
+                                                    break; // Salir del bucle de items del cofre ya que encontramos y transferimos combustible
                                                 }
-                                                transferred = true;
-                                                return transferred; // Salir del método ya que encontramos y transferimos carbón
+                                            } else if (isCoalOrCharcoal) {
+                                                // Calcular cuánto carbón necesitamos transferir
+                                                int spaceInFurnace = fuelSlotStack.isEmpty() ? 64 : 64 - fuelSlotStack.getCount();
+                                                int toTransfer = Math.min(stack.getCount(), spaceInFurnace);
+                                                
+                                                if (toTransfer > 0) {
+                                                    // Transferir el carbón al horno
+                                                    if (fuelSlotStack.isEmpty()) {
+                                                        // Slot vacío, crear nuevo stack
+                                                        ItemStack newStack = stack.copy();
+                                                        newStack.setCount(toTransfer);
+                                                        furnace.setItem(FURNACE_FUEL_SLOT, newStack);
+                                                    } else {
+                                                        // Añadir al stack existente
+                                                        fuelSlotStack.grow(toTransfer);
+                                                    }
+                                                    
+                                                    // Actualizar el stack en el cofre
+                                                    stack.shrink(toTransfer);
+                                                    if (stack.isEmpty()) {
+                                                        chest.setItem(i, ItemStack.EMPTY);
+                                                    } else {
+                                                        chest.setItem(i, stack);
+                                                    }
+                                                    
+                                                    // Marcar como cambiados
+                                                    if (containerEntity instanceof BlockEntity) {
+                                                        ((BlockEntity) containerEntity).setChanged();
+                                                    }
+                                                    if (chestEntity instanceof BlockEntity) {
+                                                        ((BlockEntity) chestEntity).setChanged();
+                                                    }
+                                                    
+                                                    if (isBeingUsed) {
+
+                                                    }
+                                                    transferred = true;
+                                                    break; // Salir del bucle de items del cofre ya que encontramos y transferimos combustible
+                                                }
                                             }
                                         }
+                                    }
+                                    
+                                    // Si ya transferimos combustible para este horno, pasar al siguiente cofre
+                                    if (transferred) {
+                                        break;
                                     }
                                 }
                             }
@@ -777,6 +896,129 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
             this.dropBoxHasItems = ((DropBoxBlockEntity) this.dropContainerEntity).hasItems();
         }
         
+        return transferred;
+    }
+    
+    /**
+     * Verifica si hay hornos conectados que necesiten items de entrada y los rellena desde DropBox
+     * y desde cofres conectados, basándose en el filtro del conector.
+     * Requiere que el conector tenga un filtro configurado.
+     */
+    private boolean checkAndRefillFurnaceInput(List<IndexerConnectorBlockEntity> connectors, Container dropContainer) {
+        if (this.level == null) return false;
+
+        boolean transferred = false;
+
+        for (IndexerConnectorBlockEntity furnaceConnector : connectors) {
+            BlockPos furnacePos = furnaceConnector.getConnectedContainerPos();
+            if (furnacePos == null) continue;
+
+            BlockEntity furnaceEntity = this.level.getBlockEntity(furnacePos);
+            if (furnaceEntity == null) continue;
+
+            if (furnaceEntity.getClass().getName().contains("FurnaceBlockEntity") && furnaceEntity instanceof Container furnace) {
+                final int FURNACE_INPUT_SLOT = 0;
+                if (FURNACE_INPUT_SLOT >= furnace.getContainerSize()) continue;
+
+                ItemStack inputSlotStack = furnace.getItem(FURNACE_INPUT_SLOT);
+                ItemStack filterItem = furnaceConnector.getFilterItem(0);
+                if (filterItem.isEmpty()) continue; // no input without filter
+
+                boolean hasSpace = inputSlotStack.isEmpty() ||
+                                   (FilterUtils.passesFilter(inputSlotStack, filterItem) &&
+                                    inputSlotStack.getCount() < inputSlotStack.getMaxStackSize());
+                if (!hasSpace) continue;
+
+                boolean filledFromDropBox = false;
+                if (dropContainer != null) {
+                    for (int i = 0; i < dropContainer.getContainerSize(); i++) {
+                        ItemStack stack = dropContainer.getItem(i);
+                        if (stack.isEmpty()) continue;
+                        if (!FilterUtils.passesFilter(stack, filterItem)) continue;
+
+                        int spaceInFurnace = inputSlotStack.isEmpty() ? stack.getMaxStackSize()
+                                : inputSlotStack.getMaxStackSize() - inputSlotStack.getCount();
+                        int toTransfer = Math.min(stack.getCount(), spaceInFurnace);
+                        if (toTransfer <= 0) continue;
+
+                        if (inputSlotStack.isEmpty()) {
+                            ItemStack newStack = stack.copy();
+                            newStack.setCount(toTransfer);
+                            furnace.setItem(FURNACE_INPUT_SLOT, newStack);
+                        } else {
+                            inputSlotStack.grow(toTransfer);
+                        }
+
+                        stack.shrink(toTransfer);
+                        dropContainer.setItem(i, stack.isEmpty() ? ItemStack.EMPTY : stack);
+
+                        if (furnaceEntity instanceof BlockEntity) {
+                            ((BlockEntity) furnaceEntity).setChanged();
+                        }
+                        if (dropContainerEntity instanceof BlockEntity) {
+                            ((BlockEntity) dropContainerEntity).setChanged();
+                        }
+
+                        transferred = true;
+                        filledFromDropBox = true;
+                        break;
+                    }
+                }
+
+                if (!filledFromDropBox) {
+                    for (IndexerConnectorBlockEntity chestConnector : connectors) {
+                        BlockPos chestPos = chestConnector.getConnectedContainerPos();
+                        if (chestPos == null || chestPos.equals(furnacePos)) continue;
+
+                        BlockEntity chestEntity = this.level.getBlockEntity(chestPos);
+                        if (chestEntity == null) continue;
+
+                        if (chestEntity instanceof Container chest &&
+                            !chestEntity.getClass().getName().contains("FurnaceBlockEntity")) {
+
+                            for (int i = 0; i < chest.getContainerSize(); i++) {
+                                ItemStack stack = chest.getItem(i);
+                                if (stack.isEmpty()) continue;
+                                if (!FilterUtils.passesFilter(stack, filterItem)) continue;
+
+                                int spaceInFurnace = inputSlotStack.isEmpty() ? stack.getMaxStackSize()
+                                        : inputSlotStack.getMaxStackSize() - inputSlotStack.getCount();
+                                int toTransfer = Math.min(stack.getCount(), spaceInFurnace);
+                                if (toTransfer <= 0) continue;
+
+                                if (inputSlotStack.isEmpty()) {
+                                    ItemStack newStack = stack.copy();
+                                    newStack.setCount(toTransfer);
+                                    furnace.setItem(FURNACE_INPUT_SLOT, newStack);
+                                } else {
+                                    inputSlotStack.grow(toTransfer);
+                                }
+
+                                stack.shrink(toTransfer);
+                                chest.setItem(i, stack.isEmpty() ? ItemStack.EMPTY : stack);
+
+                                if (furnaceEntity instanceof BlockEntity) {
+                                    ((BlockEntity) furnaceEntity).setChanged();
+                                }
+                                if (chestEntity instanceof BlockEntity) {
+                                    ((BlockEntity) chestEntity).setChanged();
+                                }
+
+                                transferred = true;
+                                break;
+                            }
+                        }
+
+                        if (transferred) break;
+                    }
+                }
+            }
+        }
+
+        if (transferred && this.dropContainerEntity instanceof DropBoxBlockEntity) {
+            this.dropBoxHasItems = ((DropBoxBlockEntity) this.dropContainerEntity).hasItems();
+        }
+
         return transferred;
     }
     
@@ -892,6 +1134,234 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         connectorCache = connectors;
         return connectors;
     }
+    
+    // Método para verificar solo hornos sin depender del dropbox
+    private void checkFurnacesOnly() {
+        if (this.level == null) {
+            return;
+        }
 
+        // Buscar conectores en el rango
+        List<IndexerConnectorBlockEntity> connectors = findConnectors();
+        if (connectors.isEmpty()) {
+            return;
+        }
 
+        // Solo verificar hornos, sin dropContainer
+        checkAndRefillFurnaceFuel(connectors, null);
+        checkAndRefillFurnaceInput(connectors, null);
+    }
+    
+    // Método para detectar otros controladores en la misma red
+    public List<IndexerControllerBlockEntity> findOtherControllers() {
+        if (this.level == null) return new ArrayList<>();
+        
+        List<IndexerControllerBlockEntity> otherControllers = new ArrayList<>();
+        Set<BlockPos> visited = new HashSet<>();
+        Queue<BlockPos> queue = new LinkedList<>();
+        
+        // Comenzar la búsqueda desde las posiciones adyacentes
+        for (Direction direction : Direction.values()) {
+            BlockPos adjacentPos = this.worldPosition.relative(direction);
+            BlockState adjacentState = this.level.getBlockState(adjacentPos);
+            
+            // Si hay un controlador directamente adyacente (que no sea este mismo)
+            if (adjacentState.getBlock() instanceof IndexerControllerBlock && !adjacentPos.equals(this.worldPosition)) {
+                BlockEntity entity = this.level.getBlockEntity(adjacentPos);
+                if (entity instanceof IndexerControllerBlockEntity) {
+                    otherControllers.add((IndexerControllerBlockEntity) entity);
+                }
+            }
+            
+            // Si hay una tubería adyacente, añadirla a la cola para BFS
+            if (adjacentState.getBlock() instanceof IndexerPipeBlock) {
+                // Verificar que la tubería esté conectada en esta dirección
+                if (adjacentState.getValue(IndexerPipeBlock.getPropertyForDirection(direction.getOpposite()))) {
+                    queue.add(adjacentPos);
+                    visited.add(adjacentPos);
+                }
+            }
+        }
+        
+        // BFS para encontrar controladores a través de tuberías
+        while (!queue.isEmpty()) {
+            BlockPos currentPos = queue.poll();
+            BlockState currentState = this.level.getBlockState(currentPos);
+            
+            // Explorar en todas las direcciones
+            for (Direction direction : Direction.values()) {
+                BlockPos nextPos = currentPos.relative(direction);
+                if (visited.contains(nextPos) || nextPos.equals(this.worldPosition)) continue;
+                
+                BlockState nextState = this.level.getBlockState(nextPos);
+                Block nextBlock = nextState.getBlock();
+                
+                // Si encontramos otro controlador, agregarlo a la lista
+                if (nextBlock instanceof IndexerControllerBlock) {
+                    BlockEntity entity = this.level.getBlockEntity(nextPos);
+                    if (entity instanceof IndexerControllerBlockEntity) {
+                        otherControllers.add((IndexerControllerBlockEntity) entity);
+                        visited.add(nextPos);
+                    }
+                }
+                
+                // Si encontramos otra tubería, añadirla a la cola
+                if (nextBlock instanceof IndexerPipeBlock) {
+                    // Verificar que la tubería esté conectada en ambas direcciones
+                    boolean currentPipeConnected = currentState.getBlock() instanceof IndexerPipeBlock && 
+                                                 currentState.getValue(IndexerPipeBlock.getPropertyForDirection(direction));
+                    boolean nextPipeConnected = nextState.getValue(IndexerPipeBlock.getPropertyForDirection(direction.getOpposite()));
+                    
+                    if (currentPipeConnected && nextPipeConnected) {
+                        queue.add(nextPos);
+                        visited.add(nextPos);
+                    }
+                }
+            }
+        }
+        
+        return otherControllers;
+    }
+    
+    // Métodos para la nueva GUI de red
+    public void forceNetworkRefresh() {
+        connectorCache = null;
+        uniqueContainersCache = null;
+        totalAvailableSlotsCache = -1;
+        totalCapacityCache = -1;
+        occupiedSlotsCache = -1;
+        markNetworkChanged();
+        setChanged();
+    }
+    
+    public List<ContainerNetworkInfo> getNetworkContainers() {
+        List<ContainerNetworkInfo> networkContainers = new ArrayList<>();
+        List<IndexerConnectorBlockEntity> connectors = findConnectors();
+        
+        for (IndexerConnectorBlockEntity connector : connectors) {
+            BlockPos connectedPos = connector.getConnectedContainerPos();
+            if (connectedPos != null && level != null) {
+                BlockEntity blockEntity = level.getBlockEntity(connectedPos);
+                if (blockEntity instanceof Container container) {
+                    ContainerNetworkInfo info = new ContainerNetworkInfo();
+                    info.position = connectedPos;
+                    info.containerType = getContainerTypeName(blockEntity);
+                    info.maxSlots = container.getContainerSize();
+                    info.itemCount = getOccupiedSlots(container);
+                    info.filters = getContainerFilters(connector);
+                    info.uniqueItems = getUniqueItemsWithQuantities(container); // Agregar items únicos con cantidades
+                    networkContainers.add(info);
+                }
+            }
+        }
+        
+        return networkContainers;
+    }
+    
+    private String getContainerTypeName(BlockEntity blockEntity) {
+        // Usar el ResourceLocation del bloque para obtener un nombre consistente
+        ResourceLocation blockId = net.minecraftforge.registries.ForgeRegistries.BLOCKS.getKey(blockEntity.getBlockState().getBlock());
+        if (blockId != null) {
+            String path = blockId.getPath();
+            // Devolver los nombres en inglés para que coincidan con las claves de traducción
+            switch (path) {
+                case "chest":
+                    return "chest";
+                case "furnace":
+                    return "furnace";
+                case "blast_furnace":
+                    return "blast_furnace";
+                case "smoker":
+                    return "smoker";
+                case "barrel":
+                    return "barrel";
+                case "shulker_box":
+                    return "shulker_box";
+                case "hopper":
+                    return "hopper";
+                case "dropper":
+                    return "dropper";
+                case "dispenser":
+                    return "dispenser";
+                case "brewing_stand":
+                    return "brewing_stand";
+                default:
+                    // Para otros contenedores, devolver el path original
+                    return path;
+            }
+        }
+        // Fallback al método anterior si no se puede obtener el ResourceLocation
+        String blockName = blockEntity.getBlockState().getBlock().getName().getString();
+        return blockName.substring(blockName.lastIndexOf('.') + 1);
+    }
+    
+    private int getOccupiedSlots(Container container) {
+        int occupied = 0;
+        for (int i = 0; i < container.getContainerSize(); i++) {
+            if (!container.getItem(i).isEmpty()) {
+                occupied++;
+            }
+        }
+        return occupied;
+    }
+    
+    private Map<String, Integer> getUniqueItemsWithQuantities(Container container) {
+        Map<String, Integer> uniqueItems = new HashMap<>();
+        
+        for (int i = 0; i < container.getContainerSize(); i++) {
+            ItemStack stack = container.getItem(i);
+            if (!stack.isEmpty()) {
+                // Usar el ResourceLocation del item en lugar del description ID
+                ResourceLocation itemLocation = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(stack.getItem());
+                if (itemLocation != null) {
+                    String itemKey = itemLocation.toString();
+                    uniqueItems.put(itemKey, uniqueItems.getOrDefault(itemKey, 0) + stack.getCount());
+                }
+            }
+        }
+        
+        return uniqueItems;
+    }
+    
+    private List<ItemStack> getContainerFilters(IndexerConnectorBlockEntity connector) {
+        List<ItemStack> filters = new ArrayList<>();
+        // Obtener filtros del conector (implementación específica del mod)
+        for (int i = 0; i < connector.getContainerSize(); i++) {
+            ItemStack filterItem = connector.getItem(i);
+            if (!filterItem.isEmpty()) {
+                filters.add(filterItem.copy());
+            }
+        }
+        return filters;
+    }
+    
+    // Método para abrir la GUI de red
+    public void openNetworkScreen(net.minecraft.server.level.ServerPlayer player, BlockPos pos) {
+        net.minecraftforge.network.NetworkHooks.openScreen(player, new MenuProvider() {
+            @Override
+            public Component getDisplayName() {
+                return Component.translatable("gui.indexer.controller.network_title");
+            }
+            
+            @Override
+            public AbstractContainerMenu createMenu(int id, Inventory inventory, Player player) {
+                return new com.agustinbenitez.indexer.menu.IndexerControllerNetworkMenu(id, inventory, IndexerControllerBlockEntity.this, data);
+            }
+        }, pos);
+    }
+    
+    // Clase para almacenar información de contenedores de red
+    public static class ContainerNetworkInfo {
+        public BlockPos position;
+        public String containerType;
+        public int itemCount;
+        public int maxSlots;
+        public List<ItemStack> filters;
+        public Map<String, Integer> uniqueItems; // Nuevo campo para items únicos con cantidades
+
+        public ContainerNetworkInfo() {
+            this.filters = new ArrayList<>();
+            this.uniqueItems = new HashMap<>();
+        }
+    }
 }

@@ -32,6 +32,48 @@ public class ModNetworking {
                 .encoder(ToggleControllerPacket::toBytes)
                 .consumerMainThread(ToggleControllerPacket::handle)
                 .add();
+        
+        // Registrar el paquete TransferAllItemsPacket
+        net.messageBuilder(TransferAllItemsPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
+                .decoder(TransferAllItemsPacket::new)
+                .encoder(TransferAllItemsPacket::toBytes)
+                .consumerMainThread(TransferAllItemsPacket::handle)
+                .add();
+        
+        // Registrar el paquete RefreshNetworkPacket
+        net.messageBuilder(RefreshNetworkPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
+                .decoder(RefreshNetworkPacket::new)
+                .encoder(RefreshNetworkPacket::toBytes)
+                .consumerMainThread(RefreshNetworkPacket::handle)
+                .add();
+        
+        // Registrar el paquete ContainerListUpdatePacket
+        net.messageBuilder(ContainerListUpdatePacket.class, id(), NetworkDirection.PLAY_TO_CLIENT)
+                .decoder(ContainerListUpdatePacket::new)
+                .encoder(ContainerListUpdatePacket::toBytes)
+                .consumerMainThread(ContainerListUpdatePacket::handle)
+                .add();
+        
+        // Registrar el paquete CustomTagFilterPacket
+        net.messageBuilder(CustomTagFilterPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
+                .decoder(CustomTagFilterPacket::new)
+                .encoder(CustomTagFilterPacket::toBytes)
+                .consumerMainThread(CustomTagFilterPacket::handle)
+                .add();
+        
+        // Registrar el paquete AttributeFilterPacket
+        net.messageBuilder(AttributeFilterPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
+                .decoder(AttributeFilterPacket::new)
+                .encoder(AttributeFilterPacket::toBytes)
+                .consumerMainThread(AttributeFilterPacket::handle)
+                .add();
+        
+        // Registrar el paquete NameFilterPacket
+        net.messageBuilder(NameFilterPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
+                .decoder(NameFilterPacket::new)
+                .encoder(NameFilterPacket::toBytes)
+                .consumerMainThread(NameFilterPacket::handle)
+                .add();
     }
     
     public static <MSG> void sendToServer(MSG message) {

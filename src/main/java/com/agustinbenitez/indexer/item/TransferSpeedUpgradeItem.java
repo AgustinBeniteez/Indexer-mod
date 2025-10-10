@@ -57,6 +57,23 @@ public class TransferSpeedUpgradeItem extends Item {
                 int currentLevel = controller.getCurrentUpgradeLevel();
                 int requiredLevel = this.upgradeLevel - 1; // El nivel requerido es el anterior al que queremos aplicar
                 
+                // Debug message
+                IndexerMod.LOGGER.info("Aplicando mejora - Nivel actual: {}, Nivel requerido: {}, Nivel de esta mejora: {}", 
+                    currentLevel, requiredLevel, this.upgradeLevel);
+                
+                // Check if this exact upgrade is already applied
+                if (currentLevel == this.upgradeLevel) {
+                    player.sendSystemMessage(Component.translatable("message.indexer.upgrade.already_applied").withStyle(ChatFormatting.YELLOW));
+                    return InteractionResult.FAIL;
+                }
+                
+                // Check if upgrade is already applied (higher level)
+                if (currentLevel > this.upgradeLevel) {
+                    player.sendSystemMessage(Component.translatable("message.indexer.upgrade.already_applied").withStyle(ChatFormatting.YELLOW));
+                    return InteractionResult.FAIL;
+                }
+                
+                // Check if prerequisite is met - debe tener exactamente el nivel anterior
                 if (currentLevel != requiredLevel) {
                     // Mostrar mensaje de error indicando qué mejora necesita
                     Component requiredUpgradeName;
@@ -68,7 +85,13 @@ public class TransferSpeedUpgradeItem extends Item {
                             requiredUpgradeName = Component.translatable("upgrade.indexer.basic");
                             break;
                         case 2:
+                            requiredUpgradeName = Component.translatable("upgrade.indexer.copper");
+                            break;
+                        case 3:
                             requiredUpgradeName = Component.translatable("upgrade.indexer.advanced");
+                            break;
+                        case 4:
+                            requiredUpgradeName = Component.translatable("upgrade.indexer.elite");
                             break;
                         default:
                             requiredUpgradeName = Component.literal("nivel " + requiredLevel);
@@ -81,22 +104,24 @@ public class TransferSpeedUpgradeItem extends Item {
                             currentUpgradeName = Component.translatable("upgrade.indexer.basic");
                             break;
                         case 2:
-                            currentUpgradeName = Component.translatable("upgrade.indexer.advanced");
+                            currentUpgradeName = Component.translatable("upgrade.indexer.copper");
                             break;
                         case 3:
+                            currentUpgradeName = Component.translatable("upgrade.indexer.advanced");
+                            break;
+                        case 4:
                             currentUpgradeName = Component.translatable("upgrade.indexer.elite");
+                            break;
+                        case 5:
+                            currentUpgradeName = Component.translatable("upgrade.indexer.definitive");
                             break;
                         default:
                             currentUpgradeName = Component.literal("nivel " + this.upgradeLevel);
                             break;
                     }
                     
-                    if (currentLevel < requiredLevel) {
-                        player.sendSystemMessage(Component.translatable("message.indexer.upgrade.prerequisite_required", 
-                                currentUpgradeName, requiredUpgradeName).withStyle(ChatFormatting.RED));
-                    } else {
-                        player.sendSystemMessage(Component.translatable("message.indexer.upgrade.already_applied").withStyle(ChatFormatting.YELLOW));
-                    }
+                    player.sendSystemMessage(Component.translatable("message.indexer.upgrade.prerequisite_required", 
+                            currentUpgradeName, requiredUpgradeName).withStyle(ChatFormatting.RED));
                     return InteractionResult.FAIL;
                 }
                 

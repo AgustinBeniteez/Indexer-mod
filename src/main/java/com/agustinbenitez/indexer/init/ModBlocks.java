@@ -27,7 +27,7 @@ public class ModBlocks {
                     .mapColor(MapColor.METAL)
                     .instrument(NoteBlockInstrument.IRON_XYLOPHONE)
                     .requiresCorrectToolForDrops()
-                    .strength(0.5f, 0.4f) // Reducida la resistencia para que se rompa más rápido
+                    .strength(1.2f, 2.0f) // Aumenta ligeramente la dureza y resistencia
                     .sound(SoundType.METAL)));
 
     // Registra el bloque de tubería para conectar componentes
@@ -45,7 +45,7 @@ public class ModBlocks {
                     .mapColor(MapColor.METAL)
                     .instrument(NoteBlockInstrument.IRON_XYLOPHONE)
                     .requiresCorrectToolForDrops()
-                    .strength(0.5f, 0.4f) // Reducida la resistencia para que se rompa muy rápido
+                    .strength(1.2f, 2.0f) // Aumenta ligeramente la dureza y resistencia
                     .sound(SoundType.METAL)));
                     
     // Registra el bloque DropBox que funciona como un cofre con más capacidad
@@ -54,7 +54,7 @@ public class ModBlocks {
                     .mapColor(MapColor.METAL)
                     .instrument(NoteBlockInstrument.IRON_XYLOPHONE)
                     .requiresCorrectToolForDrops()
-                    .strength(0.5f, 0.4f) // Reducida la resistencia para que se rompa más rápido
+                    .strength(1.2f, 2.0f) // Aumenta ligeramente la dureza y resistencia
                     .sound(SoundType.METAL)));
                     
     // Registra el bloque Extractor que extrae items de contenedores
@@ -63,7 +63,7 @@ public class ModBlocks {
                     .mapColor(MapColor.METAL)
                     .instrument(NoteBlockInstrument.IRON_XYLOPHONE)
                     .requiresCorrectToolForDrops()
-                    .strength(0.5f, 0.4f) // Reducida la resistencia para que se rompa más rápido
+                    .strength(1.2f, 2.0f) // Aumenta ligeramente la dureza y resistencia
                     .sound(SoundType.METAL)));
 
     public static void register(IEventBus eventBus) {

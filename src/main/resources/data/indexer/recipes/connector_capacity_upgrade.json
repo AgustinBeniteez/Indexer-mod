@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "DDD",
+    "RCR",
+    "DDD"
+  ],
+  "key": {
+    "D": {
+      "item": "minecraft:diamond"
+    },
+    "R": {
+      "item": "minecraft:repeater"
+    },
+    "C": {
+      "item": "indexer:indexer_connector"
+    }
+  },
+  "result": {
+    "item": "indexer:connector_capacity_upgrade",
+    "count": 1
+  }
+}

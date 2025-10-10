@@ -1,4 +1,5 @@
 # Indexer Mod
+![Indexer Logo](src/main/resources/assets/indexer/textures/gui/logo.png)
 
 ## Description
 Indexer is a mod for Minecraft 1.20.1 that helps you organize and manage your items. This automation system allows you to filter and automatically distribute the contents of your Chests/Containers, eliminating the need to manually sort your resources.
@@ -23,9 +24,91 @@ Place these blocks next to your chests, barrels, furnaces, or other containers. 
 A special container with 54 slots (double that of a normal chest) where you can deposit all the items you want to sort. The Indexer Controller will extract the items from here and distribute them according to the configured filters.
 
 ### Speed Upgrades
-The mod includes two levels of speed upgrades:
-- **Basic Upgrade**: Allows the Controller to transfer up to 4 items at a time per cycle. Crafted with gold ingots in the corners, redstone dust in the remaining slots, and an Indexer Controller in the center.
-- **Advanced Upgrade**: Allows transferring up to 16 items at a time per cycle. Crafted by surrounding a Basic Upgrade with diamonds.
+The system includes 5 speed upgrades with performance increases per level:
+
+- Basic — 5x
+  
+  ![Basic Upgrade](src/main/resources/assets/indexer/textures/item/transfer_speed_upgrade_basic.png)
+  
+  Crafting: gold ingots in the corners, redstone dust in the remaining slots, and an Indexer Controller in the center. Transfers up to 4 items per cycle.
+
+- Copper — 10x
+  
+  ![Copper Upgrade](src/main/resources/assets/indexer/textures/item/transfer_speed_upgrade_copper.png)
+  
+  Crafting: surround the Basic upgrade with copper ingots.
+
+- Advanced — 20x
+  
+  ![Advanced Upgrade](src/main/resources/assets/indexer/textures/item/transfer_speed_upgrade_advanced.png)
+  
+  Crafting: surround the Copper upgrade with diamonds. Transfers up to 16 items per cycle.
+
+- Elite — 64x
+  
+  ![Elite Upgrade](src/main/resources/assets/indexer/textures/item/transfer_speed_upgrade_elite.png)
+  
+  Crafting: surround the Advanced upgrade with `Netherite Scrap`.
+
+- Definitive — 256x
+  
+  ![Definitive Upgrade](src/main/resources/assets/indexer/textures/item/transfer_speed_upgrade_definitive.png)
+  
+  Crafting: final tier. Check the in-game recipe book if your pack includes its recipe.
+
+Note: The “x” values represent the system’s relative performance multiplier. Exact items-per-cycle amounts are shown in the UI and in the Indexer Controller tooltips depending on the applied upgrade.
+
+### Filters
+Filters let you restrict or allow items routed through the Indexer network.
+
+- Usage
+  - Place filters in the connector’s filter slots to affect routing.
+  - Right-click configurable filters to set their criteria (Name, Attribute, Custom Tag Blocker).
+  - Multiple filters can be combined; specific filters (tools/food/fuel) allow only their category.
+
+- Base Filter
+  
+  ![Base Filter](src/main/resources/assets/indexer/textures/item/filter/indexer_filter_base.png)
+  
+  Core component used for crafting other filters.
+
+- Name Filter
+  
+  ![Name Filter](src/main/resources/assets/indexer/textures/item/filter/indexer_filter_name.png)
+  
+  Filters items by exact custom name. Right-click to set the target name.
+
+- Attribute Filter
+  
+  ![Attribute Filter](src/main/resources/assets/indexer/textures/item/filter/indexer_filter_attribute.png)
+  
+  Filters by attributes like enchantments. Right-click to set the attribute.
+
+- Custom Tag Blocker
+  
+  ![Custom Tag Blocker](src/main/resources/assets/indexer/textures/item/filter/indexer_filter_custom_tag.png)
+  
+  Blocks items by ID/tag. Right-click to set the item/tag to block.
+
+- Food Filter
+  
+  ![Food Filter](src/main/resources/assets/indexer/textures/item/filter/indexer_filter_food.png)
+  
+  Allows only edible items.
+
+- Fuel Filter
+  
+  ![Fuel Filter](src/main/resources/assets/indexer/textures/item/filter/indexer_filter_fuel.png)
+  
+  Allows only fuel items (e.g., coal, charcoal, lava bucket in furnaces).
+
+- Tools Filter
+  
+  ![Tools Filter](src/main/resources/assets/indexer/textures/item/filter/indexer_filter_tools.png)
+  
+  Allows only tools: pickaxes, axes, shovels, hoes, and swords.
+
+Crafting: most filters are crafted using the Base Filter plus category items. Check the in-game recipe book for exact patterns.
 
 ## Special Features
 
@@ -41,14 +124,35 @@ There is no restriction on the number of connectors you can use in your system, 
 ### Intuitive Interface
 Easily configure your connector filters with a simple and straightforward interface. Just place the item you want to filter in the available slot.
 
+## New Indexer Controller UI
+
+The Indexer Controller Network screen was redesigned to clearly show all connected containers and system statistics.
+
+- Container list: shows position, type, and configured filters. Includes search and refresh button.
+- Content preview: hovering a card shows an overlay with items and quantities (if the container is not empty). If there are more items than displayed, `...` appears.
+- Type icon: each card shows the icon of the container type (Chest, Barrel, Furnace, etc.). It automatically hides when the detail modal is open.
+- Network statistics: panel with connection info (DropBox), number of connected containers, and occupancy bar with percentage (example: 29%).
+- Detailed view: clicking a card opens a modal with position, type, capacity, fill percentage with bar, filters, and an items section with scroll (minimum 2 visible rows and mouse wheel enabled).
+
+### How to Use
+- Open the Indexer Controller network screen.
+- Use the search to filter containers or hover a card to preview its contents.
+- Click a card to open the detailed view and scroll the items using the mouse wheel.
+
 ## Language Support
 
 The Indexer Mod includes full translation support for multiple languages and regional variants:
 
 ### Supported Languages:
+[![ES](https://img.shields.io/badge/Language-ES-red?style=for-the-badge)](https://github.com/AgustinBeniteez/Indexer-mod/pull/6) 
+[![EN](https://img.shields.io/badge/Language-EN-blue?style=for-the-badge)](https://github.com/AgustinBeniteez/Indexer-mod/pull/6) 
+[![CN](https://img.shields.io/badge/Language-CN-yellow?style=for-the-badge)](https://github.com/AgustinBeniteez/Indexer-mod/pull/6)
+
 - **Spanish**: es_es, es_ar, es_mx, es_cl, es_co, es_pe, es_ve, es_uy, es_an
 - **English**: en_us, en_gb, en_ca, en_au
 - **Chinese**: zh_cn
+- **Catalan**: ca_es
+- **Valencian**: ca_valencia
 
 All interface elements, item names, tooltips, and system messages are fully translated. The mod automatically detects your Minecraft language settings and displays the appropriate translations.
 
@@ -91,7 +195,7 @@ The MIT License is a permissive license that allows you to do almost anything wi
 If you find any problem or have a suggestion to improve the mod, please create an issue in the GitHub repository by following these steps:
 
 1. Go to the [project repository](https://github.com/Agustinbeniteez/Indexer-mod) on GitHub.
-2. Click on the "Issues" tab.
+2. Click on the "Issues" tab or use the quick link: [+ issues](https://github.com/Agustinbeniteez/Indexer-mod/issues)
 3. Click on the "New Issue" button.
 4. Provide a descriptive title for the issue.
 5. Describe the problem or suggestion in detail. Include:

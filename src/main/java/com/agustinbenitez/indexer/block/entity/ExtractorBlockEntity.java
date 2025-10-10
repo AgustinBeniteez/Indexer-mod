@@ -3,6 +3,7 @@ package com.agustinbenitez.indexer.block.entity;
 import com.agustinbenitez.indexer.init.ModBlockEntities;
 import com.agustinbenitez.indexer.block.IndexerControllerBlock;
 import com.agustinbenitez.indexer.block.IndexerPipeBlock;
+import com.agustinbenitez.indexer.util.FilterUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
@@ -19,9 +20,8 @@ import java.util.LinkedList;
 
 public class ExtractorBlockEntity extends BlockEntity {
     private BlockPos connectedContainerPos = null;
-    private int extractionTimer = 0;
-    private static final int DEFAULT_EXTRACTION_INTERVAL = 40; // 2 segundos (40 ticks) sin mejoras
-    private static final int ITEMS_PER_EXTRACTION = 1; // Extraer 1 item por vez
+    private int extractionCooldown = 0;
+    private static final int EXTRACTION_COOLDOWN_MAX = 8; // Mismo cooldown que el IndexerController
 
     public ExtractorBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.EXTRACTOR.get(), pos, state);
@@ -37,7 +37,7 @@ public class ExtractorBlockEntity extends BlockEntity {
                     tag.getInt("ContainerZ")
             );
         }
-        this.extractionTimer = tag.getInt("ExtractionTimer");
+        this.extractionCooldown = tag.getInt("ExtractionCooldown");
     }
 
     @Override
@@ -48,7 +48,7 @@ public class ExtractorBlockEntity extends BlockEntity {
             tag.putInt("ContainerY", this.connectedContainerPos.getY());
             tag.putInt("ContainerZ", this.connectedContainerPos.getZ());
         }
-        tag.putInt("ExtractionTimer", this.extractionTimer);
+        tag.putInt("ExtractionCooldown", this.extractionCooldown);
     }
 
     public static void tick(Level level, BlockPos pos, BlockState state, ExtractorBlockEntity entity) {
@@ -57,14 +57,18 @@ public class ExtractorBlockEntity extends BlockEntity {
         // Actualizar conexión de contenedor
         entity.updateConnectedContainer();
         
-        // Incrementar timer de extracción
-        entity.extractionTimer++;
+        // Manejar cooldown de extracción
+        if (entity.extractionCooldown > 0) {
+            entity.extractionCooldown--;
+            return;
+        }
         
-        // Intentar extraer items cada cierto intervalo (dinámico basado en mejoras del controller)
-        int extractionInterval = entity.getExtractionInterval(level, pos);
-        if (entity.extractionTimer >= extractionInterval) {
-            entity.extractionTimer = 0;
-            entity.attemptExtraction(level, pos);
+        // Intentar extraer items
+        boolean didExtract = entity.attemptExtraction(level, pos);
+        
+        // Si se extrajo algo, aplicar cooldown
+        if (didExtract) {
+            entity.extractionCooldown = EXTRACTION_COOLDOWN_MAX;
         }
     }
 
@@ -81,10 +85,8 @@ public class ExtractorBlockEntity extends BlockEntity {
             BlockPos adjacentPos = this.worldPosition.relative(direction);
             BlockEntity adjacentEntity = this.level.getBlockEntity(adjacentPos);
             
-            // Verificar si es un contenedor válido (excluir otros extractores y conectores)
-            if (adjacentEntity instanceof Container && 
-                !adjacentEntity.getClass().getName().contains("ExtractorBlockEntity") &&
-                !adjacentEntity.getClass().getName().contains("IndexerConnectorBlockEntity")) {
+            // Verificar si es un contenedor válido
+            if (isValidContainer(adjacentEntity)) {
                 this.connectedContainerPos = adjacentPos;
                 this.setChanged();
                 return;
@@ -96,111 +98,398 @@ public class ExtractorBlockEntity extends BlockEntity {
             this.setChanged();
         }
     }
+    
+    /**
+     * Verifica si una BlockEntity es un contenedor válido para el extractor.
+     * Incluye contenedores de Minecraft vanilla, hornos, y contenedores de otros mods.
+     */
+    private boolean isValidContainer(BlockEntity entity) {
+        if (entity == null) return false;
+        
+        // Excluir nuestros propios bloques del mod
+        String className = entity.getClass().getName();
+        if (className.contains("ExtractorBlockEntity") || 
+            className.contains("IndexerConnectorBlockEntity") ||
+            className.contains("DropBoxBlockEntity")) {
+            return false;
+        }
+        
+        // Verificar si implementa Container (interfaz estándar de Minecraft)
+        if (entity instanceof Container) {
+            return true;
+        }
+        
+        // Verificar contenedores de otros mods que podrían no implementar Container directamente
+        // pero tienen métodos de inventario comunes
+        try {
+            // Intentar acceder a métodos comunes de inventario usando reflexión
+            if (entity.getClass().getMethod("getContainerSize") != null ||
+                entity.getClass().getMethod("getSlots") != null ||
+                entity.getClass().getMethod("getInventory") != null) {
+                return true;
+            }
+        } catch (NoSuchMethodException | SecurityException e) {
+            // Método no encontrado, continuar con otras verificaciones
+        }
+        
+        // Verificar por nombres de clase comunes de mods populares
+        if (className.contains("BackpackBlockEntity") ||
+            className.contains("ChestBlockEntity") ||
+            className.contains("BarrelBlockEntity") ||
+            className.contains("ShulkerBoxBlockEntity") ||
+            className.contains("StorageBlockEntity") ||
+            className.contains("InventoryBlockEntity") ||
+            className.toLowerCase().contains("storage") ||
+            className.toLowerCase().contains("chest") ||
+            className.toLowerCase().contains("container") ||
+            className.toLowerCase().contains("inventory") ||
+            className.toLowerCase().contains("backpack") ||
+            className.toLowerCase().contains("bag")) {
+            return true;
+        }
+        
+        return false;
+    }
 
-    private void attemptExtraction(Level level, BlockPos extractorPos) {
+    private boolean attemptExtraction(Level level, BlockPos extractorPos) {
         if (this.connectedContainerPos == null || this.level == null) {
-            return;
+            return false;
         }
         
         // Verificar si está conectado a la red de tuberías antes de extraer
         if (!isConnectedToController(level, extractorPos)) {
-            return; // No extraer si no está conectado a la red
+            return false; // No extraer si no está conectado a la red
         }
         
         // Obtener el controlador conectado para determinar la cantidad de ítems a extraer
         IndexerControllerBlockEntity controller = findConnectedController(level, extractorPos);
         if (controller == null) {
-            return; // No hay controlador conectado
+            return false; // No hay controlador conectado
         }
         
         // Obtener la cantidad de ítems a extraer según la mejora aplicada al controlador
         int itemsToExtract = controller.getItemsPerTransfer();
         
         BlockEntity containerEntity = this.level.getBlockEntity(this.connectedContainerPos);
-        if (!(containerEntity instanceof Container)) {
+        if (containerEntity == null) {
             this.connectedContainerPos = null;
-            return;
+            return false;
         }
         
-        Container container = (Container) containerEntity;
+        // Intentar extraer usando diferentes métodos según el tipo de contenedor
+        boolean extractionSuccessful = false;
         
+        // Primero intentar con la interfaz Container estándar
+        if (containerEntity instanceof Container) {
+            extractionSuccessful = extractFromContainer((Container) containerEntity, itemsToExtract, level, extractorPos);
+        } else {
+            // Intentar extraer de contenedores de otros mods usando reflexión
+            extractionSuccessful = extractFromModContainer(containerEntity, itemsToExtract, level, extractorPos);
+        }
+        
+        if (extractionSuccessful) {
+            this.setChanged();
+        }
+        
+        return extractionSuccessful;
+    }
+    
+    /**
+     * Extrae items de un contenedor estándar que implementa la interfaz Container.
+     */
+    private boolean extractFromContainer(Container container, int itemsToExtract, Level level, BlockPos extractorPos) {
         // Verificar si es un horno (cualquier tipo de horno)
-        boolean isFurnace = containerEntity.getClass().getName().contains("FurnaceBlockEntity") ||
-                           containerEntity.getClass().getName().contains("BlastFurnaceBlockEntity") ||
-                           containerEntity.getClass().getName().contains("SmokerBlockEntity");
+        boolean isFurnace = container.getClass().getName().contains("FurnaceBlockEntity") ||
+                           container.getClass().getName().contains("BlastFurnaceBlockEntity") ||
+                           container.getClass().getName().contains("SmokerBlockEntity");
         
         if (isFurnace) {
-            // Para hornos, solo extraer del slot de resultado (slot 2)
-            final int FURNACE_RESULT_SLOT = 2;
-            
-            if (FURNACE_RESULT_SLOT < container.getContainerSize()) {
-                ItemStack stackInSlot = container.getItem(FURNACE_RESULT_SLOT);
-                
-                if (!stackInSlot.isEmpty()) {
-                    // Extraer la cantidad de ítems según la mejora aplicada
-                    ItemStack extractedStack = stackInSlot.copy();
-                    extractedStack.setCount(Math.min(itemsToExtract, stackInSlot.getCount()));
-                    
-                    // Remover los ítems del contenedor
-                    stackInSlot.shrink(extractedStack.getCount());
-                    container.setItem(FURNACE_RESULT_SLOT, stackInSlot);
-                    
-                    // Intentar enviar los ítems al sistema de tuberías
-                    if (sendItemToPipeSystem(extractedStack, level, extractorPos)) {
-                        // Ítems enviados exitosamente
-                        this.setChanged();
-                        return;
-                    } else {
-                        // Si no se pudieron enviar, devolver los ítems al contenedor
-                        ItemStack remainingStack = container.getItem(FURNACE_RESULT_SLOT);
-                        if (remainingStack.isEmpty()) {
-                            container.setItem(FURNACE_RESULT_SLOT, extractedStack);
-                        } else if (remainingStack.getItem() == extractedStack.getItem() && 
-                                  remainingStack.getCount() + extractedStack.getCount() <= remainingStack.getMaxStackSize()) {
-                            remainingStack.grow(extractedStack.getCount());
-                            container.setItem(FURNACE_RESULT_SLOT, remainingStack);
-                        }
-                    }
-                }
-            }
+            return extractFromFurnace(container, itemsToExtract, level, extractorPos);
         } else {
-            // Para otros contenedores, buscar el primer item no vacío
-            for (int slot = 0; slot < container.getContainerSize(); slot++) {
-                ItemStack stackInSlot = container.getItem(slot);
+            return extractFromGenericContainer(container, itemsToExtract, level, extractorPos);
+        }
+    }
+    
+    /**
+     * Extrae items de un horno (resultado y buckets vacíos del combustible).
+     */
+    private boolean extractFromFurnace(Container container, int itemsToExtract, Level level, BlockPos extractorPos) {
+        final int FURNACE_RESULT_SLOT = 2;
+        final int FURNACE_FUEL_SLOT = 1;
+        
+        // Primero intentar extraer buckets vacíos del slot de combustible
+        if (FURNACE_FUEL_SLOT < container.getContainerSize()) {
+            ItemStack fuelSlotStack = container.getItem(FURNACE_FUEL_SLOT);
+            
+            if (!fuelSlotStack.isEmpty() && fuelSlotStack.getItem().getDescriptionId().equals("item.minecraft.bucket")) {
+                // Verificar si hay espacio disponible para buckets vacíos antes de extraer
+                ItemStack testStack = fuelSlotStack.copy();
+                testStack.setCount(Math.min(itemsToExtract, fuelSlotStack.getCount()));
                 
-                if (!stackInSlot.isEmpty()) {
-                    // Extraer la cantidad de ítems según la mejora aplicada
-                    ItemStack extractedStack = stackInSlot.copy();
-                    extractedStack.setCount(Math.min(itemsToExtract, stackInSlot.getCount()));
+                if (canSendBucketToPipeSystem(testStack, level, extractorPos)) {
+                    // Hay espacio disponible, proceder con la extracción
+                    ItemStack extractedStack = fuelSlotStack.copy();
+                    extractedStack.setCount(Math.min(itemsToExtract, fuelSlotStack.getCount()));
                     
-                    // Remover los ítems del contenedor
-                    stackInSlot.shrink(extractedStack.getCount());
-                    container.setItem(slot, stackInSlot);
+                    // Remover los buckets del contenedor
+                    fuelSlotStack.shrink(extractedStack.getCount());
+                    container.setItem(FURNACE_FUEL_SLOT, fuelSlotStack);
                     
-                    // Intentar enviar los ítems al sistema de tuberías
+                    // Intentar enviar los buckets al sistema de tuberías
                     if (sendItemToPipeSystem(extractedStack, level, extractorPos)) {
-                        // Ítems enviados exitosamente
-                        this.setChanged();
-                        return;
+                        return true;
                     } else {
-                        // Si no se pudieron enviar, devolver los ítems al contenedor
-                        ItemStack remainingStack = container.getItem(slot);
+                        // Si no se pudieron enviar, devolver los buckets al contenedor
+                        ItemStack remainingStack = container.getItem(FURNACE_FUEL_SLOT);
                         if (remainingStack.isEmpty()) {
-                            container.setItem(slot, extractedStack);
+                            container.setItem(FURNACE_FUEL_SLOT, extractedStack);
                         } else if (remainingStack.getItem() == extractedStack.getItem() && 
                                   remainingStack.getCount() + extractedStack.getCount() <= remainingStack.getMaxStackSize()) {
                             remainingStack.grow(extractedStack.getCount());
-                            container.setItem(slot, remainingStack);
+                            container.setItem(FURNACE_FUEL_SLOT, remainingStack);
                         }
                     }
-                    return;
                 }
             }
         }
+        
+        // Luego intentar extraer del slot de resultado
+        if (FURNACE_RESULT_SLOT < container.getContainerSize()) {
+            ItemStack stackInSlot = container.getItem(FURNACE_RESULT_SLOT);
+
+            if (!stackInSlot.isEmpty()) {
+                // Antes de extraer, verificar si hay algún destino disponible con capacidad
+                ItemStack testStack = stackInSlot.copy();
+                testStack.setCount(Math.min(itemsToExtract, stackInSlot.getCount()));
+
+                if (!canSendItemToPipeSystem(testStack, level, extractorPos)) {
+                    // No hay destino con espacio: no extraer todavía
+                    return false;
+                }
+
+                // Hay destino con espacio, proceder con la extracción real
+                ItemStack extractedStack = stackInSlot.copy();
+                extractedStack.setCount(Math.min(itemsToExtract, stackInSlot.getCount()));
+
+                stackInSlot.shrink(extractedStack.getCount());
+                container.setItem(FURNACE_RESULT_SLOT, stackInSlot);
+
+                if (sendItemToPipeSystem(extractedStack, level, extractorPos)) {
+                    return true;
+                } else {
+                    // Devolver los ítems si no se pudieron enviar
+                    ItemStack remainingStack = container.getItem(FURNACE_RESULT_SLOT);
+                    if (remainingStack.isEmpty()) {
+                        container.setItem(FURNACE_RESULT_SLOT, extractedStack);
+                    } else if (remainingStack.getItem() == extractedStack.getItem() &&
+                              remainingStack.getCount() + extractedStack.getCount() <= remainingStack.getMaxStackSize()) {
+                        remainingStack.grow(extractedStack.getCount());
+                        container.setItem(FURNACE_RESULT_SLOT, remainingStack);
+                    }
+                }
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Extrae items de un contenedor genérico (cofres, barriles, etc.).
+     */
+    private boolean extractFromGenericContainer(Container container, int itemsToExtract, Level level, BlockPos extractorPos) {
+        for (int slot = 0; slot < container.getContainerSize(); slot++) {
+            ItemStack stackInSlot = container.getItem(slot);
+            
+            if (!stackInSlot.isEmpty()) {
+                ItemStack extractedStack = stackInSlot.copy();
+                extractedStack.setCount(Math.min(itemsToExtract, stackInSlot.getCount()));
+                
+                stackInSlot.shrink(extractedStack.getCount());
+                container.setItem(slot, stackInSlot);
+                
+                if (sendItemToPipeSystem(extractedStack, level, extractorPos)) {
+                    return true;
+                } else {
+                    // Devolver los ítems si no se pudieron enviar
+                    ItemStack remainingStack = container.getItem(slot);
+                    if (remainingStack.isEmpty()) {
+                        container.setItem(slot, extractedStack);
+                    } else if (remainingStack.getItem() == extractedStack.getItem() && 
+                              remainingStack.getCount() + extractedStack.getCount() <= remainingStack.getMaxStackSize()) {
+                        remainingStack.grow(extractedStack.getCount());
+                        container.setItem(slot, remainingStack);
+                    }
+                }
+                return false;
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * Intenta extraer items de contenedores de otros mods usando reflexión.
+     */
+    private boolean extractFromModContainer(BlockEntity containerEntity, int itemsToExtract, Level level, BlockPos extractorPos) {
+        try {
+            // Intentar obtener el inventario usando métodos comunes
+            Object inventory = null;
+            int containerSize = 0;
+            
+            // Intentar diferentes métodos para obtener el inventario
+            try {
+                inventory = containerEntity.getClass().getMethod("getInventory").invoke(containerEntity);
+                containerSize = (Integer) inventory.getClass().getMethod("getSlots").invoke(inventory);
+            } catch (Exception e1) {
+                try {
+                    containerSize = (Integer) containerEntity.getClass().getMethod("getContainerSize").invoke(containerEntity);
+                    inventory = containerEntity; // El contenedor mismo implementa los métodos
+                } catch (Exception e2) {
+                    try {
+                        containerSize = (Integer) containerEntity.getClass().getMethod("getSlots").invoke(containerEntity);
+                        inventory = containerEntity;
+                    } catch (Exception e3) {
+                        return false; // No se pudo acceder al inventario
+                    }
+                }
+            }
+            
+            if (inventory == null || containerSize <= 0) {
+                return false;
+            }
+            
+            // Intentar extraer del primer slot no vacío
+            for (int slot = 0; slot < containerSize; slot++) {
+                try {
+                    ItemStack stackInSlot = null;
+                    
+                    // Intentar diferentes métodos para obtener el item
+                    try {
+                        stackInSlot = (ItemStack) inventory.getClass().getMethod("getStackInSlot", int.class).invoke(inventory, slot);
+                    } catch (Exception e1) {
+                        try {
+                            stackInSlot = (ItemStack) inventory.getClass().getMethod("getItem", int.class).invoke(inventory, slot);
+                        } catch (Exception e2) {
+                            continue; // No se pudo obtener el item de este slot
+                        }
+                    }
+                    
+                    if (stackInSlot != null && !stackInSlot.isEmpty()) {
+                        ItemStack extractedStack = stackInSlot.copy();
+                        extractedStack.setCount(Math.min(itemsToExtract, stackInSlot.getCount()));
+                        
+                        // Intentar extraer el item
+                        try {
+                            ItemStack extracted = (ItemStack) inventory.getClass().getMethod("extractItem", int.class, int.class, boolean.class)
+                                    .invoke(inventory, slot, extractedStack.getCount(), false);
+                            
+                            if (!extracted.isEmpty() && sendItemToPipeSystem(extracted, level, extractorPos)) {
+                                return true;
+                            }
+                        } catch (Exception e) {
+                            // Si no tiene extractItem, intentar con setItem
+                            try {
+                                stackInSlot.shrink(extractedStack.getCount());
+                                inventory.getClass().getMethod("setStackInSlot", int.class, ItemStack.class)
+                                        .invoke(inventory, slot, stackInSlot);
+                                
+                                if (sendItemToPipeSystem(extractedStack, level, extractorPos)) {
+                                    return true;
+                                } else {
+                                    // Devolver el item si no se pudo enviar
+                                    stackInSlot.grow(extractedStack.getCount());
+                                    inventory.getClass().getMethod("setStackInSlot", int.class, ItemStack.class)
+                                            .invoke(inventory, slot, stackInSlot);
+                                }
+                            } catch (Exception e2) {
+                                // Intentar con setItem si setStackInSlot no existe
+                                try {
+                                    inventory.getClass().getMethod("setItem", int.class, ItemStack.class)
+                                            .invoke(inventory, slot, stackInSlot);
+                                    
+                                    if (sendItemToPipeSystem(extractedStack, level, extractorPos)) {
+                                        return true;
+                                    }
+                                } catch (Exception e3) {
+                                    // No se pudo modificar el inventario
+                                }
+                            }
+                        }
+                        return false;
+                    }
+                } catch (Exception e) {
+                    // Error al procesar este slot, continuar con el siguiente
+                    continue;
+                }
+            }
+        } catch (Exception e) {
+            // Error general al acceder al contenedor del mod
+            return false;
+        }
+        
+        return false;
     }
 
     private boolean sendItemToPipeSystem(ItemStack stack, Level level, BlockPos extractorPos) {
         // Buscar conectores de indexer cercanos para enviar el item
+        int searchRadius = 16;
+        
+        // Primero buscar conectores con filtro específico para este item
+        for (int x = -searchRadius; x <= searchRadius; x++) {
+            for (int y = -searchRadius; y <= searchRadius; y++) {
+                for (int z = -searchRadius; z <= searchRadius; z++) {
+                    BlockPos checkPos = extractorPos.offset(x, y, z);
+                    BlockEntity entity = level.getBlockEntity(checkPos);
+                    
+                    if (entity instanceof IndexerConnectorBlockEntity) {
+                        IndexerConnectorBlockEntity connector = (IndexerConnectorBlockEntity) entity;
+                        
+                        // Verificar si el conector tiene un filtro específico para este ítem
+                        ItemStack filterItem = connector.getFilterItem(0);
+                        if (!filterItem.isEmpty() && FilterUtils.passesFilter(stack, filterItem)) {
+                            // Intentar insertar el item en el conector con filtro específico
+                            ItemStack remainder = connector.insertItem(stack);
+                            
+                            if (remainder.isEmpty() || remainder.getCount() < stack.getCount()) {
+                                // Se insertó al menos parte del item
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Si no se encontró un conector con filtro específico, buscar conectores sin filtro
+        for (int x = -searchRadius; x <= searchRadius; x++) {
+            for (int y = -searchRadius; y <= searchRadius; y++) {
+                for (int z = -searchRadius; z <= searchRadius; z++) {
+                    BlockPos checkPos = extractorPos.offset(x, y, z);
+                    BlockEntity entity = level.getBlockEntity(checkPos);
+                    
+                    if (entity instanceof IndexerConnectorBlockEntity) {
+                        IndexerConnectorBlockEntity connector = (IndexerConnectorBlockEntity) entity;
+                        
+                        // Verificar si el conector NO tiene filtro específico para este ítem
+                        ItemStack filterItem = connector.getFilterItem(0);
+                        if (filterItem.isEmpty() || filterItem.getItem() != stack.getItem()) {
+                            // Intentar insertar el item en el conector sin filtro específico
+                            ItemStack remainder = connector.insertItem(stack);
+                            
+                            if (remainder.isEmpty() || remainder.getCount() < stack.getCount()) {
+                                // Se insertó al menos parte del item
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        return false; // No se pudo enviar el item
+    }
+    
+    private boolean canSendBucketToPipeSystem(ItemStack stack, Level level, BlockPos extractorPos) {
+        // Buscar conectores de indexer cercanos para verificar si hay espacio para buckets
         int searchRadius = 16;
         
         for (int x = -searchRadius; x <= searchRadius; x++) {
@@ -212,11 +501,8 @@ public class ExtractorBlockEntity extends BlockEntity {
                     if (entity instanceof IndexerConnectorBlockEntity) {
                         IndexerConnectorBlockEntity connector = (IndexerConnectorBlockEntity) entity;
                         
-                        // Intentar insertar el item en el conector
-                        ItemStack remainder = connector.insertItem(stack);
-                        
-                        if (remainder.isEmpty() || remainder.getCount() < stack.getCount()) {
-                            // Se insertó al menos parte del item
+                        // Verificar si hay espacio disponible para buckets vacíos
+                        if (connector.canAcceptBuckets()) {
                             return true;
                         }
                     }
@@ -224,7 +510,91 @@ public class ExtractorBlockEntity extends BlockEntity {
             }
         }
         
-        return false; // No se pudo enviar el item
+        return false; // No hay espacio disponible para buckets
+    }
+
+    // Verifica si existe al menos un destino con capacidad para el item sin insertar realmente
+    private boolean canSendItemToPipeSystem(ItemStack stack, Level level, BlockPos extractorPos) {
+        int searchRadius = 16;
+
+        // Primero: conectores con filtro específico que acepte este item
+        for (int x = -searchRadius; x <= searchRadius; x++) {
+            for (int y = -searchRadius; y <= searchRadius; y++) {
+                for (int z = -searchRadius; z <= searchRadius; z++) {
+                    BlockPos checkPos = extractorPos.offset(x, y, z);
+                    BlockEntity entity = level.getBlockEntity(checkPos);
+
+                    if (entity instanceof IndexerConnectorBlockEntity connector) {
+                        ItemStack filterItem = connector.getFilterItem(0);
+                        if (!filterItem.isEmpty() && FilterUtils.passesFilter(stack, filterItem)) {
+                            // Verificar capacidad del contenedor conectado (solo cofres/barriles, evitar hornos)
+                            BlockPos containerPos = connector.getConnectedContainerPos();
+                            if (containerPos == null) continue;
+                            BlockEntity containerEntity = level.getBlockEntity(containerPos);
+                            if (!(containerEntity instanceof Container)) continue;
+
+                            // Evitar enviar items a hornos por esta ruta (la salida cocinada se guarda en cofres)
+                            String name = containerEntity.getClass().getName();
+                            boolean isFurnace = name.contains("FurnaceBlockEntity") || name.contains("BlastFurnaceBlockEntity") || name.contains("SmokerBlockEntity");
+                            if (isFurnace) continue;
+
+                            Container container = (Container) containerEntity;
+                            if (hasSpaceFor(container, stack)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Segundo: conectores sin filtro específico para este item
+        for (int x = -searchRadius; x <= searchRadius; x++) {
+            for (int y = -searchRadius; y <= searchRadius; y++) {
+                for (int z = -searchRadius; z <= searchRadius; z++) {
+                    BlockPos checkPos = extractorPos.offset(x, y, z);
+                    BlockEntity entity = level.getBlockEntity(checkPos);
+
+                    if (entity instanceof IndexerConnectorBlockEntity connector) {
+                        ItemStack filterItem = connector.getFilterItem(0);
+                        if (filterItem.isEmpty() || filterItem.getItem() != stack.getItem()) {
+                            BlockPos containerPos = connector.getConnectedContainerPos();
+                            if (containerPos == null) continue;
+                            BlockEntity containerEntity = level.getBlockEntity(containerPos);
+                            if (!(containerEntity instanceof Container)) continue;
+
+                            String name = containerEntity.getClass().getName();
+                            boolean isFurnace = name.contains("FurnaceBlockEntity") || name.contains("BlastFurnaceBlockEntity") || name.contains("SmokerBlockEntity");
+                            if (isFurnace) continue;
+
+                            Container container = (Container) containerEntity;
+                            if (hasSpaceFor(container, stack)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    // Comprueba si el contenedor tiene al menos un slot vacío o un stack compatible con espacio
+    private boolean hasSpaceFor(Container container, ItemStack stack) {
+        for (int i = 0; i < container.getContainerSize(); i++) {
+            ItemStack slotStack = container.getItem(i);
+            if (slotStack.isEmpty()) {
+                return true;
+            }
+            if (ItemStack.isSameItemSameTags(slotStack, stack)) {
+                int maxStackSize = Math.min(container.getMaxStackSize(), slotStack.getMaxStackSize());
+                if (slotStack.getCount() < maxStackSize) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public boolean hasConnectedContainer() {
@@ -233,23 +603,6 @@ public class ExtractorBlockEntity extends BlockEntity {
 
     public BlockPos getConnectedContainerPos() {
         return this.connectedContainerPos;
-    }
-    
-    // Método para obtener el intervalo de extracción basado en las mejoras del controller conectado
-    private int getExtractionInterval(Level level, BlockPos pos) {
-        IndexerControllerBlockEntity controller = findConnectedController(level, pos);
-        if (controller != null) {
-            int itemsPerTransfer = controller.getItemsPerTransfer();
-            // Usar la misma velocidad que la mejora aplicada en el controller
-            // Sin mejora (1 item): 40 ticks
-            // Mejora básica (5 items): 5 ticks  
-            // Mejora avanzada (20 items): 20 ticks
-            // Mejora elite (64 items): 64 ticks
-            if (itemsPerTransfer > 1) {
-                return itemsPerTransfer; // Usar la misma velocidad que la mejora
-            }
-        }
-        return DEFAULT_EXTRACTION_INTERVAL; // Sin mejoras o sin controller
     }
     
     // Método para encontrar el controller conectado a través de tuberías

@@ -1,0 +1,26 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "WSW",
+    "NUN",
+    "WSW"
+  ],
+  "key": {
+    "W": {
+      "item": "minecraft:nether_star"
+    },
+    "S": {
+      "item": "minecraft:netherite_ingot"
+    },
+    "N": {
+      "item": "minecraft:netherite_ingot"
+    },
+    "U": {
+      "item": "indexer:transfer_speed_upgrade_elite"
+    }
+  },
+  "result": {
+    "item": "indexer:transfer_speed_upgrade_definitive",
+    "count": 1
+  }
+}

@@ -12,11 +12,13 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
 public class IndexerConnectorScreen extends AbstractContainerScreen<IndexerConnectorMenu> {
-    private static final ResourceLocation TEXTURE = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/menu_conector.png");
+    private static final ResourceLocation TEXTURE_BASE = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/menu_conector.png");
+    private static final ResourceLocation TEXTURE_LVL2 = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/menu_conector_lvl2.png");
     
     public IndexerConnectorScreen(IndexerConnectorMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
-        this.imageWidth = 176;
+        // Ajustar ancho según el número de slots de filtro
+        this.imageWidth = (menu.getFilterSlots() == 18) ? 256 : 176; // 256 para textura LVL2
         this.imageHeight = 166; // Altura estándar para incluir el inventario del jugador
         this.inventoryLabelY = 74; // Posición de la etiqueta del inventario
         this.titleLabelY = 6; // Posición del título
@@ -27,8 +29,9 @@ public class IndexerConnectorScreen extends AbstractContainerScreen<IndexerConne
         int x = (this.width - this.imageWidth) / 2;
         int y = (this.height - this.imageHeight) / 2;
         
-        // Renderizar textura de fondo
-        guiGraphics.blit(TEXTURE, x, y, 0, 0, this.imageWidth, this.imageHeight);
+        // Seleccionar textura según niveles/slots del conector
+        ResourceLocation tex = (this.menu.getFilterSlots() == 18) ? TEXTURE_LVL2 : TEXTURE_BASE;
+        guiGraphics.blit(tex, x, y, 0, 0, this.imageWidth, this.imageHeight);
     }
     
     @Override

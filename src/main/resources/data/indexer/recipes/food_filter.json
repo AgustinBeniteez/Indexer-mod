@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "LLL",
+    "SFP",
+    "LLL"
+  ],
+  "key": {
+    "L": {
+      "item": "minecraft:leather"
+    },
+    "S": {
+      "item": "minecraft:cooked_beef"
+    },
+    "F": {
+      "item": "indexer:base_filter"
+    },
+    "P": {
+      "item": "minecraft:potato"
+    }
+  },
+  "result": {
+    "item": "indexer:food_filter"
+  }
+}
