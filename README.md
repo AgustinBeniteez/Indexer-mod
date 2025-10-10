@@ -1,4 +1,5 @@
 # Indexer Mod
+![Indexer Logo](src/main/resources/assets/indexer/textures/gui/logo.png)
 
 ## Description
 Indexer is a mod for Minecraft 1.20.1 that helps you organize and manage your items. This automation system allows you to filter and automatically distribute the contents of your Chests/Containers, eliminating the need to manually sort your resources.
@@ -41,11 +42,30 @@ There is no restriction on the number of connectors you can use in your system, 
 ### Intuitive Interface
 Easily configure your connector filters with a simple and straightforward interface. Just place the item you want to filter in the available slot.
 
+## Nueva UI del Indexer Controller
+
+La pantalla de Red del Indexer Controller fue rediseñada para mostrar de forma clara todos los contenedores conectados y estadísticas del sistema.
+
+- Lista de contenedores: muestra posición, tipo y filtros configurados. Incluye buscador y botón de actualización.
+- Preview de contenido: al pasar el mouse sobre una card se muestra un overlay con los ítems y cantidades (si el contenedor no está vacío). Si hay más de los mostrados, aparece `...`.
+- Icono de tipo: cada card muestra el icono del tipo de contenedor (Cofre, Barril, Horno, etc.). Se oculta automáticamente cuando el modal de detalle está abierto.
+- Estadísticas de red: panel con información de conexión (DropBox), cantidad de contenedores conectados y barra de ocupación con porcentaje (ejemplo: 29%).
+- Vista detallada: al hacer clic en una card se abre un modal con posición, tipo, capacidad, porcentaje de llenado con barra, filtros y sección de ítems con scroll (mínimo 2 filas visibles y rueda del mouse habilitada).
+
+### Cómo usar
+- Abre la pantalla de red del Indexer Controller.
+- Usa el buscador para filtrar contenedores o pasa el mouse sobre una card para ver su contenido.
+- Haz clic en una card para abrir la vista detallada y desplázate por los ítems con la rueda del mouse.
+
 ## Language Support
 
 The Indexer Mod includes full translation support for multiple languages and regional variants:
 
 ### Supported Languages:
+[![ES](https://img.shields.io/badge/Language-ES-red?style=for-the-badge)](https://github.com/AgustinBeniteez/Indexer-mod/pull/6) 
+[![EN](https://img.shields.io/badge/Language-EN-blue?style=for-the-badge)](https://github.com/AgustinBeniteez/Indexer-mod/pull/6) 
+[![CN](https://img.shields.io/badge/Language-CN-yellow?style=for-the-badge)](https://github.com/AgustinBeniteez/Indexer-mod/pull/6)
+
 - **Spanish**: es_es, es_ar, es_mx, es_cl, es_co, es_pe, es_ve, es_uy, es_an
 - **English**: en_us, en_gb, en_ca, en_au
 - **Chinese**: zh_cn
