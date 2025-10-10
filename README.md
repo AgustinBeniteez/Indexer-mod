@@ -24,9 +24,91 @@ Place these blocks next to your chests, barrels, furnaces, or other containers. 
 A special container with 54 slots (double that of a normal chest) where you can deposit all the items you want to sort. The Indexer Controller will extract the items from here and distribute them according to the configured filters.
 
 ### Speed Upgrades
-The mod includes two levels of speed upgrades:
-- **Basic Upgrade**: Allows the Controller to transfer up to 4 items at a time per cycle. Crafted with gold ingots in the corners, redstone dust in the remaining slots, and an Indexer Controller in the center.
-- **Advanced Upgrade**: Allows transferring up to 16 items at a time per cycle. Crafted by surrounding a Basic Upgrade with diamonds.
+The system includes 5 speed upgrades with performance increases per level:
+
+- Basic — 5x
+  
+  ![Basic Upgrade](src/main/resources/assets/indexer/textures/item/transfer_speed_upgrade_basic.png)
+  
+  Crafting: gold ingots in the corners, redstone dust in the remaining slots, and an Indexer Controller in the center. Transfers up to 4 items per cycle.
+
+- Copper — 10x
+  
+  ![Copper Upgrade](src/main/resources/assets/indexer/textures/item/transfer_speed_upgrade_coper.png)
+  
+  Crafting: surround the Basic upgrade with copper ingots.
+
+- Advanced — 20x
+  
+  ![Advanced Upgrade](src/main/resources/assets/indexer/textures/item/transfer_speed_upgrade_advanced.png)
+  
+  Crafting: surround the Copper upgrade with diamonds. Transfers up to 16 items per cycle.
+
+- Elite — 64x
+  
+  ![Elite Upgrade](src/main/resources/assets/indexer/textures/item/transfer_speed_upgrade_elite.png)
+  
+  Crafting: surround the Advanced upgrade with `Netherite Scrap`.
+
+- Definitive — 256x
+  
+  ![Definitive Upgrade](src/main/resources/assets/indexer/textures/item/transfer_speed_upgrade_definitive.png)
+  
+  Crafting: final tier. Check the in-game recipe book if your pack includes its recipe.
+
+Note: The “x” values represent the system’s relative performance multiplier. Exact items-per-cycle amounts are shown in the UI and in the Indexer Controller tooltips depending on the applied upgrade.
+
+### Filters
+Filters let you restrict or allow items routed through the Indexer network.
+
+- Usage
+  - Place filters in the connector’s filter slots to affect routing.
+  - Right-click configurable filters to set their criteria (Name, Attribute, Custom Tag Blocker).
+  - Multiple filters can be combined; specific filters (tools/food/fuel) allow only their category.
+
+- Base Filter
+  
+  ![Base Filter](src/main/resources/assets/indexer/textures/item/filter/indexer_filter_base.png)
+  
+  Core component used for crafting other filters.
+
+- Name Filter
+  
+  ![Name Filter](src/main/resources/assets/indexer/textures/item/filter/indexer_filter_name.png)
+  
+  Filters items by exact custom name. Right-click to set the target name.
+
+- Attribute Filter
+  
+  ![Attribute Filter](src/main/resources/assets/indexer/textures/item/filter/indexer_filter_attribute.png)
+  
+  Filters by attributes like enchantments. Right-click to set the attribute.
+
+- Custom Tag Blocker
+  
+  ![Custom Tag Blocker](src/main/resources/assets/indexer/textures/item/filter/indexer_filter_custom_tag.png)
+  
+  Blocks items by ID/tag. Right-click to set the item/tag to block.
+
+- Food Filter
+  
+  ![Food Filter](src/main/resources/assets/indexer/textures/item/filter/indexer_filter_food.png)
+  
+  Allows only edible items.
+
+- Fuel Filter
+  
+  ![Fuel Filter](src/main/resources/assets/indexer/textures/item/filter/indexer_filter_fuel.png)
+  
+  Allows only fuel items (e.g., coal, charcoal, lava bucket in furnaces).
+
+- Tools Filter
+  
+  ![Tools Filter](src/main/resources/assets/indexer/textures/item/filter/indexer_filter_tools.png)
+  
+  Allows only tools: pickaxes, axes, shovels, hoes, and swords.
+
+Crafting: most filters are crafted using the Base Filter plus category items. Check the in-game recipe book for exact patterns.
 
 ## Special Features
 
