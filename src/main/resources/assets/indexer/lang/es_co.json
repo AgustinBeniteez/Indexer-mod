@@ -12,7 +12,7 @@
   "item.indexer.transfer_speed_upgrade.transfers_info": "Transfiere hasta %s objetos a la vez",
   "item.indexer.transfer_speed_upgrade.usage": "Usar con clic derecho en un Controlador Indexador",
   "item.indexer.transfer_speed_upgrade.single_use": "¡Objeto de un solo uso!",
-  "item.indexer.manual.tooltip": "Contiene instrucciones sobre cómo usar el sistema Indexer",
+  "item.indexer.manual.tooltip": "Incluye los crafteos del mod y un tutorial para instalar el sistema",
   "item.indexer.extractor.tooltip": "Extrae automáticamente objetos de contenedores arriba o abajo y los envía a través de la red de tuberías",
   "container.indexer.controller": "Controlador Indexer",
   "container.indexer.connector": "Conector Indexer",
@@ -83,5 +83,11 @@
   "gui.indexer.controller.detailed_view.filled": "Llenado:",
   "gui.indexer.controller.detailed_view.filters": "Filtros:",
   "gui.indexer.controller.detailed_view.close_instruction": "Presiona ESC o haz click fuera para cerrar",
-  "gui.indexer.dropbox.transfer_all": "Transferir Todo"
+  "gui.indexer.dropbox.transfer_all": "Transferir Todo",
+  "gui.indexer.manual.menu": "Menú",
+  "gui.indexer.manual.crafting": "Crafteos",
+  "gui.indexer.manual.tutorial": "Tutorial",
+  "gui.indexer.manual.wiki": "Wiki",
+  "gui.indexer.manual.search_placeholder": "Buscar por nombre",
+  "gui.indexer.manual.error_image": "Error al cargar imagen"
 }

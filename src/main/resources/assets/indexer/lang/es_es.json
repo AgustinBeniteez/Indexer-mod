@@ -8,6 +8,9 @@
   "item.indexer.transfer_speed_upgrade_basic": "Mejora Básica de Velocidad de Transferencia",
   "item.indexer.transfer_speed_upgrade_advanced": "Mejora Avanzada de Velocidad de Transferencia",
   "item.indexer.transfer_speed_upgrade_elite": "Mejora Élite de Velocidad de Transferencia",
+  "item.indexer.transfer_speed_upgrade_copper": "Mejora de Cobre de Velocidad de Transferencia",
+  "item.indexer.transfer_speed_upgrade_zero": "Mejora Inicial de Velocidad de Transferencia",
+  "item.indexer.transfer_speed_upgrade_definitive": "Mejora Definitiva de Velocidad de Transferencia",
   "item.indexer.base_filter": "Filtro Base",
   "item.indexer.tools_filter": "Filtro de Herramientas",
   "item.indexer.food_filter": "Filtro de Comida",
@@ -37,7 +40,7 @@
   "item.indexer.transfer_speed_upgrade.transfers_info": "Transfiere hasta %s objetos a la vez",
   "item.indexer.transfer_speed_upgrade.usage": "Usar con clic derecho en un Controlador Indexador",
   "item.indexer.transfer_speed_upgrade.single_use": "¡Objeto de un solo uso!",
-  "item.indexer.manual.tooltip": "Contiene instrucciones sobre cómo usar el sistema Indexer",
+  "item.indexer.manual.tooltip": "Incluye los crafteos del mod y un tutorial para instalar el sistema",
   "item.indexer.extractor.tooltip": "Extrae automáticamente objetos de contenedores arriba o abajo y los envía a través de la red de tuberías",
   "item.indexer.controller.upgrade_info": "Mejora: %s (Transfiere %s objetos a la vez)",
   "container.indexer.controller": "Controlador Indexer",
@@ -129,5 +132,11 @@
   "message.indexer.custom_filter.tag_updated": "Etiqueta de bloqueo actualizada a: %s",
   "message.indexer.attribute_filter.attribute_updated": "Filtro de atributos actualizado a: %s",
   "message.indexer.name_filter.name_updated": "Filtro por nombre actualizado a: %s",
-  "message.indexer.connector.connected_container": "Conectado a contenedor"
+  "message.indexer.connector.connected_container": "Conectado a contenedor",
+  "gui.indexer.manual.menu": "Menú",
+  "gui.indexer.manual.crafting": "Crafteos",
+  "gui.indexer.manual.tutorial": "Tutorial",
+  "gui.indexer.manual.wiki": "Wiki",
+  "gui.indexer.manual.search_placeholder": "Buscar por nombre",
+  "gui.indexer.manual.error_image": "Error al cargar imagen"
 }

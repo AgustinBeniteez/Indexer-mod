@@ -15,7 +15,7 @@
   "item.indexer.transfer_speed_upgrade.usage": "右键点击索引控制器使用",
   "item.indexer.transfer_speed_upgrade.single_use": "一次性物品！",
   "item.indexer.transfer_speed_upgrade.tooltip": "允许索引器控制器一次传输多个物品",
-  "item.indexer.manual.tooltip": "包含如何使用索引器系统的说明",
+  "item.indexer.manual.tooltip": "包含本模组的合成配方以及系统安装教程",
   "item.indexer.extractor.tooltip": "自动从上方或下方的容器中提取物品并通过管道网络发送",
   "container.indexer.controller": "索引器控制器",
   "container.indexer.connector": "索引器连接器",
@@ -87,5 +87,11 @@
   "gui.indexer.controller.detailed_view.filters": "过滤器：",
   "gui.indexer.controller.detailed_view.close_instruction": "按ESC键或点击外部关闭",
   "message.indexer.dropbox.enabled": "投放箱已启用",
-  "message.indexer.dropbox.disabled": "投放箱已禁用"
+  "message.indexer.dropbox.disabled": "投放箱已禁用",
+  "gui.indexer.manual.menu": "菜单",
+  "gui.indexer.manual.crafting": "合成",
+  "gui.indexer.manual.tutorial": "教程",
+  "gui.indexer.manual.wiki": "百科",
+  "gui.indexer.manual.search_placeholder": "按名称搜索",
+  "gui.indexer.manual.error_image": "加载图片错误"
 }

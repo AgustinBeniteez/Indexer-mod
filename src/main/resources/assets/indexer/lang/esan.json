@@ -12,7 +12,7 @@
   "item.indexer.transfer_speed_upgrade.transfers_info": "Traspasa hasta %s objétuh a la vé",
   "item.indexer.transfer_speed_upgrade.usage": "Usa con clic dereho en un Controlao Indexe",
   "item.indexer.transfer_speed_upgrade.single_use": "¡Objétuh de un solo uso!",
-  "item.indexer.manual.tooltip": "Tién' intrucciones pa' usá er sistema Indexe",
+  "item.indexer.manual.tooltip": "Incluyé los crafteos der mod y un tutoriá pa instalá er sistema",
   "item.indexer.extractor.tooltip": "Saca objétuh automáticamente de contenedoreh arriba o abajo y loh manda por la red e tubería",
   "container.indexer.controller": "Controlao Indexe",
   "container.indexer.connector": "Conectó Indexe",
@@ -86,5 +86,11 @@
   "gui.indexer.controller.detailed_view.filters": "Filtroh:",
   "gui.indexer.controller.detailed_view.close_instruction": "Aprieta ESC o haz clic fuera pa cerrá",
   "message.indexer.dropbox.enabled": "DropBox activao",
-  "message.indexer.dropbox.disabled": "DropBox desactivao"
+  "message.indexer.dropbox.disabled": "DropBox desactivao",
+  "gui.indexer.manual.menu": "Menú",
+  "gui.indexer.manual.crafting": "Crafteo",
+  "gui.indexer.manual.tutorial": "Tutorial",
+  "gui.indexer.manual.wiki": "Wiki",
+  "gui.indexer.manual.search_placeholder": "Buscá por nombre",
+  "gui.indexer.manual.error_image": "Erró cargando la imáhen"
 }

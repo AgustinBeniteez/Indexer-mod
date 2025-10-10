@@ -60,7 +60,7 @@
   "item.indexer.transfer_speed_upgrade.usage": "Use with right click on an Indexer Controller",
   "item.indexer.transfer_speed_upgrade.single_use": "Single use item!",
   "item.indexer.transfer_speed_upgrade.tooltip": "Allows an Indexer Controller to transfer multiple items at once",
-  "item.indexer.manual.tooltip": "Contains instructions on how to use the Indexer system",
+  "item.indexer.manual.tooltip": "Includes the mod's crafting recipes and a tutorial for installing the system",
   "item.indexer.extractor.tooltip": "Automatically extracts items from containers above or below and sends them through the pipe network",
   "item.indexer.controller.upgrade_info": "Upgrade: %s (Transfers %s items at once)",
   "container.indexer.controller": "Indexer Controller",
@@ -90,6 +90,7 @@
   "upgrade.indexer.advanced": "Advanced upgrade",
   "upgrade.indexer.elite": "Elite upgrade",
   "upgrade.indexer.definitive": "Definitive upgrade",
+  "item.indexer.transfer_speed_upgrade_definitive": "Definitive transfer upgrade seed ",
   "upgrade.indexer.copper": "Copper upgrade",
   "upgrade.indexer.zero": "Initial upgrade",
   "gui.indexer.controller.connection_info": "Connection Info:",
@@ -138,5 +139,11 @@
   "gui.indexer.controller.detailed_view.close_instruction": "Press ESC or click outside to close",
   "gui.indexer.controller.container_empty": "Container is empty",
   "gui.indexer.dropbox.transfer_all": "Transfer All",
-  "itemGroup.indexer": "Indexer"
+  "itemGroup.indexer": "Indexer",
+  "gui.indexer.manual.menu": "Menu",
+  "gui.indexer.manual.crafting": "Crafting",
+  "gui.indexer.manual.tutorial": "Tutorial",
+  "gui.indexer.manual.wiki": "Wiki",
+  "gui.indexer.manual.search_placeholder": "Search by name",
+  "gui.indexer.manual.error_image": "Error loading image"
 }
