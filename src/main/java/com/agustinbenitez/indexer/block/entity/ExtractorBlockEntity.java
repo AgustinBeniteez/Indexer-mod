@@ -236,7 +236,7 @@ public class ExtractorBlockEntity extends BlockEntity {
                     container.setItem(FURNACE_FUEL_SLOT, fuelSlotStack);
                     
                     // Intentar enviar los buckets al sistema de tuberías
-                    if (sendItemToPipeSystem(extractedStack, level, extractorPos)) {
+                    if (sendItemToPipeSystem(extractedStack, level, extractorPos, false)) {
                         return true;
                     } else {
                         // Si no se pudieron enviar, devolver los buckets al contenedor
@@ -262,7 +262,8 @@ public class ExtractorBlockEntity extends BlockEntity {
                 ItemStack testStack = stackInSlot.copy();
                 testStack.setCount(Math.min(itemsToExtract, stackInSlot.getCount()));
 
-                if (!canSendItemToPipeSystem(testStack, level, extractorPos)) {
+                // Requisito: solo extraer si hay un conector con filtro que acepte este ítem
+                if (!canSendItemToPipeSystem(testStack, level, extractorPos, true)) {
                     // No hay destino con espacio: no extraer todavía
                     return false;
                 }
@@ -274,7 +275,8 @@ public class ExtractorBlockEntity extends BlockEntity {
                 stackInSlot.shrink(extractedStack.getCount());
                 container.setItem(FURNACE_RESULT_SLOT, stackInSlot);
 
-                if (sendItemToPipeSystem(extractedStack, level, extractorPos)) {
+                // Enviar únicamente a conectores con filtro que acepte este ítem
+                if (sendItemToPipeSystem(extractedStack, level, extractorPos, true)) {
                     return true;
                 } else {
                     // Devolver los ítems si no se pudieron enviar
@@ -307,7 +309,8 @@ public class ExtractorBlockEntity extends BlockEntity {
                 stackInSlot.shrink(extractedStack.getCount());
                 container.setItem(slot, stackInSlot);
                 
-                if (sendItemToPipeSystem(extractedStack, level, extractorPos)) {
+                // En contenedores genéricos se permite enviar también a conectores sin filtro
+                if (sendItemToPipeSystem(extractedStack, level, extractorPos, false)) {
                     return true;
                 } else {
                     // Devolver los ítems si no se pudieron enviar
@@ -382,7 +385,7 @@ public class ExtractorBlockEntity extends BlockEntity {
                             ItemStack extracted = (ItemStack) inventory.getClass().getMethod("extractItem", int.class, int.class, boolean.class)
                                     .invoke(inventory, slot, extractedStack.getCount(), false);
                             
-                            if (!extracted.isEmpty() && sendItemToPipeSystem(extracted, level, extractorPos)) {
+                            if (!extracted.isEmpty() && sendItemToPipeSystem(extracted, level, extractorPos, false)) {
                                 return true;
                             }
                         } catch (Exception e) {
@@ -392,7 +395,7 @@ public class ExtractorBlockEntity extends BlockEntity {
                                 inventory.getClass().getMethod("setStackInSlot", int.class, ItemStack.class)
                                         .invoke(inventory, slot, stackInSlot);
                                 
-                                if (sendItemToPipeSystem(extractedStack, level, extractorPos)) {
+                                if (sendItemToPipeSystem(extractedStack, level, extractorPos, false)) {
                                     return true;
                                 } else {
                                     // Devolver el item si no se pudo enviar
@@ -406,7 +409,7 @@ public class ExtractorBlockEntity extends BlockEntity {
                                     inventory.getClass().getMethod("setItem", int.class, ItemStack.class)
                                             .invoke(inventory, slot, stackInSlot);
                                     
-                                    if (sendItemToPipeSystem(extractedStack, level, extractorPos)) {
+                                    if (sendItemToPipeSystem(extractedStack, level, extractorPos, false)) {
                                         return true;
                                     }
                                 } catch (Exception e3) {
@@ -429,7 +432,7 @@ public class ExtractorBlockEntity extends BlockEntity {
         return false;
     }
 
-    private boolean sendItemToPipeSystem(ItemStack stack, Level level, BlockPos extractorPos) {
+    private boolean sendItemToPipeSystem(ItemStack stack, Level level, BlockPos extractorPos, boolean requireMatchingFilter) {
         // Buscar conectores de indexer cercanos para enviar el item
         int searchRadius = 16;
         
@@ -459,7 +462,12 @@ public class ExtractorBlockEntity extends BlockEntity {
             }
         }
         
-        // Si no se encontró un conector con filtro específico, buscar conectores sin filtro
+        // Si se requiere filtro y no se encontró un conector con filtro específico, no continuar
+        if (requireMatchingFilter) {
+            return false;
+        }
+
+        // Si no se requiere filtro específico, buscar conectores sin filtro
         for (int x = -searchRadius; x <= searchRadius; x++) {
             for (int y = -searchRadius; y <= searchRadius; y++) {
                 for (int z = -searchRadius; z <= searchRadius; z++) {
@@ -514,7 +522,7 @@ public class ExtractorBlockEntity extends BlockEntity {
     }
 
     // Verifica si existe al menos un destino con capacidad para el item sin insertar realmente
-    private boolean canSendItemToPipeSystem(ItemStack stack, Level level, BlockPos extractorPos) {
+    private boolean canSendItemToPipeSystem(ItemStack stack, Level level, BlockPos extractorPos, boolean requireMatchingFilter) {
         int searchRadius = 16;
 
         // Primero: conectores con filtro específico que acepte este item
@@ -546,6 +554,11 @@ public class ExtractorBlockEntity extends BlockEntity {
                     }
                 }
             }
+        }
+
+        // Si se requiere filtro, no considerar conectores sin filtro
+        if (requireMatchingFilter) {
+            return false;
         }
 
         // Segundo: conectores sin filtro específico para este item
