@@ -1,7 +1,5 @@
 package com.agustinbenitez.indexer.item;
 
-import com.agustinbenitez.indexer.screen.CustomTagFilterScreen;
-import net.minecraft.client.Minecraft;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
@@ -12,6 +10,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.fml.DistExecutor;
 
 import java.util.List;
@@ -28,16 +27,22 @@ public class CustomTagFilterItem extends Item {
         
         if (level.isClientSide) {
             // Abrir la GUI en el cliente
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
-                int slotIndex = player.getInventory().selected;
-                if (hand == InteractionHand.OFF_HAND) {
-                    slotIndex = 40; // Slot de la mano secundaria
-                }
-                Minecraft.getInstance().setScreen(new CustomTagFilterScreen(itemStack, slotIndex));
-            });
+            int slotIndex = player.getInventory().selected;
+            if (hand == InteractionHand.OFF_HAND) {
+                slotIndex = 40; // Slot de la mano secundaria
+            }
+            openCustomTagFilterScreen(itemStack, slotIndex);
         }
         
         return InteractionResultHolder.sidedSuccess(itemStack, level.isClientSide);
+    }
+    
+    @OnlyIn(Dist.CLIENT)
+    private void openCustomTagFilterScreen(ItemStack itemStack, int slotIndex) {
+        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
+            net.minecraft.client.Minecraft.getInstance().setScreen(
+                new com.agustinbenitez.indexer.screen.CustomTagFilterScreen(itemStack, slotIndex));
+        });
     }
     
     @Override
