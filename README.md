@@ -1,4 +1,12 @@
-# Indexer Mod
+# Indexer Mod 
+<a href="https://modrinth.com/mod/indexer" target="_blank">
+  <img src="https://img.shields.io/badge/Modrinth-6F98A8?style=for-the-badge&logo=modrinth&logoColor=white"/>
+</a>
+
+<a href="https://www.curseforge.com/minecraft/mc-mods/indexer" target="_blank"> 
+  <img src="https://img.shields.io/badge/CurseForge-F16436?style=for-the-badge&logo=curseforge&logoColor=white"/> 
+</a>
+
 ![Indexer Logo](src/main/resources/assets/indexer/textures/gui/logo.png)
 
 ## Description
