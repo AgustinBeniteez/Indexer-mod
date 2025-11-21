@@ -8,7 +8,7 @@
 </a>
 
 ![Indexer Logo](src/main/resources/assets/indexer/textures/gui/logo.png)
-
+# [View Video](https://youtu.be/rm9Hx_9Qvbw?si=IMnWUiCvcO_cNHbx)
 ## Description
 Indexer is a mod for Minecraft 1.20.1 that helps you organize and manage your items. This automation system allows you to filter and automatically distribute the contents of your Chests/Containers, eliminating the need to manually sort your resources.
 
