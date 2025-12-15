@@ -97,5 +97,11 @@
   "message.indexer.connector_upgrade.only_connector": "Can only be applied to an Indexer Connector",
   "message.indexer.connector_upgrade.already_applied": "Connector already upgraded",
   "message.indexer.connector_upgrade.success": "Connector upgraded to Level 2 (18 filter slots)",
-  "item.indexer.indexer_connector.level2": "Connector Lvl2"
+  "item.indexer.indexer_connector.level2": "Connector Lvl2",
+  "gui.indexer.manager.search_placeholder": "Search",
+  "gui.indexer.manager.sort_cantidad": "Quantity",
+  "gui.indexer.manager.sort_alfabeto": "Alphabetical",
+  "gui.indexer.manager.sort_block": "Block",
+  "gui.indexer.manager.sort_item": "Item",
+  "gui.indexer.manager.sort_mod": "Mod"
 }

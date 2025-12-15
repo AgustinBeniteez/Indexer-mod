@@ -157,5 +157,11 @@
   "block.indexer.indexer_manager": "Indexer Manager",
   "container.indexer.manager": "Indexer Manager",
   "item.indexer.indexer_manager": "Indexer Manager",
-  "gui.indexer.refresh": "Refresh"
+  "gui.indexer.refresh": "Refresh",
+  "gui.indexer.manager.search_placeholder": "Search",
+  "gui.indexer.manager.sort_cantidad": "Quantity",
+  "gui.indexer.manager.sort_alfabeto": "Alphabetical",
+  "gui.indexer.manager.sort_block": "Block",
+  "gui.indexer.manager.sort_item": "Item",
+  "gui.indexer.manager.sort_mod": "Mod"
 }

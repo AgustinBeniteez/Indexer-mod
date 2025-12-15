@@ -2,11 +2,11 @@
   "parent": "block/cube",
   "textures": {
     "particle": "indexer:block/indexer_manager",
-    "down": "indexer:block/indexer_manager",
+    "down": "indexer:block/indexer_manager_bottom",
     "up": "indexer:block/indexer_manager",
-    "north": "indexer:block/indexer_manager",
-    "east": "indexer:block/indexer_manager",
-    "south": "indexer:block/indexer_manager",
-    "west": "indexer:block/indexer_manager"
+    "north": "indexer:block/indexer_manager_side",
+    "east": "indexer:block/indexer_manager_side",
+    "south": "indexer:block/indexer_manager_side",
+    "west": "indexer:block/indexer_manager_side"
   }
 }

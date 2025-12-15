@@ -11,6 +11,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
@@ -34,6 +35,8 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
     private static final int CONTAINER_SIZE = 9;
     private NonNullList<ItemStack> items = NonNullList.withSize(CONTAINER_SIZE, ItemStack.EMPTY);
     private final Map<ResourceLocation, Integer> pendingExtractions = new HashMap<>();
+    private static final int EXTRACTION_COOLDOWN_MAX = 8;
+    private int extractionCooldown = 0;
 
     public IndexerManagerBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.INDEXER_MANAGER.get(), pos, state);
@@ -73,12 +76,14 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
         super.load(tag);
         this.items = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
         net.minecraft.world.ContainerHelper.loadAllItems(tag, this.items);
+        this.extractionCooldown = tag.getInt("ExtractionCooldown");
     }
 
     @Override
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
         net.minecraft.world.ContainerHelper.saveAllItems(tag, this.items);
+        tag.putInt("ExtractionCooldown", this.extractionCooldown);
     }
 
     public boolean stillValid(Player player) {
@@ -116,6 +121,23 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
         Map<String, Integer> data = getAggregatedItems();
         ModNetworking.sendToPlayer(new ManagerItemsUpdatePacket(data), player);
     }
+    
+    private void sendItemsToOpenPlayers() {
+        if (!(this.level instanceof ServerLevel serverLevel)) return;
+        Map<String, Integer> data = getAggregatedItems();
+        for (ServerPlayer sp : serverLevel.players()) {
+            AbstractContainerMenu menu = sp.containerMenu;
+            if (menu instanceof com.agustinbenitez.indexer.menu.IndexerManagerMenu managerMenu) {
+                if (managerMenu.getBlockEntity() == this) {
+                    ModNetworking.sendToPlayer(new ManagerItemsUpdatePacket(data), sp);
+                }
+            }
+        }
+    }
+    
+    public void syncOpenPlayers() {
+        sendItemsToOpenPlayers();
+    }
 
     public void queueExtraction(ResourceLocation itemId, int amount) {
         if (amount <= 0) return;
@@ -123,10 +145,24 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
         pendingExtractions.put(itemId, current + amount);
         this.setChanged();
     }
+    
+    public int extractImmediately(ResourceLocation itemId, int amount) {
+        int perTransfer = Math.max(1, getItemsPerTransferFromNearestController());
+        int limit = Math.max(0, Math.min(amount, perTransfer));
+        int moved = moveFromNetworkIntoInventory(itemId, limit);
+        if (moved > 0) {
+            this.setChanged();
+        }
+        return moved;
+    }
 
     public void tick(Level level, BlockPos pos, BlockState state) {
         if (level.isClientSide()) return;
         if (pendingExtractions.isEmpty()) return;
+        if (this.extractionCooldown > 0) {
+            this.extractionCooldown--;
+            return;
+        }
 
         ResourceLocation nextId = pendingExtractions.keySet().iterator().next();
         int remainingRequest = pendingExtractions.getOrDefault(nextId, 0);
@@ -144,9 +180,20 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
                 pendingExtractions.remove(nextId);
             }
             this.setChanged();
+            this.extractionCooldown = EXTRACTION_COOLDOWN_MAX;
+            sendItemsToOpenPlayers();
         } else {
             pendingExtractions.remove(nextId);
         }
+    }
+    
+    public boolean isInventoryFull() {
+        for (int i = 0; i < this.getContainerSize(); i++) {
+            ItemStack s = this.getItem(i);
+            if (s.isEmpty()) return false;
+            if (s.getCount() < s.getMaxStackSize()) return false;
+        }
+        return true;
     }
 
     private int moveFromNetworkIntoInventory(ResourceLocation itemId, int maxAmount) {
@@ -168,10 +215,12 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
                 if (take <= 0) continue;
                 ItemStack toMove = slot.copy();
                 toMove.setCount(take);
-                slot.shrink(take);
-                container.setItem(i, slot.isEmpty() ? ItemStack.EMPTY : slot);
-                remaining -= take;
-                insertIntoSelf(toMove);
+                int inserted = insertIntoSelf(toMove);
+                if (inserted > 0) {
+                    slot.shrink(inserted);
+                    container.setItem(i, slot.isEmpty() ? ItemStack.EMPTY : slot);
+                    remaining -= inserted;
+                }
                 if (be instanceof BlockEntity) {
                     ((BlockEntity) be).setChanged();
                 }
@@ -181,29 +230,31 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
         return maxAmount - remaining;
     }
 
-    private void insertIntoSelf(ItemStack stack) {
+    private int insertIntoSelf(ItemStack stack) {
+        int originalCount = stack.getCount();
         for (int i = 0; i < this.getContainerSize(); i++) {
             ItemStack existing = this.getItem(i);
             if (existing.isEmpty()) {
                 this.setItem(i, stack.copy());
-                return;
+                return originalCount;
             } else if (ItemStack.isSameItem(existing, stack) &&
                     existing.getCount() < existing.getMaxStackSize()) {
                 int canAdd = Math.min(stack.getCount(), existing.getMaxStackSize() - existing.getCount());
                 existing.grow(canAdd);
                 stack.shrink(canAdd);
                 this.setItem(i, existing);
-                if (stack.isEmpty()) return;
+                if (stack.isEmpty()) return originalCount;
             }
         }
         if (!stack.isEmpty()) {
             for (int i = 0; i < this.getContainerSize(); i++) {
                 if (this.getItem(i).isEmpty()) {
                     this.setItem(i, stack.copy());
-                    return;
+                    return originalCount;
                 }
             }
         }
+        return originalCount - stack.getCount();
     }
 
     private int getItemsPerTransferFromNearestController() {

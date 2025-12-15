@@ -99,5 +99,11 @@
   "message.indexer.connector_upgrade.only_connector": "只能应用于索引器连接器",
   "message.indexer.connector_upgrade.already_applied": "连接器已升级",
   "message.indexer.connector_upgrade.success": "连接器已升级至等级2（18个过滤槽）",
-  "item.indexer.indexer_connector.level2": "连接器 等级2"
+  "item.indexer.indexer_connector.level2": "连接器 等级2",
+  "gui.indexer.manager.search_placeholder": "搜索",
+  "gui.indexer.manager.sort_cantidad": "数量",
+  "gui.indexer.manager.sort_alfabeto": "字母顺序",
+  "gui.indexer.manager.sort_block": "方块",
+  "gui.indexer.manager.sort_item": "物品",
+  "gui.indexer.manager.sort_mod": "模组"
 }

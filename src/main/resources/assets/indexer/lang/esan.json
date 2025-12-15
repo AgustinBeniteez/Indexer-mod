@@ -99,5 +99,11 @@
   "message.indexer.connector_upgrade.only_connector": "Solo aplicable a un Conector Indexer",
   "message.indexer.connector_upgrade.already_applied": "El conector ya está mejorado",
   "message.indexer.connector_upgrade.success": "Conector mejorado a Nivel 2 (18 slots de filtro)",
-  "item.indexer.indexer_connector.level2": "Conector Lvl2"
+  "item.indexer.indexer_connector.level2": "Conector Lvl2",
+  "gui.indexer.manager.search_placeholder": "Buscá",
+  "gui.indexer.manager.sort_cantidad": "Cantidá",
+  "gui.indexer.manager.sort_alfabeto": "Alfabéticu",
+  "gui.indexer.manager.sort_block": "Bloque",
+  "gui.indexer.manager.sort_item": "Ítem",
+  "gui.indexer.manager.sort_mod": "Mod"
 }

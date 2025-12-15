@@ -145,5 +145,11 @@
   "message.indexer.connector_upgrade.already_applied": "El connector ja està millorat",
   "message.indexer.connector_upgrade.success": "Connector millorat a Nivell 2 (18 slots de filtre)",
   "item.indexer.connector_capacity_upgrade": "Millora de capacitat del connector",
-  "item.indexer.indexer_connector.level2": "Connector Nivell 2"
+  "item.indexer.indexer_connector.level2": "Connector Nivell 2",
+  "gui.indexer.manager.search_placeholder": "Cercar",
+  "gui.indexer.manager.sort_cantidad": "Quantitat",
+  "gui.indexer.manager.sort_alfabeto": "Alfabètic",
+  "gui.indexer.manager.sort_block": "Bloc",
+  "gui.indexer.manager.sort_item": "Ítem",
+  "gui.indexer.manager.sort_mod": "Mod"
 }

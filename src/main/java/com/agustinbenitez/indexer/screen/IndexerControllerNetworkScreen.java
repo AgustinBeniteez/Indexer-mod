@@ -61,8 +61,9 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
     private EditBox searchBox;
     private String searchFilter = "";
     
-    // Botón de refresh
-    private Button refreshButton;
+    // Estado de scrollbars interactivos
+    private boolean draggingLeftScrollbar = false;
+    private boolean draggingDetailScrollbar = false;
     
     // Indicador de carga
     private boolean isLoading = false;
@@ -104,12 +105,6 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
         this.searchBox.setResponder(this::onSearchChanged);
         this.addWidget(this.searchBox);
         
-        // Botón de refrescar
-        this.refreshButton = Button.builder(Component.translatable("gui.indexer.controller.refresh"), 
-                                          button -> refreshNetwork())
-                                  .bounds(leftX + RIGHT_PANEL_X + 10, topY + RIGHT_PANEL_Y + RIGHT_PANEL_HEIGHT - 25, 80, 20)
-                                  .build();
-        this.addRenderableWidget(this.refreshButton);
     }
     
     private void onSearchChanged(String search) {
@@ -259,14 +254,8 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
     
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        // Ocultar widgets cuando se muestra la vista detallada
-        if (showDetailedView) {
-            this.searchBox.visible = false;
-            this.refreshButton.visible = false;
-        } else {
-            this.searchBox.visible = true;
-            this.refreshButton.visible = true;
-        }
+        // Ocultar caja de búsqueda cuando se muestra la vista detallada
+        this.searchBox.visible = !showDetailedView;
         
         // Renderizar todo el contenido base primero
         super.render(guiGraphics, mouseX, mouseY, partialTick);
@@ -531,7 +520,7 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
     }
     
     private void renderScrollbar(GuiGraphics guiGraphics, int totalItems) {
-        int scrollbarX = LEFT_PANEL_X + LEFT_PANEL_WIDTH - 8;
+        int scrollbarX = LEFT_PANEL_X + LEFT_PANEL_WIDTH - 6;
         int scrollbarY = LEFT_PANEL_Y + 5;
         int scrollbarHeight = LEFT_PANEL_HEIGHT - 10;
         
@@ -572,10 +561,8 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
         
         int totalCapacity = this.menu.getTotalCapacity();
         int occupiedSlots = this.menu.getOccupiedSlots();
-        int availableSlots = totalCapacity - occupiedSlots;
         
-        // Mostrar solo los slots disponibles sin el texto de objetos
-        String slotsText = formatNumber(availableSlots) + "/" + formatNumber(totalCapacity);
+        String slotsText = formatNumber(occupiedSlots) + "/" + formatNumber(totalCapacity);
         guiGraphics.drawString(this.font, slotsText, RIGHT_PANEL_X + 10, currentY, 0xFFFFFF, false);
         currentY += lineHeight;
         
@@ -889,6 +876,24 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
             return true; // Consumir el click dentro del panel detallado
         }
         
+        // Click en la barra de scroll del panel izquierdo
+        List<ContainerInfo> filtered = getFilteredContainers();
+        if (filtered.size() > maxVisibleContainers) {
+            int scrollbarX = LEFT_PANEL_X + LEFT_PANEL_WIDTH - 6;
+            int scrollbarY = LEFT_PANEL_Y + 5;
+            int scrollbarHeight = LEFT_PANEL_HEIGHT - 10;
+            if (mouseX >= scrollbarX && mouseX <= scrollbarX + 6 &&
+                mouseY >= scrollbarY && mouseY <= scrollbarY + scrollbarHeight) {
+                int thumbHeight = Math.max(10, (maxVisibleContainers * scrollbarHeight) / filtered.size());
+                int track = Math.max(1, scrollbarHeight - thumbHeight);
+                int pos = (int) Math.max(0, Math.min(track, mouseY - scrollbarY - thumbHeight / 2));
+                int maxScroll = Math.max(0, filtered.size() - maxVisibleContainers);
+                scrollOffset = (pos * maxScroll) / track;
+                draggingLeftScrollbar = true;
+                return true;
+            }
+        }
+        
         // Manejar clics en la lista de contenedores para abrir vista detallada
         if (mouseX >= LEFT_PANEL_X && mouseX <= LEFT_PANEL_X + LEFT_PANEL_WIDTH &&
             mouseY >= LEFT_PANEL_Y + 5 && mouseY <= LEFT_PANEL_Y + LEFT_PANEL_HEIGHT - 5) {
@@ -902,6 +907,31 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
                 detailedContainer = filteredContainers.get(clickedIndex);
                 showDetailedView = true;
                 return true;
+            }
+        }
+        
+        // Click en scrollbar del detalle (cuando modal está abierto)
+        if (showDetailedView && detailedContainer != null) {
+            int itemSpacing = 20;
+            int itemsPerRow = Math.max(1, detailedItemsAreaWidth / itemSpacing);
+            int totalItems = detailedContainer.uniqueItems.size();
+            int totalRows = (int) Math.ceil(totalItems / (double) itemsPerRow);
+            int visibleRows = Math.max(2, detailedItemsAreaHeight / itemSpacing);
+            if (totalRows > visibleRows) {
+                int scrollbarWidth = 6;
+                int scrollbarX = detailedItemsAreaX + detailedItemsAreaWidth - scrollbarWidth;
+                int scrollbarY = detailedItemsAreaY;
+                int scrollbarHeight = detailedItemsAreaHeight;
+                if (mouseX >= scrollbarX && mouseX <= scrollbarX + scrollbarWidth &&
+                    mouseY >= scrollbarY && mouseY <= scrollbarY + scrollbarHeight) {
+                    int thumbHeight = Math.max(10, (visibleRows * scrollbarHeight) / totalRows);
+                    int track = Math.max(1, scrollbarHeight - thumbHeight);
+                    int pos = (int) Math.max(0, Math.min(track, mouseY - scrollbarY - thumbHeight / 2));
+                    int maxRowOffset = Math.max(0, totalRows - visibleRows);
+                    detailedItemsScrollRowOffset = Math.max(0, Math.min(maxRowOffset, (pos * maxRowOffset) / track));
+                    draggingDetailScrollbar = true;
+                    return true;
+                }
             }
         }
         
@@ -938,6 +968,43 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
         }
         
         return super.mouseScrolled(mouseX, mouseY, delta);
+    }
+    
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (draggingLeftScrollbar) {
+            List<ContainerInfo> filtered = getFilteredContainers();
+            int scrollbarY = LEFT_PANEL_Y + 5;
+            int scrollbarHeight = LEFT_PANEL_HEIGHT - 10;
+            int thumbHeight = Math.max(10, (maxVisibleContainers * scrollbarHeight) / Math.max(1, filtered.size()));
+            int track = Math.max(1, scrollbarHeight - thumbHeight);
+            int pos = (int) Math.max(0, Math.min(track, mouseY - scrollbarY - thumbHeight / 2));
+            int maxScroll = Math.max(0, filtered.size() - maxVisibleContainers);
+            scrollOffset = (pos * maxScroll) / track;
+            return true;
+        }
+        if (draggingDetailScrollbar && showDetailedView && detailedContainer != null) {
+            int itemSpacing = 20;
+            int itemsPerRow = Math.max(1, detailedItemsAreaWidth / itemSpacing);
+            int totalItems = detailedContainer.uniqueItems.size();
+            int totalRows = (int) Math.ceil(totalItems / (double) itemsPerRow);
+            int visibleRows = Math.max(2, detailedItemsAreaHeight / itemSpacing);
+            int maxRowOffset = Math.max(0, totalRows - visibleRows);
+            int scrollbarHeight = detailedItemsAreaHeight;
+            int thumbHeight = Math.max(10, (visibleRows * scrollbarHeight) / Math.max(1, totalRows));
+            int track = Math.max(1, scrollbarHeight - thumbHeight);
+            int pos = (int) Math.max(0, Math.min(track, mouseY - detailedItemsAreaY - thumbHeight / 2));
+            detailedItemsScrollRowOffset = Math.max(0, Math.min(maxRowOffset, (pos * maxRowOffset) / track));
+            return true;
+        }
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    }
+    
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        draggingLeftScrollbar = false;
+        draggingDetailScrollbar = false;
+        return super.mouseReleased(mouseX, mouseY, button);
     }
     
     @Override

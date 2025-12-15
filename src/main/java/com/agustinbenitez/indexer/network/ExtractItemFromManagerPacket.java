@@ -40,7 +40,12 @@ public class ExtractItemFromManagerPacket {
             if (player != null) {
                 BlockEntity be = player.level().getBlockEntity(managerPos);
                 if (be instanceof IndexerManagerBlockEntity manager) {
-                    manager.queueExtraction(itemId, count);
+                    int moved = manager.extractImmediately(itemId, count);
+                    int remaining = Math.max(0, count - moved);
+                    if (remaining > 0 && !manager.isInventoryFull()) {
+                        manager.queueExtraction(itemId, remaining);
+                    }
+                    manager.sendItemsTo(player);
                 }
             }
         });
