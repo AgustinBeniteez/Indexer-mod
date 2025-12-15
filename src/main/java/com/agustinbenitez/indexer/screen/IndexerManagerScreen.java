@@ -32,8 +32,8 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
     private static final ResourceLocation FILTER_ICON = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/filter.png");
     private static final int STATS_PANEL_WIDTH = 100;
     private EditBox searchBox;
-    private final List<ItemEntry> items = new ArrayList<>();
-    private final List<ItemEntry> filtered = new ArrayList<>();
+    private final List<ItemVariantEntry> items = new ArrayList<>();
+    private final List<ItemVariantEntry> filtered = new ArrayList<>();
     private int scrollRowOffset = 0;
     private boolean draggingScrollbar = false;
     private String searchPlaceholder = "";
@@ -81,13 +81,11 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
         super.render(graphics, mouseX, mouseY, partialTick);
         String query = searchBox.getValue() == null ? "" : searchBox.getValue().toLowerCase(Locale.ROOT);
         filtered.clear();
-        for (ItemEntry e : items) {
-            Item item = ForgeRegistries.ITEMS.getValue(e.id);
-            String name = "";
-            if (item != null) {
-                name = new ItemStack(item).getHoverName().getString().toLowerCase(Locale.ROOT);
-            }
-            if (query.isEmpty() || e.id.toString().toLowerCase(Locale.ROOT).contains(query) || name.contains(query)) {
+        for (ItemVariantEntry e : items) {
+            String name = Component.translatable(e.stack.getItem().getDescriptionId()).getString().toLowerCase(Locale.ROOT);
+            String idStr = ForgeRegistries.ITEMS.getKey(e.stack.getItem()).toString();
+            String enchTokens = getEnchantSearchTokens(e.stack);
+            if (query.isEmpty() || idStr.toLowerCase(Locale.ROOT).contains(query) || name.contains(query) || enchTokens.contains(query)) {
                 filtered.add(e);
             }
         }
@@ -122,14 +120,12 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
             overMenu = mouseX >= menuX && mouseX <= menuX + menuW && mouseY >= menuY && mouseY <= menuY + menuH;
         }
         for (int i = startIndex; i < endIndex; i++) {
-            ItemEntry e = filtered.get(i);
+            ItemVariantEntry e = filtered.get(i);
             int col = idx % itemsPerRow;
             int row = idx / itemsPerRow;
             int ix = areaX + col * itemSpacing;
             int iy = areaY + row * itemSpacing;
-            Item item = ForgeRegistries.ITEMS.getValue(e.id);
-            ItemStack stack = ItemStack.EMPTY;
-            if (item != null) stack = new ItemStack(item);
+            ItemStack stack = e.stack.copy();
             graphics.renderItem(stack, ix, iy);
             String countStr = formatCount(e.count);
             graphics.renderItemDecorations(this.font, stack, ix, iy, countStr);
@@ -137,10 +133,41 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
                 List<Component> tooltip = new ArrayList<>();
                 boolean full = isManagerInventoryFull();
                 if (!stack.isEmpty()) {
-                    MutableComponent name = Component.literal(stack.getHoverName().getString());
+                    MutableComponent name = Component.literal(Component.translatable(stack.getItem().getDescriptionId()).getString());
                     tooltip.add(full ? name.withStyle(ChatFormatting.RED) : name);
                 }
                 tooltip.add(Component.literal("x" + e.count));
+                var tag = stack.getTag();
+                if (tag != null) {
+                    java.util.List<Component> enchLines = new java.util.ArrayList<>();
+                    if (tag.contains("Enchantments")) {
+                        var list = tag.getList("Enchantments", 10);
+                        for (int j = 0; j < list.size(); j++) {
+                            var ench = list.getCompound(j);
+                            String id = ench.getString("id");
+                            int lvl = ench.getInt("lvl");
+                            var rl = new net.minecraft.resources.ResourceLocation(id);
+                            var eobj = net.minecraftforge.registries.ForgeRegistries.ENCHANTMENTS.getValue(rl);
+                            String nameTxt = eobj != null ? Component.translatable(eobj.getDescriptionId()).getString() : id;
+                            String lvlTxt = Component.translatable("enchantment.level." + lvl).getString();
+                            enchLines.add(Component.literal(nameTxt + " " + lvlTxt));
+                        }
+                    }
+                    if (tag.contains("StoredEnchantments")) {
+                        var list2 = tag.getList("StoredEnchantments", 10);
+                        for (int k = 0; k < list2.size(); k++) {
+                            var ench = list2.getCompound(k);
+                            String id = ench.getString("id");
+                            int lvl = ench.getInt("lvl");
+                            var rl = new net.minecraft.resources.ResourceLocation(id);
+                            var eobj = net.minecraftforge.registries.ForgeRegistries.ENCHANTMENTS.getValue(rl);
+                            String nameTxt = eobj != null ? Component.translatable(eobj.getDescriptionId()).getString() : id;
+                            String lvlTxt = Component.translatable("enchantment.level." + lvl).getString();
+                            enchLines.add(Component.literal(nameTxt + " " + lvlTxt));
+                        }
+                    }
+                    for (var c : enchLines) tooltip.add(c);
+                }
                 graphics.renderComponentTooltip(this.font, tooltip, mouseX, mouseY);
             }
             idx++;
@@ -192,6 +219,7 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
             drawMenuItem(graphics, Component.translatable("gui.indexer.manager.sort_mod"), menuX + 6, ty, currentSort == SortMode.MOD, hoverMod);
             graphics.pose().popPose();
         }
+        super.renderTooltip(graphics, mouseX, mouseY);
     }
     
     private void renderStats(GuiGraphics guiGraphics, int mouseX, int mouseY) {
@@ -383,9 +411,9 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
                     failTicks = 10;
                     return true;
                 }
-                ItemEntry e = filtered.get(i);
+                ItemVariantEntry e = filtered.get(i);
                 int amount = hasShiftDown() ? Math.min(64, e.count) : Math.min(1, e.count);
-                requestExtract(e.id, amount);
+                requestExtract(e.stack, amount);
                 return true;
             }
             idx++;
@@ -459,15 +487,16 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
         return super.mouseReleased(mouseX, mouseY, button);
     }
 
-    public void updateItemListFromServer(Map<String, Integer> data) {
+    public void updateItemListFromServer(java.util.List<com.agustinbenitez.indexer.network.ManagerItemsUpdatePacket.Entry> data) {
         items.clear();
-        for (Map.Entry<String, Integer> entry : data.entrySet()) {
-            items.add(new ItemEntry(new ResourceLocation(entry.getKey()), entry.getValue()));
+        for (var entry : data) {
+            items.add(new ItemVariantEntry(entry.stackVariant.copy(), entry.count));
         }
     }
 
-    public void requestExtract(ResourceLocation id, int count) {
-        ModNetworking.sendToServer(new ExtractItemFromManagerPacket(this.menu.getBlockEntity().getBlockPos(), id, count));
+    public void requestExtract(ItemStack stackVariant, int count) {
+        ModNetworking.sendToServer(new ExtractItemFromManagerPacket(this.menu.getBlockEntity().getBlockPos(),
+                net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(stackVariant.getItem()), count, stackVariant));
     }
     
     private void sortFiltered() {
@@ -479,16 +508,19 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
                 filtered.sort(Comparator.comparing(this::getItemName, String.CASE_INSENSITIVE_ORDER));
                 break;
             case BLOCK:
-                filtered.sort(Comparator.comparingInt((ItemEntry e) -> isConstruction(e) ? 0 : 1)
-                        .thenComparing((ItemEntry e) -> getItemName(e), String.CASE_INSENSITIVE_ORDER));
+                filtered.sort(Comparator.comparingInt((ItemVariantEntry e) -> isConstruction(e) ? 0 : 1)
+                        .thenComparing((ItemVariantEntry e) -> getItemName(e), String.CASE_INSENSITIVE_ORDER));
                 break;
             case ITEM:
-                filtered.sort(Comparator.comparingInt((ItemEntry e) -> isConstruction(e) ? 1 : 0)
-                        .thenComparing((ItemEntry e) -> getItemName(e), String.CASE_INSENSITIVE_ORDER));
+                filtered.sort(Comparator.comparingInt((ItemVariantEntry e) -> isConstruction(e) ? 1 : 0)
+                        .thenComparing((ItemVariantEntry e) -> getItemName(e), String.CASE_INSENSITIVE_ORDER));
                 break;
             case MOD:
-                filtered.sort(Comparator.comparing((ItemEntry e) -> e.id.getNamespace(), String.CASE_INSENSITIVE_ORDER)
-                        .thenComparing((ItemEntry e) -> getItemName(e), String.CASE_INSENSITIVE_ORDER));
+                filtered.sort(Comparator.comparing((ItemVariantEntry e) -> {
+                            var key = ForgeRegistries.ITEMS.getKey(e.stack.getItem());
+                            return key == null ? "" : key.getNamespace();
+                        }, String.CASE_INSENSITIVE_ORDER)
+                        .thenComparing((ItemVariantEntry e) -> getItemName(e), String.CASE_INSENSITIVE_ORDER));
                 break;
             case NONE:
             default:
@@ -496,20 +528,58 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
         }
     }
     
-    private String getItemName(ItemEntry e) {
-        Item item = ForgeRegistries.ITEMS.getValue(e.id);
-        if (item == null) return e.id.toString();
-        return new ItemStack(item).getHoverName().getString();
+    private String getItemName(ItemVariantEntry e) {
+        return Component.translatable(e.stack.getItem().getDescriptionId()).getString();
     }
     
-    private boolean isConstruction(ItemEntry e) {
-        Item item = ForgeRegistries.ITEMS.getValue(e.id);
-        return item instanceof BlockItem;
+    private String getEnchantSearchTokens(ItemStack stack) {
+        StringBuilder sb = new StringBuilder();
+        var tag = stack.getTag();
+        if (tag != null) {
+            if (tag.contains("Enchantments")) {
+                var list = tag.getList("Enchantments", 10);
+                for (int i = 0; i < list.size(); i++) {
+                    var ench = list.getCompound(i);
+                    String id = ench.getString("id");
+                    int lvl = ench.getInt("lvl");
+                    var rl = new net.minecraft.resources.ResourceLocation(id);
+                    var eobj = net.minecraftforge.registries.ForgeRegistries.ENCHANTMENTS.getValue(rl);
+                    if (eobj != null) {
+                        sb.append(net.minecraftforge.registries.ForgeRegistries.ENCHANTMENTS.getKey(eobj).toString().toLowerCase(Locale.ROOT)).append(" ");
+                        sb.append(Component.translatable(eobj.getDescriptionId()).getString().toLowerCase(Locale.ROOT)).append(" ");
+                    } else {
+                        sb.append(id.toLowerCase(Locale.ROOT)).append(" ");
+                    }
+                    sb.append(Component.translatable("enchantment.level." + lvl).getString().toLowerCase(Locale.ROOT)).append(" ");
+                }
+            }
+            if (tag.contains("StoredEnchantments")) {
+                var list2 = tag.getList("StoredEnchantments", 10);
+                for (int i = 0; i < list2.size(); i++) {
+                    var ench = list2.getCompound(i);
+                    String id = ench.getString("id");
+                    int lvl = ench.getInt("lvl");
+                    var rl = new net.minecraft.resources.ResourceLocation(id);
+                    var eobj = net.minecraftforge.registries.ForgeRegistries.ENCHANTMENTS.getValue(rl);
+                    if (eobj != null) {
+                        sb.append(net.minecraftforge.registries.ForgeRegistries.ENCHANTMENTS.getKey(eobj).toString().toLowerCase(Locale.ROOT)).append(" ");
+                        sb.append(Component.translatable(eobj.getDescriptionId()).getString().toLowerCase(Locale.ROOT)).append(" ");
+                    } else {
+                        sb.append(id.toLowerCase(Locale.ROOT)).append(" ");
+                    }
+                    sb.append(Component.translatable("enchantment.level." + lvl).getString().toLowerCase(Locale.ROOT)).append(" ");
+                }
+            }
+        }
+        return sb.toString();
     }
     
-    private boolean isTool(ItemEntry e) {
-        Item item = ForgeRegistries.ITEMS.getValue(e.id);
-        if (item == null) return false;
+    private boolean isConstruction(ItemVariantEntry e) {
+        return e.stack.getItem() instanceof BlockItem;
+    }
+    
+    private boolean isTool(ItemVariantEntry e) {
+        Item item = e.stack.getItem();
         return item instanceof TieredItem || item instanceof SwordItem || item instanceof ShearsItem;
     }
     
@@ -521,11 +591,11 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
         g.drawString(this.font, text, x, y, color, false);
     }
 
-    public static class ItemEntry {
-        public final ResourceLocation id;
+    public static class ItemVariantEntry {
+        public final ItemStack stack;
         public final int count;
-        public ItemEntry(ResourceLocation id, int count) {
-            this.id = id;
+        public ItemVariantEntry(ItemStack stack, int count) {
+            this.stack = stack;
             this.count = count;
         }
     }
