@@ -50,7 +50,7 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
     // Vista detallada
     private boolean showDetailedView = false;
     private ContainerInfo detailedContainer = null;
-    // Área y scroll para items del detalle
+    // Area and scroll for detailed items
     private int detailedItemsAreaX = 0;
     private int detailedItemsAreaY = 0;
     private int detailedItemsAreaWidth = 0;
@@ -746,7 +746,7 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
         if (detailedContainer.uniqueItems.isEmpty()) {
             guiGraphics.drawString(this.font, Component.translatable("gui.indexer.controller.container_empty").getString(), panelX + 10, yOffset, 0x888888, false);
         } else {
-            // Área con scroll para Items
+            // Area with scroll for Items
             int itemSize = 16;
             int itemSpacing = 20;
 

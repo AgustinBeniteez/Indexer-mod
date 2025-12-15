@@ -74,6 +74,25 @@ public class ModNetworking {
                 .encoder(NameFilterPacket::toBytes)
                 .consumerMainThread(NameFilterPacket::handle)
                 .add();
+        
+        // Registrar paquetes del Indexer Manager
+        net.messageBuilder(RequestManagerItemsPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
+                .decoder(RequestManagerItemsPacket::new)
+                .encoder(RequestManagerItemsPacket::toBytes)
+                .consumerMainThread(RequestManagerItemsPacket::handle)
+                .add();
+        
+        net.messageBuilder(ManagerItemsUpdatePacket.class, id(), NetworkDirection.PLAY_TO_CLIENT)
+                .decoder(ManagerItemsUpdatePacket::new)
+                .encoder(ManagerItemsUpdatePacket::toBytes)
+                .consumerMainThread(ManagerItemsUpdatePacket::handle)
+                .add();
+        
+        net.messageBuilder(ExtractItemFromManagerPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
+                .decoder(ExtractItemFromManagerPacket::new)
+                .encoder(ExtractItemFromManagerPacket::toBytes)
+                .consumerMainThread(ExtractItemFromManagerPacket::handle)
+                .add();
     }
     
     public static <MSG> void sendToServer(MSG message) {

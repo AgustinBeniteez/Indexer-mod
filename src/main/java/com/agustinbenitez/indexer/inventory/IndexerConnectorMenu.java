@@ -62,7 +62,7 @@ public class IndexerConnectorMenu extends AbstractContainerMenu {
         if (filterSlots == 18) {
             for (int row = 0; row < 3; row++) {
                 for (int col = 0; col < 3; col++) {
-                    int slotIndex = 9 + col + row * 3; // Índices 9-17
+                    int slotIndex = 9 + col + row * 3; // Indices 9-17
                     this.addSlot(new Slot(container, slotIndex,
                             FILTER_START_X + (col + 3) * SLOT_SIZE,
                             FILTER_START_Y + row * SLOT_SIZE) {

@@ -5,6 +5,7 @@ import com.agustinbenitez.indexer.screen.DropBoxScreen;
 import com.agustinbenitez.indexer.screen.IndexerConnectorScreen;
 
 import com.agustinbenitez.indexer.screen.IndexerControllerNetworkScreen;
+import com.agustinbenitez.indexer.screen.IndexerManagerScreen;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -23,6 +24,8 @@ public class ClientSetup {
             MenuScreens.register(ModMenuTypes.DROP_BOX_MENU.get(), DropBoxScreen::new);
             // Registrar la pantalla del conector
             MenuScreens.register(ModMenuTypes.INDEXER_CONNECTOR_MENU.get(), IndexerConnectorScreen::new);
+            // Registrar la pantalla del Manager
+            MenuScreens.register(ModMenuTypes.INDEXER_MANAGER_MENU.get(), IndexerManagerScreen::new);
         });
     }
 }

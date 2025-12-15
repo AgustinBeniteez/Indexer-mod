@@ -28,6 +28,9 @@ public class ModItems {
             
     public static final RegistryObject<Item> EXTRACTOR_ITEM = ITEMS.register("extractor",
             () -> new ExtractorItem(ModBlocks.EXTRACTOR.get(), new Item.Properties()));
+    
+    public static final RegistryObject<Item> INDEXER_MANAGER_ITEM = ITEMS.register("indexer_manager",
+            () -> new BlockItem(ModBlocks.INDEXER_MANAGER.get(), new Item.Properties()));
 
     // Indexer Manual
     public static final RegistryObject<Item> INDEXER_MANUAL = ITEMS.register("indexer_manual",

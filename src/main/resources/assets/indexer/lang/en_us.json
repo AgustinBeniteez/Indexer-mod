@@ -153,4 +153,9 @@
   "message.indexer.connector_upgrade.already_applied": "Connector already upgraded",
   "message.indexer.connector_upgrade.success": "Connector upgraded to Level 2 (18 filter slots)",
   "item.indexer.indexer_connector.level2": "Connector Lvl2"
+  ,
+  "block.indexer.indexer_manager": "Indexer Manager",
+  "container.indexer.manager": "Indexer Manager",
+  "item.indexer.indexer_manager": "Indexer Manager",
+  "gui.indexer.refresh": "Refresh"
 }
