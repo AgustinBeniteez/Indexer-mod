@@ -16,6 +16,7 @@ import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraft.world.entity.player.Inventory;
 
 import java.util.*;
+import java.text.DecimalFormat;
 
 public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManagerMenu> {
     private EditBox searchBox;
@@ -36,6 +37,7 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
         int x = this.leftPos + 8;
         int y = this.topPos + 6;
         this.searchBox = new EditBox(this.font, x, y, 120, 12, Component.literal(""));
+        this.searchBox.setSuggestion("Buscar");
         this.searchBox.setResponder(s -> {});
         this.addRenderableWidget(this.searchBox);
         int requestX = this.leftPos + 132;
@@ -90,8 +92,8 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
             ItemStack stack = ItemStack.EMPTY;
             if (item != null) stack = new ItemStack(item);
             graphics.renderItem(stack, ix, iy);
-            String countStr = String.valueOf(e.count);
-            graphics.drawString(this.font, countStr, ix + 12 - this.font.width(countStr), iy + 12, 0xFFFFFF, false);
+            String countStr = formatCount(e.count);
+            graphics.renderItemDecorations(this.font, stack, ix, iy, countStr);
             if (mouseX >= ix && mouseX < ix + 16 && mouseY >= iy && mouseY < iy + 16) {
                 List<Component> tooltip = new ArrayList<>();
                 if (!stack.isEmpty()) tooltip.add(stack.getHoverName());
@@ -100,6 +102,30 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
             }
             idx++;
         }
+    }
+    
+    private String formatCount(int value) {
+        if (value < 1000) return String.valueOf(value);
+        String suffix;
+        double base;
+        if (value >= 1_000_000_000) {
+            suffix = "B";
+            base = 1_000_000_000.0;
+        } else if (value >= 1_000_000) {
+            suffix = "M";
+            base = 1_000_000.0;
+        } else {
+            suffix = "k";
+            base = 1_000.0;
+        }
+        double v = value / base;
+        DecimalFormat df = new DecimalFormat(v >= 100 ? "#0" : "#.#");
+        return df.format(v) + suffix;
+    }
+    
+    @Override
+    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
+        graphics.drawString(this.font, "Your Inventory", 8, 94, 0x404040, false);
     }
     
     @Override
