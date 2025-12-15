@@ -104,4 +104,7 @@
   "gui.indexer.manager.sort_block": "Bloque",
   "gui.indexer.manager.sort_item": "Ítem",
   "gui.indexer.manager.sort_mod": "Mod"
+  ,
+  "item.indexer.chip_manager": "Chip Manager",
+  "item.indexer.chip_manager.tooltip": "Se usa para craftear el Indexer Manager"
 }

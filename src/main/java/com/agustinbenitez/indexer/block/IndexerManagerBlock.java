@@ -27,6 +27,7 @@ import net.minecraftforge.network.NetworkHooks;
 
 import javax.annotation.Nullable;
 
+import com.agustinbenitez.indexer.block.entity.IndexerControllerBlockEntity;
 public class IndexerManagerBlock extends BaseEntityBlock {
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
     private static final VoxelShape SHAPE = Block.box(0, 0, 0, 16, 16, 16);
@@ -43,6 +44,43 @@ public class IndexerManagerBlock extends BaseEntityBlock {
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
         return this.defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+    }
+
+    @Override
+    public void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean isMoving) {
+        super.onPlace(state, level, pos, oldState, isMoving);
+        notifyNearbyControllers(level, pos);
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof IndexerManagerBlockEntity manager) {
+            manager.markNetworkChanged();
+        }
+    }
+
+    @Override
+    public void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos fromPos, boolean isMoving) {
+        super.neighborChanged(state, level, pos, block, fromPos, isMoving);
+        notifyNearbyControllers(level, pos);
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof IndexerManagerBlockEntity manager) {
+            manager.markNetworkChanged();
+        }
+    }
+
+    private void notifyNearbyControllers(Level level, BlockPos pos) {
+        if (level.isClientSide()) return;
+        int searchRadius = 16;
+        for (int x = -searchRadius; x <= searchRadius; x++) {
+            for (int y = -searchRadius; y <= searchRadius; y++) {
+                for (int z = -searchRadius; z <= searchRadius; z++) {
+                    BlockPos checkPos = pos.offset(x, y, z);
+                    BlockEntity blockEntity = level.getBlockEntity(checkPos);
+                    if (blockEntity instanceof IndexerControllerBlockEntity controller) {
+                        controller.markNetworkChanged();
+                        return;
+                    }
+                }
+            }
+        }
     }
 
     @Override

@@ -157,6 +157,8 @@
   "block.indexer.indexer_manager": "Indexer Manager",
   "container.indexer.manager": "Indexer Manager",
   "item.indexer.indexer_manager": "Indexer Manager",
+  "item.indexer.chip_manager": "Chip Manager",
+  "item.indexer.chip_manager.tooltip": "Used to craft the Indexer Manager",
   "gui.indexer.refresh": "Refresh",
   "gui.indexer.manager.search_placeholder": "Search",
   "gui.indexer.manager.sort_cantidad": "Quantity",

@@ -376,4 +376,9 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
         networkChanged = false;
         return connectors;
     }
+    
+    public void markNetworkChanged() {
+        this.networkChanged = true;
+        this.connectorCache = null;
+    }
 }

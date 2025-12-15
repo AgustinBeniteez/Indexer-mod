@@ -83,6 +83,9 @@ public class ModItems {
             
     // MOD_FILTER eliminado
 
+    // Chip Manager
+    public static final RegistryObject<Item> CHIP_MANAGER = ITEMS.register("chip_manager",
+            () -> new ChipManagerItem(new Item.Properties().stacksTo(64)));
 
 
     public static void register(IEventBus eventBus) {

@@ -89,4 +89,7 @@
   "gui.indexer.manager.sort_block": "Block",
   "gui.indexer.manager.sort_item": "Item",
   "gui.indexer.manager.sort_mod": "Mod"
+  ,
+  "item.indexer.chip_manager": "Chip Manager",
+  "item.indexer.chip_manager.tooltip": "Used to craft the Indexer Manager"
 }

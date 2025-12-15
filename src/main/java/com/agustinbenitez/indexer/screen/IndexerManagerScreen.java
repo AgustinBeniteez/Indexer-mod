@@ -180,11 +180,16 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
             graphics.fill(menuX, menuY, menuX + menuW, menuY + 1, 0xFF2e5d70);
             graphics.fill(menuX, menuY + menuH - 1, menuX + menuW, menuY + menuH, 0xFF2e5d70);
             int ty = menuY + 4;
-            drawMenuItem(graphics, Component.translatable("gui.indexer.manager.sort_cantidad"), menuX + 6, ty, currentSort == SortMode.CANTIDAD); ty += itemH;
-            drawMenuItem(graphics, Component.translatable("gui.indexer.manager.sort_alfabeto"), menuX + 6, ty, currentSort == SortMode.ALFABETO); ty += itemH;
-            drawMenuItem(graphics, Component.translatable("gui.indexer.manager.sort_block"), menuX + 6, ty, currentSort == SortMode.BLOCK); ty += itemH;
-            drawMenuItem(graphics, Component.translatable("gui.indexer.manager.sort_item"), menuX + 6, ty, currentSort == SortMode.ITEM); ty += itemH;
-            drawMenuItem(graphics, Component.translatable("gui.indexer.manager.sort_mod"), menuX + 6, ty, currentSort == SortMode.MOD);
+            boolean hoverCantidad = mouseX >= menuX && mouseX <= menuX + menuW && mouseY >= ty && mouseY <= ty + itemH;
+            drawMenuItem(graphics, Component.translatable("gui.indexer.manager.sort_cantidad"), menuX + 6, ty, currentSort == SortMode.CANTIDAD, hoverCantidad); ty += itemH;
+            boolean hoverAlfabeto = mouseX >= menuX && mouseX <= menuX + menuW && mouseY >= ty && mouseY <= ty + itemH;
+            drawMenuItem(graphics, Component.translatable("gui.indexer.manager.sort_alfabeto"), menuX + 6, ty, currentSort == SortMode.ALFABETO, hoverAlfabeto); ty += itemH;
+            boolean hoverBlock = mouseX >= menuX && mouseX <= menuX + menuW && mouseY >= ty && mouseY <= ty + itemH;
+            drawMenuItem(graphics, Component.translatable("gui.indexer.manager.sort_block"), menuX + 6, ty, currentSort == SortMode.BLOCK, hoverBlock); ty += itemH;
+            boolean hoverItem = mouseX >= menuX && mouseX <= menuX + menuW && mouseY >= ty && mouseY <= ty + itemH;
+            drawMenuItem(graphics, Component.translatable("gui.indexer.manager.sort_item"), menuX + 6, ty, currentSort == SortMode.ITEM, hoverItem); ty += itemH;
+            boolean hoverMod = mouseX >= menuX && mouseX <= menuX + menuW && mouseY >= ty && mouseY <= ty + itemH;
+            drawMenuItem(graphics, Component.translatable("gui.indexer.manager.sort_mod"), menuX + 6, ty, currentSort == SortMode.MOD, hoverMod);
             graphics.pose().popPose();
         }
     }
@@ -508,11 +513,12 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
         return item instanceof TieredItem || item instanceof SwordItem || item instanceof ShearsItem;
     }
     
-    private void drawMenuItem(GuiGraphics g, Component text, int x, int y, boolean selected) {
+    private void drawMenuItem(GuiGraphics g, Component text, int x, int y, boolean selected, boolean hovered) {
         if (selected) {
             g.fill(x - 4, y - 2, x + this.font.width(text) + 4, y + 10, 0x402e5d70);
         }
-        g.drawString(this.font, text, x, y, 0xFFFFFF, false);
+        int color = hovered ? 0xCCCCCC : 0xFFFFFF;
+        g.drawString(this.font, text, x, y, color, false);
     }
 
     public static class ItemEntry {
