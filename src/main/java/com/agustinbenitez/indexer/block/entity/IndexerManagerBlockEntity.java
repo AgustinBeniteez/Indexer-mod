@@ -4,6 +4,9 @@ import com.agustinbenitez.indexer.init.ModBlockEntities;
 import com.agustinbenitez.indexer.menu.IndexerManagerMenu;
 import com.agustinbenitez.indexer.network.ModNetworking;
 import com.agustinbenitez.indexer.network.ManagerItemsUpdatePacket;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
+import net.minecraftforge.items.IItemHandler;
+import net.minecraftforge.items.ItemHandlerHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
@@ -106,25 +109,38 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
             BlockPos containerPos = connector.getConnectedContainerPos();
             if (containerPos == null || level == null) continue;
             BlockEntity be = level.getBlockEntity(containerPos);
-            if (!(be instanceof Container container)) continue;
-            for (int i = 0; i < container.getContainerSize(); i++) {
-                ItemStack stack = container.getItem(i);
-                if (stack.isEmpty()) continue;
-                String key = buildVariantKey(stack);
-                com.agustinbenitez.indexer.network.ManagerItemsUpdatePacket.Entry entry = variants.get(key);
-                if (entry == null) {
-                    ItemStack icon = stack.copy();
-                    icon.setCount(1);
-                    boolean pend = pendingExtractions.getOrDefault(key, 0) > 0;
-                    entry = new com.agustinbenitez.indexer.network.ManagerItemsUpdatePacket.Entry(icon, 0, pend);
-                    variants.put(key, entry);
+            if (be == null) continue;
+
+            // Usar Capability si está disponible (soporte cofres dobles y mods)
+            var cap = be.getCapability(ForgeCapabilities.ITEM_HANDLER, null);
+            if (cap.isPresent()) {
+                IItemHandler handler = cap.resolve().get();
+                for (int i = 0; i < handler.getSlots(); i++) {
+                    aggregateStack(variants, handler.getStackInSlot(i));
                 }
-                int newCount = entry.count + stack.getCount();
-                boolean pend = pendingExtractions.getOrDefault(key, 0) > 0;
-                variants.put(key, new com.agustinbenitez.indexer.network.ManagerItemsUpdatePacket.Entry(entry.stackVariant, newCount, pend));
+            } else if (be instanceof Container container) {
+                for (int i = 0; i < container.getContainerSize(); i++) {
+                    aggregateStack(variants, container.getItem(i));
+                }
             }
         }
         return new ArrayList<>(variants.values());
+    }
+
+    private void aggregateStack(Map<String, com.agustinbenitez.indexer.network.ManagerItemsUpdatePacket.Entry> variants, ItemStack stack) {
+        if (stack.isEmpty()) return;
+        String key = buildVariantKey(stack);
+        com.agustinbenitez.indexer.network.ManagerItemsUpdatePacket.Entry entry = variants.get(key);
+        if (entry == null) {
+            ItemStack icon = stack.copy();
+            icon.setCount(1);
+            boolean pend = pendingExtractions.getOrDefault(key, 0) > 0;
+            entry = new com.agustinbenitez.indexer.network.ManagerItemsUpdatePacket.Entry(icon, 0, pend);
+            variants.put(key, entry);
+        }
+        int newCount = entry.count + stack.getCount();
+        boolean pend = pendingExtractions.getOrDefault(key, 0) > 0;
+        variants.put(key, new com.agustinbenitez.indexer.network.ManagerItemsUpdatePacket.Entry(entry.stackVariant, newCount, pend));
     }
     
     private String buildVariantKey(ItemStack stack) {
@@ -308,6 +324,41 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
             BlockPos containerPos = connector.getConnectedContainerPos();
             if (containerPos == null) continue;
             BlockEntity be = level.getBlockEntity(containerPos);
+            if (be == null) continue;
+
+            // Intentar usar Capability primero
+            var cap = be.getCapability(ForgeCapabilities.ITEM_HANDLER, null);
+            if (cap.isPresent()) {
+                IItemHandler handler = cap.resolve().get();
+                for (int i = 0; i < handler.getSlots(); i++) {
+                    if (remaining <= 0) break;
+                    ItemStack slot = handler.getStackInSlot(i);
+                    if (slot.isEmpty()) continue;
+                    
+                    ResourceLocation key = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(slot.getItem());
+                    if (key == null || !key.equals(itemId)) continue;
+                    if (!variantMatches(slot, variantStack)) continue;
+                    
+                    // Simular extracción para ver cuánto podemos tomar
+                    ItemStack extractedSim = handler.extractItem(i, remaining, true);
+                    if (extractedSim.isEmpty()) continue;
+                    
+                    // Intentar insertar en el Manager
+                    ItemStack toMove = extractedSim.copy();
+                    int inserted = insertIntoSelf(toMove);
+                    
+                    // Si se pudo insertar algo, extraer realmente del inventario origen
+                    if (inserted > 0) {
+                        handler.extractItem(i, inserted, false);
+                        remaining -= inserted;
+                        if (be instanceof BlockEntity) {
+                            ((BlockEntity) be).setChanged();
+                        }
+                    }
+                }
+                continue; // Procesado con capability, pasar al siguiente conector
+            }
+
             if (!(be instanceof Container container)) continue;
             for (int i = 0; i < container.getContainerSize(); i++) {
                 ItemStack slot = container.getItem(i);
@@ -419,7 +470,7 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
     }
 
     @Nullable
-    private IndexerControllerBlockEntity findNearestController() {
+    public IndexerControllerBlockEntity findNearestController() {
         if (this.level == null) return null;
         Set<BlockPos> visited = new HashSet<>();
         Queue<BlockPos> queue = new LinkedList<>();
@@ -476,18 +527,20 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
     }
 
     private List<IndexerConnectorBlockEntity> findConnectors() {
-        if (!networkChanged && connectorCache != null) {
-            return connectorCache;
-        }
-
         // Intenta usar el controlador conectado para obtener la lista de conectores
         // Esto asegura que el Manager vea exactamente lo mismo que el Controller
+        // Siempre consultamos al controlador primero, ya que él gestiona su propio caché de red
         IndexerControllerBlockEntity controller = findNearestController();
         if (controller != null) {
             List<IndexerConnectorBlockEntity> controllerConnectors = controller.findConnectors();
+            // Actualizamos nuestro caché local solo para referencia, aunque delegamos al controlador
             this.connectorCache = controllerConnectors;
             this.networkChanged = false;
             return controllerConnectors;
+        }
+
+        if (!networkChanged && connectorCache != null) {
+            return connectorCache;
         }
         
         List<IndexerConnectorBlockEntity> connectors = new ArrayList<>();
