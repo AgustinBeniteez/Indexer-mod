@@ -98,6 +98,7 @@
   "gui.indexer.controller.connected": "Connected",
   "gui.indexer.controller.containers": "Containers",
   "gui.indexer.controller.capacity_info": "Capacity Info:",
+  "gui.indexer.manager.controller_not_found": "Controller not connected",
   "gui.indexer.controller.slots": "Slots",
   "gui.indexer.controller.stacks": "Stacks",
   "gui.indexer.controller.speed": "Speed",

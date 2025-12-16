@@ -15,6 +15,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -231,29 +232,71 @@ public class DropBoxBlockEntity extends RandomizableContainerBlockEntity impleme
     public IndexerControllerBlockEntity findConnectedController() {
         if (this.level == null) return null;
         
-        // First, search for controllers in adjacent positions for quick response
-        for (Direction direction : Direction.values()) {
-            BlockPos adjacentPos = this.worldPosition.relative(direction);
-            BlockEntity blockEntity = this.level.getBlockEntity(adjacentPos);
-            
-            if (blockEntity instanceof IndexerControllerBlockEntity controller) {
-                return controller;
-            }
-        }
+        // Use BFS to find a connected controller through pipes
+        java.util.Set<BlockPos> visited = new java.util.HashSet<>();
+        java.util.Queue<BlockPos> queue = new java.util.LinkedList<>();
         
-        // If no adjacent controllers found, search in a wider radius
-        int searchRadius = 16;
-        for (int x = -searchRadius; x <= searchRadius; x++) {
-            for (int y = -searchRadius; y <= searchRadius; y++) {
-                for (int z = -searchRadius; z <= searchRadius; z++) {
-                    // Skip the central position that we already verified
-                    if (x == 0 && y == 0 && z == 0) continue;
+        queue.add(this.worldPosition);
+        visited.add(this.worldPosition);
+        
+        int maxSearch = 1000; // Safety limit
+        int count = 0;
+        
+        while (!queue.isEmpty() && count < maxSearch) {
+            BlockPos currentPos = queue.poll();
+            count++;
+            
+            // Check all 6 directions
+            for (Direction direction : Direction.values()) {
+                BlockPos neighborPos = currentPos.relative(direction);
+                if (visited.contains(neighborPos)) continue;
+                
+                BlockState neighborState = this.level.getBlockState(neighborPos);
+                Block neighborBlock = neighborState.getBlock();
+                
+                // If we found a controller directly connected
+                if (neighborBlock instanceof com.agustinbenitez.indexer.block.IndexerControllerBlock) {
+                    // If we are at the DropBox (start), we can connect to any adjacent controller
+                    // If we are at a pipe, the pipe must be connected to this side
+                    boolean connected = false;
+                    if (currentPos.equals(this.worldPosition)) {
+                        connected = true;
+                    } else {
+                        BlockState currentState = this.level.getBlockState(currentPos);
+                        if (currentState.getBlock() instanceof com.agustinbenitez.indexer.block.IndexerPipeBlock) {
+                            connected = currentState.getValue(com.agustinbenitez.indexer.block.IndexerPipeBlock.getPropertyForDirection(direction));
+                        }
+                    }
                     
-                    BlockPos checkPos = this.worldPosition.offset(x, y, z);
-                    BlockEntity blockEntity = this.level.getBlockEntity(checkPos);
+                    if (connected) {
+                        BlockEntity blockEntity = this.level.getBlockEntity(neighborPos);
+                        if (blockEntity instanceof IndexerControllerBlockEntity controller) {
+                            return controller;
+                        }
+                    }
+                }
+                // If it's a pipe, check connections
+                else if (neighborBlock instanceof com.agustinbenitez.indexer.block.IndexerPipeBlock) {
+                    boolean connected = false;
                     
-                    if (blockEntity instanceof IndexerControllerBlockEntity controller) {
-                        return controller;
+                    // Logic for connection between current block and neighbor pipe
+                    if (currentPos.equals(this.worldPosition)) {
+                        // From DropBox to Pipe: Check if pipe connects to DropBox
+                        // Pipe connects to DropBox if its property for opposite direction is true
+                        connected = neighborState.getValue(com.agustinbenitez.indexer.block.IndexerPipeBlock.getPropertyForDirection(direction.getOpposite()));
+                    } else {
+                        // From Pipe to Pipe: Check both ends
+                        BlockState currentState = this.level.getBlockState(currentPos);
+                        if (currentState.getBlock() instanceof com.agustinbenitez.indexer.block.IndexerPipeBlock) {
+                            boolean mySide = currentState.getValue(com.agustinbenitez.indexer.block.IndexerPipeBlock.getPropertyForDirection(direction));
+                            boolean otherSide = neighborState.getValue(com.agustinbenitez.indexer.block.IndexerPipeBlock.getPropertyForDirection(direction.getOpposite()));
+                            connected = mySide && otherSide;
+                        }
+                    }
+                    
+                    if (connected) {
+                        visited.add(neighborPos);
+                        queue.add(neighborPos);
                     }
                 }
             }

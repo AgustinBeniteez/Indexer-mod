@@ -211,6 +211,38 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
                         }
                     }
                     for (var c : enchLines) tooltip.add(c);
+                    
+                    if (tag.contains("BlockEntityTag")) {
+                        var bet = tag.getCompound("BlockEntityTag");
+                        if (bet.contains("Items")) {
+                            var items = bet.getList("Items", 10);
+                            if (!items.isEmpty()) {
+                                tooltip.add(Component.literal("Contents:").withStyle(ChatFormatting.GRAY));
+                                int limit = 5;
+                                int countShown = 0;
+                                for (int k = 0; k < items.size(); k++) {
+                                    if (countShown >= limit) {
+                                        tooltip.add(Component.literal("... and " + (items.size() - limit) + " more").withStyle(ChatFormatting.ITALIC, ChatFormatting.GRAY));
+                                        break;
+                                    }
+                                    var itemTag = items.getCompound(k);
+                                    String id = itemTag.getString("id");
+                                    if (id.isEmpty()) continue;
+                                    int count = itemTag.contains("Count") ? itemTag.getByte("Count") : 1;
+                                    var rl = new net.minecraft.resources.ResourceLocation(id);
+                                    var item = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(rl);
+                                    MutableComponent line = Component.literal("- ");
+                                    if (item != null) {
+                                        line.append(Component.translatable(item.getDescriptionId())).append(" x" + count);
+                                    } else {
+                                        line.append(id + " x" + count);
+                                    }
+                                    tooltip.add(line.withStyle(ChatFormatting.GRAY));
+                                    countShown++;
+                                }
+                            }
+                        }
+                    }
                 }
                 graphics.renderComponentTooltip(this.font, tooltip, mouseX, mouseY);
             }
@@ -271,6 +303,13 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
         int statsY = this.topPos + 8;
         Component statsTitle = Component.translatable("gui.indexer.stats");
         guiGraphics.drawString(this.font, statsTitle, statsX, statsY, 0xFFFFFF, false);
+        
+        if (!this.menu.isControllerConnected()) {
+            statsY += 20;
+            Component errorText = Component.translatable("gui.indexer.manager.controller_not_found");
+            guiGraphics.drawWordWrap(this.font, errorText, statsX, statsY, STATS_PANEL_WIDTH - 12, 0xFF5555);
+            return;
+        }
         
         int occupiedSlots = this.menu.getOccupiedSlots();
         int totalCapacity = this.menu.getTotalCapacity();

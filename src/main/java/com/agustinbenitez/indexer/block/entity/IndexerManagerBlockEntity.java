@@ -38,6 +38,7 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
     private final Map<String, ItemStack> pendingVariantByKey = new HashMap<>();
     private static final int EXTRACTION_COOLDOWN_MAX = 8;
     private int extractionCooldown = 0;
+    private int syncTicker = 0;
 
     public IndexerManagerBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.INDEXER_MANAGER.get(), pos, state);
@@ -158,6 +159,9 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
                     sb.append(p).append(",");
                 }
             }
+            if (tag.contains("BlockEntityTag")) {
+                sb.append("|BET:").append(tag.getCompound("BlockEntityTag").toString());
+            }
         }
         return sb.toString();
     }
@@ -230,6 +234,28 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
 
     public void tick(Level level, BlockPos pos, BlockState state) {
         if (level.isClientSide()) return;
+        
+        // Sincronizar con los clientes abiertos cada 10 ticks (0.5 segundos)
+        // Esto permite ver cambios en tiempo real (ej: items entrando desde hornos/extractores)
+        this.syncTicker++;
+        if (this.syncTicker >= 10) {
+            this.syncTicker = 0;
+            // Solo sincronizar si hay jugadores viendo este inventario
+            if (this.level instanceof ServerLevel serverLevel) {
+                boolean hasOpenPlayers = false;
+                for (ServerPlayer sp : serverLevel.players()) {
+                    if (sp.containerMenu instanceof com.agustinbenitez.indexer.menu.IndexerManagerMenu managerMenu && 
+                        managerMenu.getBlockEntity() == this) {
+                        hasOpenPlayers = true;
+                        break;
+                    }
+                }
+                if (hasOpenPlayers) {
+                    sendItemsToOpenPlayers();
+                }
+            }
+        }
+
         if (pendingExtractions.isEmpty()) return;
         if (this.extractionCooldown > 0) {
             this.extractionCooldown--;
@@ -312,6 +338,15 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
         if (variant.isEmpty()) return true;
         var ta = a.hasTag() ? a.getTag() : null;
         var tv = variant.hasTag() ? variant.getTag() : null;
+        
+        // Check BlockEntityTag (Shulker Box content)
+        boolean aHasBet = ta != null && ta.contains("BlockEntityTag");
+        boolean vHasBet = tv != null && tv.contains("BlockEntityTag");
+        if (aHasBet != vHasBet) return false;
+        if (aHasBet) {
+            if (!ta.getCompound("BlockEntityTag").equals(tv.getCompound("BlockEntityTag"))) return false;
+        }
+
         boolean aHas = ta != null && (ta.contains("Enchantments") || ta.contains("StoredEnchantments"));
         boolean vHas = tv != null && (tv.contains("Enchantments") || tv.contains("StoredEnchantments"));
         if (!aHas && !vHas) return true;
@@ -379,13 +414,21 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
     }
 
     private int getItemsPerTransferFromNearestController() {
-        if (this.level == null) return 1;
+        IndexerControllerBlockEntity controller = findNearestController();
+        return controller != null ? Math.max(1, controller.getItemsPerTransfer()) : 1;
+    }
+
+    @Nullable
+    private IndexerControllerBlockEntity findNearestController() {
+        if (this.level == null) return null;
         Set<BlockPos> visited = new HashSet<>();
         Queue<BlockPos> queue = new LinkedList<>();
+        
         for (Direction direction : Direction.values()) {
             BlockPos adjacentPos = this.worldPosition.relative(direction);
             BlockState adjacentState = this.level.getBlockState(adjacentPos);
             Block adjacentBlock = adjacentState.getBlock();
+            
             if (adjacentBlock instanceof com.agustinbenitez.indexer.block.IndexerPipeBlock) {
                 if (adjacentState.getValue(com.agustinbenitez.indexer.block.IndexerPipeBlock.getPropertyForDirection(direction.getOpposite()))) {
                     queue.add(adjacentPos);
@@ -394,29 +437,34 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
             } else if (adjacentBlock instanceof com.agustinbenitez.indexer.block.IndexerControllerBlock) {
                 BlockEntity entity = this.level.getBlockEntity(adjacentPos);
                 if (entity instanceof IndexerControllerBlockEntity controller) {
-                    return Math.max(1, controller.getItemsPerTransfer());
+                    return controller;
                 }
                 visited.add(adjacentPos);
             }
         }
+        
         while (!queue.isEmpty()) {
             BlockPos currentPos = queue.poll();
             BlockState currentState = this.level.getBlockState(currentPos);
+            
             for (Direction direction : Direction.values()) {
                 BlockPos nextPos = currentPos.relative(direction);
                 if (visited.contains(nextPos)) continue;
+                
                 BlockState nextState = this.level.getBlockState(nextPos);
                 Block nextBlock = nextState.getBlock();
+                
                 if (nextBlock instanceof com.agustinbenitez.indexer.block.IndexerControllerBlock) {
                     BlockEntity entity = this.level.getBlockEntity(nextPos);
                     if (entity instanceof IndexerControllerBlockEntity controller) {
-                        return Math.max(1, controller.getItemsPerTransfer());
+                        return controller;
                     }
                     visited.add(nextPos);
                 } else if (nextBlock instanceof com.agustinbenitez.indexer.block.IndexerPipeBlock) {
                     boolean currentPipeConnected = currentState.getBlock() instanceof com.agustinbenitez.indexer.block.IndexerPipeBlock &&
                             currentState.getValue(com.agustinbenitez.indexer.block.IndexerPipeBlock.getPropertyForDirection(direction));
                     boolean nextPipeConnected = nextState.getValue(com.agustinbenitez.indexer.block.IndexerPipeBlock.getPropertyForDirection(direction.getOpposite()));
+                    
                     if (currentPipeConnected && nextPipeConnected) {
                         queue.add(nextPos);
                         visited.add(nextPos);
@@ -424,13 +472,24 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
                 }
             }
         }
-        return 1;
+        return null;
     }
 
     private List<IndexerConnectorBlockEntity> findConnectors() {
         if (!networkChanged && connectorCache != null) {
             return connectorCache;
         }
+
+        // Intenta usar el controlador conectado para obtener la lista de conectores
+        // Esto asegura que el Manager vea exactamente lo mismo que el Controller
+        IndexerControllerBlockEntity controller = findNearestController();
+        if (controller != null) {
+            List<IndexerConnectorBlockEntity> controllerConnectors = controller.findConnectors();
+            this.connectorCache = controllerConnectors;
+            this.networkChanged = false;
+            return controllerConnectors;
+        }
+        
         List<IndexerConnectorBlockEntity> connectors = new ArrayList<>();
         Set<BlockPos> visited = new HashSet<>();
         Queue<BlockPos> queue = new LinkedList<>();
@@ -465,18 +524,28 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
                 if (visited.contains(nextPos)) continue;
                 BlockState nextState = this.level.getBlockState(nextPos);
                 Block nextBlock = nextState.getBlock();
+                
+                boolean isCurrentPipe = currentState.getBlock() instanceof com.agustinbenitez.indexer.block.IndexerPipeBlock;
+                boolean isCurrentController = currentState.getBlock() instanceof com.agustinbenitez.indexer.block.IndexerControllerBlock;
+                
                 if (nextBlock instanceof com.agustinbenitez.indexer.block.IndexerPipeBlock) {
-                    boolean currentPipeConnected = currentState.getBlock() instanceof com.agustinbenitez.indexer.block.IndexerPipeBlock &&
-                            currentState.getValue(com.agustinbenitez.indexer.block.IndexerPipeBlock.getPropertyForDirection(direction));
+                    boolean validSource = isCurrentController;
+                    if (isCurrentPipe) {
+                        validSource = currentState.getValue(com.agustinbenitez.indexer.block.IndexerPipeBlock.getPropertyForDirection(direction));
+                    }
+                    
                     boolean nextPipeConnected = nextState.getValue(com.agustinbenitez.indexer.block.IndexerPipeBlock.getPropertyForDirection(direction.getOpposite()));
-                    if (currentPipeConnected && nextPipeConnected) {
+                    if (validSource && nextPipeConnected) {
                         queue.add(nextPos);
                         visited.add(nextPos);
                     }
                 } else if (nextBlock instanceof com.agustinbenitez.indexer.block.IndexerConnectorBlock) {
-                    boolean currentPipeConnected = currentState.getBlock() instanceof com.agustinbenitez.indexer.block.IndexerPipeBlock &&
-                            currentState.getValue(com.agustinbenitez.indexer.block.IndexerPipeBlock.getPropertyForDirection(direction));
-                    if (currentPipeConnected) {
+                    boolean validSource = isCurrentController;
+                    if (isCurrentPipe) {
+                        validSource = currentState.getValue(com.agustinbenitez.indexer.block.IndexerPipeBlock.getPropertyForDirection(direction));
+                    }
+                    
+                    if (validSource) {
                         BlockEntity nextEntity = this.level.getBlockEntity(nextPos);
                         if (nextEntity instanceof IndexerConnectorBlockEntity) {
                             connectors.add((IndexerConnectorBlockEntity) nextEntity);
@@ -484,9 +553,12 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
                         }
                     }
                 } else if (nextBlock instanceof com.agustinbenitez.indexer.block.IndexerControllerBlock) {
-                    boolean currentPipeConnected = currentState.getBlock() instanceof com.agustinbenitez.indexer.block.IndexerPipeBlock &&
-                            currentState.getValue(com.agustinbenitez.indexer.block.IndexerPipeBlock.getPropertyForDirection(direction));
-                    if (currentPipeConnected || !(currentState.getBlock() instanceof com.agustinbenitez.indexer.block.IndexerPipeBlock)) {
+                    boolean validSource = isCurrentController;
+                    if (isCurrentPipe) {
+                        validSource = currentState.getValue(com.agustinbenitez.indexer.block.IndexerPipeBlock.getPropertyForDirection(direction));
+                    }
+                    
+                    if (validSource) {
                         queue.add(nextPos);
                         visited.add(nextPos);
                     }

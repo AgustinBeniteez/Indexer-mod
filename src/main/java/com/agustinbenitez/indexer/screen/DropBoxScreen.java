@@ -66,6 +66,27 @@ public class DropBoxScreen extends AbstractContainerScreen<DropBoxMenu> {
         Component statsTitle = Component.translatable("gui.indexer.stats");
         guiGraphics.drawString(this.font, statsTitle, statsX, statsY, 0xFFFFFF, false);
         
+        if (!this.menu.isControllerConnected()) {
+            statsY += 20;
+            Component errorText = Component.translatable("gui.indexer.manager.controller_not_found");
+            // Wrap text if needed or just display it
+            guiGraphics.drawWordWrap(this.font, errorText, statsX, statsY, STATS_PANEL_WIDTH - 12, 0xFF5555);
+            
+            // Also render in the main area to be more prominent
+            int areaX = this.leftPos + 8;
+            int areaW = 176 - 16;
+            int areaY = this.topPos + 24;
+            int textWidth = this.font.width(errorText);
+            int tx = areaX + (areaW - textWidth) / 2;
+            int ty = areaY + 20;
+            
+            guiGraphics.pose().pushPose();
+            guiGraphics.pose().translate(0, 0, 300); // Render on top of everything
+            guiGraphics.drawString(this.font, errorText, tx, ty, 0xFF5555, false);
+            guiGraphics.pose().popPose();
+            return;
+        }
+        
         // Get stats from menu
         int occupiedSlots = this.menu.getOccupiedSlots();
         int totalCapacity = this.menu.getTotalCapacity();

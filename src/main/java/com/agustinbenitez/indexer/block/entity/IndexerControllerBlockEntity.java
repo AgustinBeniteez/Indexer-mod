@@ -1061,7 +1061,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
     // Cache de conectores para evitar búsquedas repetidas
     private List<IndexerConnectorBlockEntity> connectorCache = null;
     
-    private List<IndexerConnectorBlockEntity> findConnectors() {
+    public List<IndexerConnectorBlockEntity> findConnectors() {
         // Si la red no ha cambiado y tenemos un cache válido, devolver el cache
         if (!networkChanged && connectorCache != null) {
             return connectorCache;
