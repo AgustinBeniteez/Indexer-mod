@@ -91,5 +91,6 @@
   "gui.indexer.manager.sort_mod": "Mod"
   ,
   "item.indexer.chip_manager": "Chip Manager",
-  "item.indexer.chip_manager.tooltip": "Used to craft the Indexer Manager"
+  "item.indexer.chip_manager.tooltip": "Used to craft the Indexer Manager",
+  "gui.indexer.container_empty": "Containers empty"
 }

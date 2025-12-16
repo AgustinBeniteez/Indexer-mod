@@ -97,6 +97,15 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
         int areaX = this.leftPos + 8;
         int areaY = this.topPos + 24;
         int areaW = 176 - 16;
+        
+        if (filtered.isEmpty()) {
+            Component emptyText = Component.translatable("gui.indexer.container_empty");
+            int textWidth = this.font.width(emptyText);
+            int tx = areaX + (areaW - textWidth) / 2;
+            int ty = areaY + 5; 
+            graphics.drawString(this.font, emptyText, tx, ty, 0xFFFFFF, false);
+        }
+
         int areaH = 60;
         int itemSpacing = 20;
         int itemsPerRow = Math.max(1, areaW / itemSpacing);

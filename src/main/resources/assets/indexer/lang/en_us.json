@@ -168,5 +168,6 @@
   "gui.indexer.manager.sort_mod": "Mod",
   "gui.indexer.control.move_stack": "Move stack",
   "gui.indexer.control.move_one": "Move 1",
-  "gui.indexer.control.cancel_stack": "Cancel stack"
+  "gui.indexer.control.cancel_stack": "Cancel stack",
+  "gui.indexer.container_empty": "Containers empty"
 }

@@ -105,5 +105,6 @@
   "gui.indexer.manager.sort_alfabeto": "字母顺序",
   "gui.indexer.manager.sort_block": "方块",
   "gui.indexer.manager.sort_item": "物品",
-  "gui.indexer.manager.sort_mod": "模组"
+  "gui.indexer.manager.sort_mod": "模组",
+  "gui.indexer.container_empty": "容器为空"
 }

@@ -151,5 +151,6 @@
   "gui.indexer.manager.sort_alfabeto": "Alfabètic",
   "gui.indexer.manager.sort_block": "Bloc",
   "gui.indexer.manager.sort_item": "Ítem",
-  "gui.indexer.manager.sort_mod": "Mod"
+  "gui.indexer.manager.sort_mod": "Mod",
+  "gui.indexer.container_empty": "Contenidors buits"
 }

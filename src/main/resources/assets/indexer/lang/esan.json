@@ -105,5 +105,7 @@
   "gui.indexer.manager.sort_alfabeto": "Alfabéticu",
   "gui.indexer.manager.sort_block": "Bloque",
   "gui.indexer.manager.sort_item": "Ítem",
-  "gui.indexer.manager.sort_mod": "Mod"
+  "gui.indexer.manager.sort_mod": "Mod",
+  "item.indexer.chip_manager.tooltip": "Se usa para craftear el Indexer Manager",
+  "gui.indexer.container_empty": "Contenedores vacíos"
 }
