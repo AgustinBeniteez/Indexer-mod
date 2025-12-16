@@ -134,10 +134,13 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
             if (e.pending && !overMenu) {
                 long gt = Minecraft.getInstance().level != null ? Minecraft.getInstance().level.getGameTime() : System.currentTimeMillis() / 50L;
                 int animPeriod = 20;
-                int barH = 5;
                 int offset = (int)((gt % animPeriod) * (16.0 / animPeriod));
+                graphics.pose().pushPose();
+                graphics.pose().translate(0, 0, 190);
                 graphics.fill(ix, iy, ix + 16, iy + 16, 0x40202020);
-                graphics.fill(ix + 1, iy + Math.min(16 - barH, offset), ix + 15, iy + Math.min(16, offset + barH), 0x8033AAFF);
+                int fillHeight = Math.min(16, offset);
+                graphics.fill(ix + 1, iy + 15 - fillHeight, ix + 15, iy + 15, 0x8033AAFF);
+                graphics.pose().popPose();
             }
             String countStr = formatCount(e.count);
             graphics.renderItemDecorations(this.font, stack, ix, iy, countStr);
