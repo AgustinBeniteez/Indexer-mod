@@ -141,6 +141,8 @@
   "gui.indexer.manual.error_image": "Error al cargar imagen",
   "item.indexer.chip_manager": "Chip Manager",
   "item.indexer.chip_manager.tooltip": "Se usa para craftear el Indexer Manager",
+  "item.indexer.screen": "Pantalla",
+  "item.indexer.screen.tooltip": "Se usa para craftear el Indexer Manager",
   "gui.indexer.manager.search_placeholder": "Buscar",
 "item.indexer.connector_capacity_upgrade.tooltip": "Mejora el Conector a 18 slots de filtro (Nivel 2)",
   "item.indexer.connector_capacity_upgrade": "Mejora de capacidad del conector",

@@ -98,5 +98,7 @@
   "gui.indexer.manager.sort_mod": "Mod"
   ,
   "item.indexer.chip_manager": "Chip Manager",
-  "item.indexer.chip_manager.tooltip": "Se usa para craftear el Indexer Manager"
+  "item.indexer.chip_manager.tooltip": "Se usa para craftear el Indexer Manager",
+  "item.indexer.screen": "Pantalla",
+  "item.indexer.screen.tooltip": "Se usa para craftear el Indexer Manager"
 }
