@@ -42,6 +42,7 @@ public class ModCreativeTabs {
                         output.accept(ModItems.ATTRIBUTE_FILTER.get());
                         output.accept(ModItems.NAME_FILTER.get());
                         output.accept(ModItems.CHIP_MANAGER.get());
+                        output.accept(ModItems.SCREEN_ITEM.get());
                     })
                     .build());
 

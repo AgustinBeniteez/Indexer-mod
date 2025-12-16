@@ -1,11 +1,14 @@
 {
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    "RIR",
+    "RSR",
     "ICI",
     "RBR"
   ],
   "key": {
+    "S": {
+      "item": "indexer:screen"
+    },
     "I": {
       "tag": "forge:ingots/iron"
     },

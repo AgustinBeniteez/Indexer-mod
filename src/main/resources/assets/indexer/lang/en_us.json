@@ -160,6 +160,8 @@
   "item.indexer.indexer_manager": "Indexer Manager",
   "item.indexer.chip_manager": "Chip Manager",
   "item.indexer.chip_manager.tooltip": "Used to craft the Indexer Manager",
+  "item.indexer.screen": "Screen",
+  "item.indexer.screen.tooltip": "Used to craft the Indexer Manager",
   "gui.indexer.refresh": "Refresh",
   "gui.indexer.manager.search_placeholder": "Search",
   "gui.indexer.manager.sort_cantidad": "Quantity",
