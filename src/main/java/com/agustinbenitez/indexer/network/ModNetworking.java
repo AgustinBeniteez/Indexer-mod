@@ -93,6 +93,12 @@ public class ModNetworking {
                 .encoder(ExtractItemFromManagerPacket::toBytes)
                 .consumerMainThread(ExtractItemFromManagerPacket::handle)
                 .add();
+        
+        net.messageBuilder(CancelExtractionFromManagerPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
+                .decoder(CancelExtractionFromManagerPacket::new)
+                .encoder(CancelExtractionFromManagerPacket::toBytes)
+                .consumerMainThread(CancelExtractionFromManagerPacket::handle)
+                .add();
     }
     
     public static <MSG> void sendToServer(MSG message) {

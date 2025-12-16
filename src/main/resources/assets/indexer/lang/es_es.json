@@ -153,5 +153,8 @@
   "gui.indexer.manager.sort_alfabeto": "Alfabético",
   "gui.indexer.manager.sort_block": "Bloque",
   "gui.indexer.manager.sort_item": "Ítem",
-  "gui.indexer.manager.sort_mod": "Mod"
+  "gui.indexer.manager.sort_mod": "Mod",
+  "gui.indexer.control.move_stack": "Mover stack",
+  "gui.indexer.control.move_one": "Mover 1",
+  "gui.indexer.control.cancel_stack": "Cancelar stack"
 }

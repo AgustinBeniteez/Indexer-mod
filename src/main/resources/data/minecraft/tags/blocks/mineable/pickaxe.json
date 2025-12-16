@@ -5,6 +5,7 @@
     "indexer:indexer_pipe",
     "indexer:indexer_connector",
     "indexer:drop_box",
-    "indexer:extractor"
+    "indexer:extractor",
+    "indexer:indexer_manager"
   ]
 }

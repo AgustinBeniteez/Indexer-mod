@@ -16,7 +16,8 @@ public class ManagerItemsUpdatePacket {
     public static class Entry {
         public final ItemStack stackVariant;
         public final int count;
-        public Entry(ItemStack s, int c) { this.stackVariant = s; this.count = c; }
+        public final boolean pending;
+        public Entry(ItemStack s, int c, boolean p) { this.stackVariant = s; this.count = c; this.pending = p; }
     }
 
     private final List<Entry> entries;
@@ -31,7 +32,8 @@ public class ManagerItemsUpdatePacket {
         for (int i = 0; i < size; i++) {
             ItemStack s = buf.readItem();
             int c = buf.readInt();
-            this.entries.add(new Entry(s, c));
+            boolean p = buf.readBoolean();
+            this.entries.add(new Entry(s, c, p));
         }
     }
 
@@ -40,6 +42,7 @@ public class ManagerItemsUpdatePacket {
         for (Entry e : entries) {
             buf.writeItem(e.stackVariant);
             buf.writeInt(e.count);
+            buf.writeBoolean(e.pending);
         }
     }
 

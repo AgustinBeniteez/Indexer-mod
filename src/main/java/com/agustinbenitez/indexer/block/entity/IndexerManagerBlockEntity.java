@@ -114,11 +114,13 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
                 if (entry == null) {
                     ItemStack icon = stack.copy();
                     icon.setCount(1);
-                    entry = new com.agustinbenitez.indexer.network.ManagerItemsUpdatePacket.Entry(icon, 0);
+                    boolean pend = pendingExtractions.getOrDefault(key, 0) > 0;
+                    entry = new com.agustinbenitez.indexer.network.ManagerItemsUpdatePacket.Entry(icon, 0, pend);
                     variants.put(key, entry);
                 }
                 int newCount = entry.count + stack.getCount();
-                variants.put(key, new com.agustinbenitez.indexer.network.ManagerItemsUpdatePacket.Entry(entry.stackVariant, newCount));
+                boolean pend = pendingExtractions.getOrDefault(key, 0) > 0;
+                variants.put(key, new com.agustinbenitez.indexer.network.ManagerItemsUpdatePacket.Entry(entry.stackVariant, newCount, pend));
             }
         }
         return new ArrayList<>(variants.values());
@@ -201,6 +203,19 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
         pendingExtractions.put(key, current + amount);
         pendingVariantByKey.put(key, icon);
         this.setChanged();
+    }
+    
+    public void cancelPendingExtraction(ItemStack variantStack) {
+        if (variantStack.isEmpty()) return;
+        ItemStack icon = variantStack.copy();
+        icon.setCount(1);
+        String key = buildVariantKey(icon);
+        if (pendingExtractions.containsKey(key)) {
+            pendingExtractions.remove(key);
+            pendingVariantByKey.remove(key);
+            this.setChanged();
+            sendItemsToOpenPlayers();
+        }
     }
     
     public int extractImmediately(ResourceLocation itemId, int amount, ItemStack variantStack) {

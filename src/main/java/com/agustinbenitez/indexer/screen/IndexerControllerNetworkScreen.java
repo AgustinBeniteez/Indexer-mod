@@ -316,7 +316,7 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
             int itemY = startY + (i * itemHeight);
             
             // Fondo del item (solo hover, sin selección) - colores para modo oscuro
-            boolean isHovered = mouseX >= LEFT_PANEL_X && mouseX <= LEFT_PANEL_X + LEFT_PANEL_WIDTH - 20 &&
+            boolean isHovered = mouseX >= LEFT_PANEL_X && mouseX <= LEFT_PANEL_X + LEFT_PANEL_WIDTH - 8 &&
                                mouseY >= itemY && mouseY <= itemY + itemHeight - 5;
             
             if (isHovered && !showDetailedView) { // Solo mostrar hover si no estamos en vista detallada
@@ -740,7 +740,9 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
             // Definir viewport para items dentro del panel
             detailedItemsAreaX = panelX + 10;
             detailedItemsAreaY = yOffset;
-            detailedItemsAreaWidth = panelWidth - 20;
+            int scrollbarWidth = 6;
+            int rightMargin = 8;
+            detailedItemsAreaWidth = panelWidth - 20 - (scrollbarWidth + rightMargin);
             // Reservar ~40px al fondo para el texto de cierre y margen, pero asegurar mínimo 2 filas visibles
             detailedItemsAreaHeight = panelY + panelHeight - detailedItemsAreaY - 40;
             detailedItemsAreaHeight = Math.max(itemSpacing * 2 + 8, detailedItemsAreaHeight);
@@ -828,8 +830,7 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
 
             // Scrollbar vertical si hay más filas que visibles
             if (totalRows > visibleRows) {
-                int scrollbarWidth = 6;
-                int scrollbarX = detailedItemsAreaX + detailedItemsAreaWidth - scrollbarWidth;
+                int scrollbarX = detailedItemsAreaX + detailedItemsAreaWidth + rightMargin;
                 int scrollbarY = detailedItemsAreaY;
                 int scrollbarHeight = detailedItemsAreaHeight;
 
@@ -895,10 +896,10 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
         }
         
         // Manejar clics en la lista de contenedores para abrir vista detallada
-        if (mouseX >= LEFT_PANEL_X && mouseX <= LEFT_PANEL_X + LEFT_PANEL_WIDTH &&
+        if (mouseX >= LEFT_PANEL_X && mouseX <= LEFT_PANEL_X + LEFT_PANEL_WIDTH - 8 &&
             mouseY >= LEFT_PANEL_Y + 5 && mouseY <= LEFT_PANEL_Y + LEFT_PANEL_HEIGHT - 5) {
             
-            int itemHeight = 32; // Usar el mismo itemHeight que en renderContainerList
+            int itemHeight = 35; // Coincidir con renderContainerList
             int clickedIndex = ((int)mouseY - LEFT_PANEL_Y - 5) / itemHeight + scrollOffset;
             List<ContainerInfo> filteredContainers = getFilteredContainers();
             
@@ -919,7 +920,8 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
             int visibleRows = Math.max(2, detailedItemsAreaHeight / itemSpacing);
             if (totalRows > visibleRows) {
                 int scrollbarWidth = 6;
-                int scrollbarX = detailedItemsAreaX + detailedItemsAreaWidth - scrollbarWidth;
+                int rightMargin = 8;
+                int scrollbarX = detailedItemsAreaX + detailedItemsAreaWidth + rightMargin;
                 int scrollbarY = detailedItemsAreaY;
                 int scrollbarHeight = detailedItemsAreaHeight;
                 if (mouseX >= scrollbarX && mouseX <= scrollbarX + scrollbarWidth &&

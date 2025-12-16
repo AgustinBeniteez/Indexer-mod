@@ -30,6 +30,9 @@ import java.text.DecimalFormat;
 public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManagerMenu> {
     private static final ResourceLocation TEXTURE = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/indexer_manager.png");
     private static final ResourceLocation FILTER_ICON = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/filter.png");
+    private static final ResourceLocation CONTROL_STACK_ICON = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/controllstack.png");
+    private static final ResourceLocation CONTROL_CLICK_ICON = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/controllclick.png");
+    private static final ResourceLocation CONTROL_CLICK_RIGHT_ICON = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/controllclickright.png");
     private static final int STATS_PANEL_WIDTH = 100;
     private EditBox searchBox;
     private final List<ItemVariantEntry> items = new ArrayList<>();
@@ -71,7 +74,8 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
         graphics.blit(TEXTURE, this.leftPos, this.topPos, 0, 0, 176, this.imageHeight);
         int statsX = this.leftPos + 176;
-        graphics.fill(statsX, this.topPos, statsX + STATS_PANEL_WIDTH, this.topPos + 166, 0xC0101010);
+        int panelBottom = this.topPos + (int)(this.imageHeight * 0.8f);
+        graphics.fill(statsX, this.topPos, statsX + STATS_PANEL_WIDTH, panelBottom, 0xC0101010);
         renderStats(graphics, mouseX, mouseY);
     }
 
@@ -127,6 +131,14 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
             int iy = areaY + row * itemSpacing;
             ItemStack stack = e.stack.copy();
             graphics.renderItem(stack, ix, iy);
+            if (e.pending && !overMenu) {
+                long gt = Minecraft.getInstance().level != null ? Minecraft.getInstance().level.getGameTime() : System.currentTimeMillis() / 50L;
+                int animPeriod = 20;
+                int barH = 5;
+                int offset = (int)((gt % animPeriod) * (16.0 / animPeriod));
+                graphics.fill(ix, iy, ix + 16, iy + 16, 0x40202020);
+                graphics.fill(ix + 1, iy + Math.min(16 - barH, offset), ix + 15, iy + Math.min(16, offset + barH), 0x8033AAFF);
+            }
             String countStr = formatCount(e.count);
             graphics.renderItemDecorations(this.font, stack, ix, iy, countStr);
             if (!overMenu && mouseX >= ix && mouseX < ix + 16 && mouseY >= iy && mouseY < iy + 16) {
@@ -203,7 +215,7 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
             }
             graphics.pose().pushPose();
             graphics.pose().translate(0, 0, 300);
-            graphics.fill(menuX, menuY, menuX + menuW, menuY + menuH, 0xC0202020);
+            graphics.fill(menuX, menuY, menuX + menuW, menuY + menuH, 0xF2202020);
             graphics.fill(menuX, menuY, menuX + menuW, menuY + 1, 0xFF2e5d70);
             graphics.fill(menuX, menuY + menuH - 1, menuX + menuW, menuY + menuH, 0xFF2e5d70);
             int ty = menuY + 4;
@@ -290,6 +302,30 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
         statsY += 12;
         Component containersCount = Component.literal(String.valueOf(connectedContainers));
         guiGraphics.drawString(this.font, containersCount, statsX, statsY, 0xCCCCCC, false);
+        
+        statsY += 20;
+        float scale = 0.65f;
+        int clickW = 16;
+        int clickH = 16;
+        int stackW = 32;
+        int stackH = 16;
+        guiGraphics.blit(CONTROL_STACK_ICON, statsX, statsY, 0, 0, stackW, stackH, 32, 16);
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().scale(scale, scale, 1f);
+        guiGraphics.drawString(this.font, Component.translatable("gui.indexer.control.move_stack"), (int)((statsX + stackW + 6) / scale), (int)((statsY + 2) / scale), 0xFFFFFF, false);
+        guiGraphics.pose().popPose();
+        statsY += stackH + 6;
+        guiGraphics.blit(CONTROL_CLICK_ICON, statsX, statsY, 0, 0, clickW, clickH, 16, 16);
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().scale(scale, scale, 1f);
+        guiGraphics.drawString(this.font, Component.translatable("gui.indexer.control.move_one"), (int)((statsX + clickW + 6) / scale), (int)((statsY + 2) / scale), 0xFFFFFF, false);
+        guiGraphics.pose().popPose();
+        statsY += clickH + 6;
+        guiGraphics.blit(CONTROL_CLICK_RIGHT_ICON, statsX, statsY, 0, 0, clickW, clickH, 16, 16);
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().scale(scale, scale, 1f);
+        guiGraphics.drawString(this.font, Component.translatable("gui.indexer.control.cancel_stack"), (int)((statsX + clickW + 6) / scale), (int)((statsY + 2) / scale), 0xFFFFFF, false);
+        guiGraphics.pose().popPose();
     }
     
     private net.minecraft.world.item.ItemStack getUpgradeItemForLevel(int level) {
@@ -405,13 +441,17 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
             int ix = areaX + col * itemSpacing;
             int iy = areaY + row * itemSpacing;
             if (mouseX >= ix && mouseX < ix + 16 && mouseY >= iy && mouseY < iy + 16) {
+                ItemVariantEntry e = filtered.get(i);
+                if (e.pending) {
+                    ModNetworking.sendToServer(new com.agustinbenitez.indexer.network.CancelExtractionFromManagerPacket(this.menu.getBlockEntity().getBlockPos(), e.stack));
+                    return true;
+                }
                 if (isManagerInventoryFull()) {
                     failX = ix + 8;
                     failY = iy + 8;
                     failTicks = 10;
                     return true;
                 }
-                ItemVariantEntry e = filtered.get(i);
                 int amount = hasShiftDown() ? Math.min(64, e.count) : Math.min(1, e.count);
                 requestExtract(e.stack, amount);
                 return true;
@@ -490,7 +530,7 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
     public void updateItemListFromServer(java.util.List<com.agustinbenitez.indexer.network.ManagerItemsUpdatePacket.Entry> data) {
         items.clear();
         for (var entry : data) {
-            items.add(new ItemVariantEntry(entry.stackVariant.copy(), entry.count));
+            items.add(new ItemVariantEntry(entry.stackVariant.copy(), entry.count, entry.pending));
         }
     }
 
@@ -594,9 +634,11 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
     public static class ItemVariantEntry {
         public final ItemStack stack;
         public final int count;
-        public ItemVariantEntry(ItemStack stack, int count) {
+        public final boolean pending;
+        public ItemVariantEntry(ItemStack stack, int count, boolean pending) {
             this.stack = stack;
             this.count = count;
+            this.pending = pending;
         }
     }
     
