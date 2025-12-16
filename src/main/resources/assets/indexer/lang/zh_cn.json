@@ -106,5 +106,6 @@
   "gui.indexer.manager.sort_block": "方块",
   "gui.indexer.manager.sort_item": "物品",
   "gui.indexer.manager.sort_mod": "模组",
-  "gui.indexer.container_empty": "容器为空"
+  "gui.indexer.controller.container_empty": "未找到物品",
+  "gui.indexer.manager.controller_not_found": "控制器未连接"
 }

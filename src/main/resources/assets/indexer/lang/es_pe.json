@@ -106,5 +106,6 @@
   ,
   "item.indexer.chip_manager": "Chip Manager",
   "item.indexer.chip_manager.tooltip": "Se usa para craftear el Indexer Manager",
-  "gui.indexer.container_empty": "Contenedores vacíos"
+  "gui.indexer.controller.container_empty": "Objetos no encontrados",
+  "gui.indexer.manager.controller_not_found": "Controlador no conectado"
 }

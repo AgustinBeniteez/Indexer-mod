@@ -83,6 +83,26 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         this.renderBackground(graphics);
         super.render(graphics, mouseX, mouseY, partialTick);
+
+        boolean isConnected = this.menu.isControllerConnected();
+        if (this.searchBox != null) {
+            this.searchBox.setVisible(isConnected);
+        }
+
+        if (!isConnected) {
+            filtered.clear();
+            int areaX = this.leftPos + 8;
+            int areaW = 176 - 16;
+            int areaY = this.topPos + 24;
+            Component errorText = Component.translatable("gui.indexer.manager.controller_not_found");
+            int textWidth = this.font.width(errorText);
+            int tx = areaX + (areaW - textWidth) / 2;
+            int ty = areaY + 20;
+            graphics.drawString(this.font, errorText, tx, ty, 0xFF5555, false);
+            super.renderTooltip(graphics, mouseX, mouseY);
+            return;
+        }
+
         String query = searchBox.getValue() == null ? "" : searchBox.getValue().toLowerCase(Locale.ROOT);
         filtered.clear();
         for (ItemVariantEntry e : items) {
@@ -99,7 +119,7 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
         int areaW = 176 - 16;
         
         if (filtered.isEmpty()) {
-            Component emptyText = Component.translatable("gui.indexer.container_empty");
+            Component emptyText = Component.translatable("gui.indexer.controller.container_empty");
             int textWidth = this.font.width(emptyText);
             int tx = areaX + (areaW - textWidth) / 2;
             int ty = areaY + 5; 

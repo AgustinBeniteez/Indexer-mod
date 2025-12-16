@@ -37,7 +37,7 @@ public class IndexerManagerMenu extends AbstractContainerMenu {
         BlockEntity be = inv.player.level().getBlockEntity(extraData.readBlockPos());
         this.blockEntity = (IndexerManagerBlockEntity) be;
         this.level = inv.player.level();
-        this.data = new SimpleContainerData(5);
+        this.data = new SimpleContainerData(6);
         this.addDataSlots(this.data);
         for (int col = 0; col < 9; col++) {
             this.addSlot(new Slot(blockEntity, col,
@@ -129,6 +129,7 @@ public class IndexerManagerMenu extends AbstractContainerMenu {
             @Override
             public int get(int index) {
                 IndexerControllerBlockEntity controller = findNearestController();
+                if (index == 5) return controller != null ? 1 : 0;
                 if (controller != null) {
                     switch (index) {
                         case 0: return controller.getOccupiedSlots();
@@ -144,7 +145,7 @@ public class IndexerManagerMenu extends AbstractContainerMenu {
             public void set(int index, int value) {}
             @Override
             public int getCount() {
-                return 5;
+                return 6;
             }
         };
     }
@@ -211,5 +212,8 @@ public class IndexerManagerMenu extends AbstractContainerMenu {
     }
     public int getUpgradeLevel() {
         return this.data.get(4);
+    }
+    public boolean isControllerConnected() {
+        return this.data.get(5) == 1;
     }
 }

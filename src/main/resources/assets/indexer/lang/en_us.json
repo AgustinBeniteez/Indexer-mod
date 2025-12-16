@@ -129,7 +129,6 @@
   "gui.indexer.status.disabled": "Disabled",
   "gui.indexer.capacity": "Capacity:",
   "gui.indexer.connected_containers": "Containers:",
-  "gui.indexer.controller.detailed_view.title": "Container Details",
   "gui.indexer.controller.detailed_view.position": "Position:",
   "gui.indexer.controller.detailed_view.type": "Type:",
   "gui.indexer.controller.detailed_view.capacity": "Capacity:",
@@ -137,7 +136,8 @@
   "gui.indexer.controller.detailed_view.filters": "Filters:",
   "gui.indexer.controller.detailed_view.items": "Items:",
   "gui.indexer.controller.detailed_view.close_instruction": "Press ESC or click outside to close",
-  "gui.indexer.controller.container_empty": "Container is empty",
+  "gui.indexer.controller.container_empty": "Items not found",
+  "gui.indexer.manager.controller_not_found": "Controller not connected",
   "gui.indexer.dropbox.transfer_all": "Transfer All",
   "itemGroup.indexer": "Indexer",
   "gui.indexer.manual.menu": "Menu",
@@ -168,6 +168,5 @@
   "gui.indexer.manager.sort_mod": "Mod",
   "gui.indexer.control.move_stack": "Move stack",
   "gui.indexer.control.move_one": "Move 1",
-  "gui.indexer.control.cancel_stack": "Cancel stack",
-  "gui.indexer.container_empty": "Containers empty"
+  "gui.indexer.control.cancel_stack": "Cancel stack"
 }
