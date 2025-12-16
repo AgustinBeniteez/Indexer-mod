@@ -6,6 +6,10 @@ import com.agustinbenitez.indexer.init.ModItems;
 import com.agustinbenitez.indexer.inventory.IndexerConnectorMenu;
 import com.agustinbenitez.indexer.util.FilterUtils;
 
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
+import net.minecraftforge.items.IItemHandler;
+import net.minecraftforge.items.ItemHandlerHelper;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
@@ -672,36 +676,23 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
             }
         }
 
-        // Verificar si es un cofre doble y manejar como inventario unificado
-        if (isChestBlockEntity(containerEntity)) {
-            BlockPos partnerPos = findDoubleChestPartner(this.connectedContainerPos);
-            if (partnerPos != null) {
-                // Es un cofre doble, determinar el orden correcto (cofre principal primero)
-                BlockPos mainChestPos = getMainChestPosition(this.connectedContainerPos, partnerPos);
-                BlockPos secondChestPos = mainChestPos.equals(this.connectedContainerPos) ? partnerPos : this.connectedContainerPos;
-                
-                // Usar inventario unificado con el orden correcto
-                remainder = insertIntoDoubleChest(remainder, mainChestPos, secondChestPos);
-                
-                // Marcar ambos cofres como cambiados
+        // Intentar usar IItemHandler (Capability) para inserción universal
+        // Esto soluciona problemas con cofres dobles (detectando el inventario completo) y contenedores de mods
+        var cap = containerEntity.getCapability(ForgeCapabilities.ITEM_HANDLER, null);
+        if (cap.isPresent()) {
+            IItemHandler handler = cap.resolve().get();
+            ItemStack result = ItemHandlerHelper.insertItem(handler, remainder, false);
+            
+            // Si hubo cambios (se insertó algo), marcar el bloque como cambiado
+            if (result.getCount() < initialCount) {
                 if (containerEntity instanceof BlockEntity) {
                     ((BlockEntity) containerEntity).setChanged();
                 }
-                BlockEntity partnerEntity = this.level.getBlockEntity(partnerPos);
-                if (partnerEntity instanceof BlockEntity) {
-                    ((BlockEntity) partnerEntity).setChanged();
-                }
-                
-                int inserted = initialCount - remainder.getCount();
-                if (inserted > 0) {
-                    // Ya no enviamos mensajes de notificación al chat
-                } else {
-                    // No se pudo insertar nada
-                }
-                
-                return remainder;
             }
+            return result;
         }
+
+        /* Bloque legacy eliminado: La lógica manual de cofre doble causaba problemas de posicionamiento */
 
         // Comportamiento normal para otros contenedores o cofres simples
         for (int i = 0; i < container.getContainerSize(); i++) {

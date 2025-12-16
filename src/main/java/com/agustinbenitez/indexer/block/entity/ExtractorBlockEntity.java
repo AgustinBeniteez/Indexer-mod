@@ -176,6 +176,17 @@ public class ExtractorBlockEntity extends BlockEntity {
             return false;
         }
         
+        // Evitar extraer del IndexerManager si pertenece a la misma red (mismo controlador)
+        if (containerEntity instanceof IndexerManagerBlockEntity) {
+            IndexerManagerBlockEntity manager = (IndexerManagerBlockEntity) containerEntity;
+            IndexerControllerBlockEntity managerController = manager.findNearestController();
+            
+            // Si el manager está conectado a un controlador, y es el mismo que el nuestro
+            if (managerController != null && managerController.getBlockPos().equals(controller.getBlockPos())) {
+                return false;
+            }
+        }
+        
         // Intentar extraer usando diferentes métodos según el tipo de contenedor
         boolean extractionSuccessful = false;
         
