@@ -48,7 +48,7 @@ public class IndexerManualScreen extends Screen {
     
     // Estado de la pantalla
     private int currentPage = 0;
-    private final int totalPages = 12; // Número total de páginas disponibles
+    private final int totalPages = 13; // Número total de páginas disponibles
     
     // Recursos para las imágenes de cada página
     private final ResourceLocation[] pageImages = new ResourceLocation[totalPages];
@@ -81,12 +81,20 @@ public class IndexerManualScreen extends Screen {
         }
         @Override
         protected void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-            // Imagen base del botón
-            guiGraphics.blit(texture, this.getX(), this.getY(), 0, 0, this.getWidth(), this.getHeight(), this.getWidth(), this.getHeight());
-            // En hover/focus: oscurecer y mostrar el texto
+            int x = this.getX();
+            int y = this.getY();
+            int w = this.getWidth();
+            int h = this.getHeight();
             if (this.isHoveredOrFocused()) {
-                guiGraphics.fill(this.getX(), this.getY(), this.getX() + this.getWidth(), this.getY() + this.getHeight(), 0x66000000);
-                guiGraphics.drawCenteredString(Minecraft.getInstance().font, this.getMessage(), this.getX() + this.getWidth() / 2, this.getY() + (this.getHeight() - 8) / 2, 0xFFFFFF);
+                int dw = (int)Math.round(w * 1.06);
+                int dh = (int)Math.round(h * 1.06);
+                int dx = x - (dw - w) / 2;
+                int dy = y - (dh - h) / 2;
+                guiGraphics.blit(texture, dx, dy, 0, 0, dw, dh, w, h);
+                guiGraphics.fill(x, y, x + w, y + h, 0x66000000);
+                guiGraphics.drawCenteredString(Minecraft.getInstance().font, this.getMessage(), x + w / 2, y + (h - 8) / 2, 0xFFFFFF);
+            } else {
+                guiGraphics.blit(texture, x, y, 0, 0, w, h, w, h);
             }
         }
     }

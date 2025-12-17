@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "NTN",
+    "NSN",
+    "NTN"
+  ],
+  "key": {
+    "N": {
+      "tag": "forge:nuggets/gold"
+    },
+    "T": {
+      "item": "minecraft:repeater"
+    },
+    "S": {
+      "item": "minecraft:redstone"
+    }
+  },
+  "result": {
+    "item": "indexer:chip_manager",
+    "count": 1
+  }
+}

@@ -4,6 +4,7 @@ import com.agustinbenitez.indexer.IndexerMod;
 import com.agustinbenitez.indexer.block.DropBoxBlock;
 import com.agustinbenitez.indexer.block.IndexerConnectorBlock;
 import com.agustinbenitez.indexer.block.IndexerControllerBlock;
+import com.agustinbenitez.indexer.block.IndexerManagerBlock;
 import com.agustinbenitez.indexer.block.IndexerPipeBlock;
 import com.agustinbenitez.indexer.init.ModBlockEntities;
 import com.agustinbenitez.indexer.init.ModBlocks;
@@ -563,6 +564,13 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
             // Verificar si el DropBox todavía tiene ítems
             this.dropBoxHasItems = ((DropBoxBlockEntity) this.dropContainerEntity).hasItems();
         }
+        
+        if (transferred) {
+            markNetworkChanged();
+            for (IndexerManagerBlockEntity manager : findManagers()) {
+                manager.syncOpenPlayers();
+            }
+        }
 
         return transferred;
     }
@@ -1053,7 +1061,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
     // Cache de conectores para evitar búsquedas repetidas
     private List<IndexerConnectorBlockEntity> connectorCache = null;
     
-    private List<IndexerConnectorBlockEntity> findConnectors() {
+    public List<IndexerConnectorBlockEntity> findConnectors() {
         // Si la red no ha cambiado y tenemos un cache válido, devolver el cache
         if (!networkChanged && connectorCache != null) {
             return connectorCache;
@@ -1133,6 +1141,63 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         // Actualizar el cache
         connectorCache = connectors;
         return connectors;
+    }
+    
+    private List<IndexerManagerBlockEntity> findManagers() {
+        if (this.level == null) return new ArrayList<>();
+        List<IndexerManagerBlockEntity> managers = new ArrayList<>();
+        Set<BlockPos> visited = new HashSet<>();
+        Queue<BlockPos> queue = new LinkedList<>();
+        for (Direction direction : Direction.values()) {
+            BlockPos adjacentPos = this.worldPosition.relative(direction);
+            BlockState adjacentState = this.level.getBlockState(adjacentPos);
+            if (adjacentState.getBlock() instanceof IndexerPipeBlock) {
+                if (adjacentState.getValue(IndexerPipeBlock.getPropertyForDirection(direction.getOpposite()))) {
+                    queue.add(adjacentPos);
+                    visited.add(adjacentPos);
+                }
+            } else if (adjacentState.getBlock() instanceof IndexerManagerBlock) {
+                BlockEntity be = this.level.getBlockEntity(adjacentPos);
+                if (be instanceof IndexerManagerBlockEntity) {
+                    managers.add((IndexerManagerBlockEntity) be);
+                }
+            }
+        }
+        while (!queue.isEmpty()) {
+            BlockPos currentPos = queue.poll();
+            BlockState currentState = this.level.getBlockState(currentPos);
+            BlockEntity blockEntity = this.level.getBlockEntity(currentPos);
+            if (blockEntity instanceof IndexerManagerBlockEntity) {
+                managers.add((IndexerManagerBlockEntity) blockEntity);
+                continue;
+            }
+            for (Direction direction : Direction.values()) {
+                BlockPos nextPos = currentPos.relative(direction);
+                if (visited.contains(nextPos)) continue;
+                BlockState nextState = this.level.getBlockState(nextPos);
+                Block nextBlock = nextState.getBlock();
+                if (nextBlock instanceof IndexerPipeBlock) {
+                    boolean currentPipeConnected = currentState.getBlock() instanceof IndexerPipeBlock &&
+                            currentState.getValue(IndexerPipeBlock.getPropertyForDirection(direction));
+                    boolean nextPipeConnected = nextState.getValue(IndexerPipeBlock.getPropertyForDirection(direction.getOpposite()));
+                    if (currentPipeConnected && nextPipeConnected) {
+                        queue.add(nextPos);
+                        visited.add(nextPos);
+                    }
+                } else if (nextBlock instanceof IndexerManagerBlock) {
+                    boolean currentPipeConnected = currentState.getBlock() instanceof IndexerPipeBlock &&
+                            currentState.getValue(IndexerPipeBlock.getPropertyForDirection(direction));
+                    if (currentPipeConnected) {
+                        BlockEntity nextEntity = this.level.getBlockEntity(nextPos);
+                        if (nextEntity instanceof IndexerManagerBlockEntity) {
+                            managers.add((IndexerManagerBlockEntity) nextEntity);
+                            visited.add(nextPos);
+                        }
+                    }
+                }
+            }
+        }
+        return managers;
     }
     
     // Método para verificar solo hornos sin depender del dropbox

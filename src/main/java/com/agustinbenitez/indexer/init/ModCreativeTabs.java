@@ -25,6 +25,7 @@ public class ModCreativeTabs {
                         output.accept(ModItems.INDEXER_CONNECTOR_ITEM.get());
                         output.accept(ModItems.DROP_BOX_ITEM.get());
                         output.accept(ModItems.EXTRACTOR_ITEM.get());
+                        output.accept(ModItems.INDEXER_MANAGER_ITEM.get());
                         output.accept(ModItems.INDEXER_MANUAL.get());
                         output.accept(ModItems.CONNECTOR_CAPACITY_UPGRADE.get());
                         output.accept(ModItems.TRANSFER_SPEED_UPGRADE_BASIC.get());
@@ -40,6 +41,8 @@ public class ModCreativeTabs {
                         output.accept(ModItems.CUSTOM_TAG_BLOCKER.get());
                         output.accept(ModItems.ATTRIBUTE_FILTER.get());
                         output.accept(ModItems.NAME_FILTER.get());
+                        output.accept(ModItems.CHIP_MANAGER.get());
+                        output.accept(ModItems.SCREEN_ITEM.get());
                     })
                     .build());
 

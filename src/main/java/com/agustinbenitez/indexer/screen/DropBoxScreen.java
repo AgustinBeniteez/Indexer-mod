@@ -66,6 +66,27 @@ public class DropBoxScreen extends AbstractContainerScreen<DropBoxMenu> {
         Component statsTitle = Component.translatable("gui.indexer.stats");
         guiGraphics.drawString(this.font, statsTitle, statsX, statsY, 0xFFFFFF, false);
         
+        if (!this.menu.isControllerConnected()) {
+            statsY += 20;
+            Component errorText = Component.translatable("gui.indexer.manager.controller_not_found");
+            // Wrap text if needed or just display it
+            guiGraphics.drawWordWrap(this.font, errorText, statsX, statsY, STATS_PANEL_WIDTH - 12, 0xFF5555);
+            
+            // Also render in the main area to be more prominent
+            int areaX = this.leftPos + 8;
+            int areaW = 176 - 16;
+            int areaY = this.topPos + 24;
+            int textWidth = this.font.width(errorText);
+            int tx = areaX + (areaW - textWidth) / 2;
+            int ty = areaY + 20;
+            
+            guiGraphics.pose().pushPose();
+            guiGraphics.pose().translate(0, 0, 300); // Render on top of everything
+            guiGraphics.drawString(this.font, errorText, tx, ty, 0xFF5555, false);
+            guiGraphics.pose().popPose();
+            return;
+        }
+        
         // Get stats from menu
         int occupiedSlots = this.menu.getOccupiedSlots();
         int totalCapacity = this.menu.getTotalCapacity();
@@ -86,6 +107,13 @@ public class DropBoxScreen extends AbstractContainerScreen<DropBoxMenu> {
         Component speedText = Component.literal("Speed: " + speedMultiplier);
         int speedColor = upgradeLevel > 0 ? 0x55FF55 : 0xCCCCCC;
         guiGraphics.drawString(this.font, speedText, statsX, statsY, speedColor, false);
+        if (upgradeLevel > 0) {
+            net.minecraft.world.item.ItemStack upgradeItem = getUpgradeItemForLevel(upgradeLevel);
+            if (!upgradeItem.isEmpty()) {
+                int textWidth = this.font.width(speedText.getString());
+                guiGraphics.renderItem(upgradeItem, statsX + textWidth + 6, statsY - 2);
+            }
+        }
         
         // Capacity section
         statsY += 20;
@@ -135,6 +163,18 @@ public class DropBoxScreen extends AbstractContainerScreen<DropBoxMenu> {
         statsY += 12;
         Component containersCount = Component.literal(String.valueOf(connectedContainers));
         guiGraphics.drawString(this.font, containersCount, statsX, statsY, 0xCCCCCC, false);
+    }
+    
+    private net.minecraft.world.item.ItemStack getUpgradeItemForLevel(int level) {
+        switch (level) {
+            case 0: return new net.minecraft.world.item.ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_ZERO.get());
+            case 1: return new net.minecraft.world.item.ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_BASIC.get());
+            case 2: return new net.minecraft.world.item.ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_COPPER.get());
+            case 3: return new net.minecraft.world.item.ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_ADVANCED.get());
+            case 4: return new net.minecraft.world.item.ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_ELITE.get());
+            case 5: return new net.minecraft.world.item.ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_DEFINITIVE.get());
+            default: return net.minecraft.world.item.ItemStack.EMPTY;
+        }
     }
 
     @Override

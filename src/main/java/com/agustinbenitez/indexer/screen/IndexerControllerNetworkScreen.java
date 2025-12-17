@@ -43,6 +43,14 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
     
     // Lista de contenedores y scroll
     private List<ContainerInfo> containerList = new ArrayList<>();
+    
+    // Estadísticas cacheadas
+    private int totalNetworkItems = 0;
+    private int totalUniqueTypes = 0;
+    private float averageFillPercentage = 0f;
+    private String topItemName = "";
+    private int topItemCount = 0;
+    
     private int scrollOffset = 0;
     private int maxVisibleContainers = 5; // Reducido de 6 a 5 para evitar que el último elemento se corte
     private ContainerInfo selectedContainer = null;
@@ -50,7 +58,7 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
     // Vista detallada
     private boolean showDetailedView = false;
     private ContainerInfo detailedContainer = null;
-    // Área y scroll para items del detalle
+    // Area and scroll for detailed items
     private int detailedItemsAreaX = 0;
     private int detailedItemsAreaY = 0;
     private int detailedItemsAreaWidth = 0;
@@ -61,8 +69,9 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
     private EditBox searchBox;
     private String searchFilter = "";
     
-    // Botón de refresh
-    private Button refreshButton;
+    // Estado de scrollbars interactivos
+    private boolean draggingLeftScrollbar = false;
+    private boolean draggingDetailScrollbar = false;
     
     // Indicador de carga
     private boolean isLoading = false;
@@ -104,12 +113,6 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
         this.searchBox.setResponder(this::onSearchChanged);
         this.addWidget(this.searchBox);
         
-        // Botón de refrescar
-        this.refreshButton = Button.builder(Component.translatable("gui.indexer.controller.refresh"), 
-                                          button -> refreshNetwork())
-                                  .bounds(leftX + RIGHT_PANEL_X + 10, topY + RIGHT_PANEL_Y + RIGHT_PANEL_HEIGHT - 25, 80, 20)
-                                  .build();
-        this.addRenderableWidget(this.refreshButton);
     }
     
     private void onSearchChanged(String search) {
@@ -154,8 +157,43 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
             containerList.add(info);
         }
         
+        recalculateStats();
+        
         // Ocultar indicador de carga
         isLoading = false;
+    }
+    
+    private void recalculateStats() {
+        totalNetworkItems = 0;
+        Set<String> uniqueTypes = new HashSet<>();
+        Map<String, Integer> itemCounts = new HashMap<>();
+        float totalFill = 0;
+        int filledContainers = 0;
+
+        for (ContainerInfo c : containerList) {
+            totalNetworkItems += c.itemCount;
+            uniqueTypes.addAll(c.uniqueItems.keySet());
+            
+            c.uniqueItems.forEach((k, v) -> itemCounts.merge(k, v, Integer::sum));
+            
+            if (c.maxSlots > 0) {
+                totalFill += (float) c.itemCount / c.maxSlots;
+                filledContainers++;
+            }
+        }
+        
+        totalUniqueTypes = uniqueTypes.size();
+        averageFillPercentage = filledContainers > 0 ? (totalFill / filledContainers) * 100 : 0;
+        
+        // Find top item
+        topItemCount = 0;
+        topItemName = "";
+        for (Map.Entry<String, Integer> entry : itemCounts.entrySet()) {
+            if (entry.getValue() > topItemCount) {
+                topItemCount = entry.getValue();
+                topItemName = entry.getKey();
+            }
+        }
     }
     
     private String getRandomContainerType() {
@@ -253,20 +291,16 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
         // Renderizar lista de contenedores
         renderContainerList(guiGraphics, mouseX, mouseY);
         
-        // Renderizar estadísticas
-        renderNetworkStats(guiGraphics);
+        // Renderizar estadísticas solo si no hay modal abierto
+        if (!showDetailedView) {
+            renderNetworkStats(guiGraphics);
+        }
     }
     
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        // Ocultar widgets cuando se muestra la vista detallada
-        if (showDetailedView) {
-            this.searchBox.visible = false;
-            this.refreshButton.visible = false;
-        } else {
-            this.searchBox.visible = true;
-            this.refreshButton.visible = true;
-        }
+        // Ocultar caja de búsqueda cuando se muestra la vista detallada
+        this.searchBox.visible = !showDetailedView;
         
         // Renderizar todo el contenido base primero
         super.render(guiGraphics, mouseX, mouseY, partialTick);
@@ -327,7 +361,7 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
             int itemY = startY + (i * itemHeight);
             
             // Fondo del item (solo hover, sin selección) - colores para modo oscuro
-            boolean isHovered = mouseX >= LEFT_PANEL_X && mouseX <= LEFT_PANEL_X + LEFT_PANEL_WIDTH - 20 &&
+            boolean isHovered = mouseX >= LEFT_PANEL_X && mouseX <= LEFT_PANEL_X + LEFT_PANEL_WIDTH - 8 &&
                                mouseY >= itemY && mouseY <= itemY + itemHeight - 5;
             
             if (isHovered && !showDetailedView) { // Solo mostrar hover si no estamos en vista detallada
@@ -531,7 +565,7 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
     }
     
     private void renderScrollbar(GuiGraphics guiGraphics, int totalItems) {
-        int scrollbarX = LEFT_PANEL_X + LEFT_PANEL_WIDTH - 8;
+        int scrollbarX = LEFT_PANEL_X + LEFT_PANEL_WIDTH - 6;
         int scrollbarY = LEFT_PANEL_Y + 5;
         int scrollbarHeight = LEFT_PANEL_HEIGHT - 10;
         
@@ -546,84 +580,87 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
     }
     
     private void renderNetworkStats(GuiGraphics guiGraphics) {
+        int startX = RIGHT_PANEL_X + 10;
         int startY = RIGHT_PANEL_Y + 10;
         int lineHeight = 12;
         int currentY = startY;
         
-        // Estadísticas de conexión - colores para modo oscuro
-        guiGraphics.drawString(this.font, Component.translatable("gui.indexer.controller.connection_info"), 
-                              RIGHT_PANEL_X + 10, currentY, 0xCCCCCC, false);
-        currentY += lineHeight + 5;
+        // --- RESUMEN DE RED ---
+        guiGraphics.drawString(this.font, Component.translatable("gui.indexer.controller.network_summary"), 
+                              startX, currentY, 0xCCCCCC, false);
+        currentY += lineHeight + 2;
         
-        String dropBoxText = Component.translatable("gui.indexer.controller.dropbox").getString() + ": " + 
-                           (this.menu.getBlockEntity().hasDropContainer() ? Component.translatable("gui.indexer.controller.connected").getString() : "None");
-        guiGraphics.drawString(this.font, dropBoxText, RIGHT_PANEL_X + 10, currentY, 0xFFFFFF, false);
-        currentY += lineHeight;
-        
+        // Contenedores
         String containersText = Component.translatable("gui.indexer.controller.containers").getString() + ": " + 
                                this.menu.getConnectedContainersCount();
-        guiGraphics.drawString(this.font, containersText, RIGHT_PANEL_X + 10, currentY, 0xFFFFFF, false);
-        currentY += lineHeight + 10;
-        
-        // Estadísticas de capacidad - colores para modo oscuro
-        guiGraphics.drawString(this.font, Component.translatable("gui.indexer.controller.capacity_info"), 
-                              RIGHT_PANEL_X + 10, currentY, 0xCCCCCC, false);
-        currentY += lineHeight + 5;
-        
-        int totalCapacity = this.menu.getTotalCapacity();
-        int occupiedSlots = this.menu.getOccupiedSlots();
-        int availableSlots = totalCapacity - occupiedSlots;
-        
-        // Mostrar solo los slots disponibles sin el texto de objetos
-        String slotsText = formatNumber(availableSlots) + "/" + formatNumber(totalCapacity);
-        guiGraphics.drawString(this.font, slotsText, RIGHT_PANEL_X + 10, currentY, 0xFFFFFF, false);
+        guiGraphics.drawString(this.font, containersText, startX, currentY, 0xFFFFFF, false);
         currentY += lineHeight;
         
-        // Mostrar información de la mejora aplicada y velocidad en la misma línea
+        // Items Totales
+        String itemsText = Component.translatable("gui.indexer.controller.total_items").getString() + ": " + 
+                           formatNumber(totalNetworkItems);
+        guiGraphics.drawString(this.font, itemsText, startX, currentY, 0xFFFFFF, false);
+        currentY += lineHeight;
+
+        // Tipos Únicos
+        String typesText = Component.translatable("gui.indexer.controller.unique_types").getString() + ": " + 
+                           formatNumber(totalUniqueTypes);
+        guiGraphics.drawString(this.font, typesText, startX, currentY, 0xFFFFFF, false);
+        currentY += lineHeight + 8;
+        
+        // --- MAYOR STOCK ---
+        if (!topItemName.isEmpty()) {
+            guiGraphics.drawString(this.font, Component.translatable("gui.indexer.controller.top_stock"), 
+                                  startX, currentY, 0xCCCCCC, false);
+            currentY += lineHeight + 2;
+            
+            ItemStack topStack = createItemStackFromName(topItemName);
+            if (!topStack.isEmpty()) {
+                // Render Item
+                guiGraphics.renderItem(topStack, startX, currentY);
+                
+                // Name and count
+                String name = topStack.getHoverName().getString();
+                if (name.length() > 18) name = name.substring(0, 15) + "...";
+                
+                guiGraphics.drawString(this.font, name, startX + 20, currentY, 0xFFFFFF, false);
+                guiGraphics.drawString(this.font, formatNumber(topItemCount), startX + 20, currentY + 9, 0xAAAAAA, false);
+                
+                currentY += 20;
+            } else {
+                 currentY += lineHeight;
+            }
+            currentY += 8;
+        }
+
+        // --- EFICIENCIA ---
+        guiGraphics.drawString(this.font, Component.translatable("gui.indexer.controller.efficiency"), 
+                              startX, currentY, 0xCCCCCC, false);
+        currentY += lineHeight + 2;
+        
+        // Avg Fill
+        String fillText = Component.translatable("gui.indexer.controller.avg_fill").getString() + ": ";
+        int fillTextWidth = this.font.width(fillText);
+        guiGraphics.drawString(this.font, fillText, startX, currentY, 0xFFFFFF, false);
+        
+        String pctText = String.format("%.1f%%", averageFillPercentage);
+        int color = averageFillPercentage > 80 ? 0xFF44FF44 : averageFillPercentage > 50 ? 0xFFFFAA00 : 0xFFFF4444;
+        guiGraphics.drawString(this.font, pctText, startX + fillTextWidth, currentY, color, false);
+        currentY += lineHeight + 8;
+        
+        // --- VELOCIDAD (Existing) ---
         int upgradeLevel = this.menu.getCurrentUpgradeLevel();
-        
         String transferRateText = Component.translatable("gui.indexer.controller.speed").getString() + ": " + 
-                                 this.menu.getItemsPerTransfer() + " " + 
-                                 Component.translatable("gui.indexer.controller.items_at_once").getString();
+                                 this.menu.getItemsPerTransfer() + "/t";
         
-        // Renderizar el texto de velocidad
-        guiGraphics.drawString(this.font, transferRateText, RIGHT_PANEL_X + 10, currentY, 0x00FF00, false);
+        guiGraphics.drawString(this.font, transferRateText, startX, currentY, 0x00FF00, false);
         
-        // Renderizar el icono de la mejora a la derecha del texto de velocidad
         if (upgradeLevel > 0) {
             ItemStack upgradeItem = getUpgradeItemForLevel(upgradeLevel);
             if (!upgradeItem.isEmpty()) {
                 int textWidth = this.font.width(transferRateText);
-                guiGraphics.renderItem(upgradeItem, RIGHT_PANEL_X + 15 + textWidth, currentY - 2);
+                guiGraphics.renderItem(upgradeItem, startX + 5 + textWidth, currentY - 4);
             }
-        }
-        
-        currentY += lineHeight + 10;
-        
-        // Barra de progreso de capacidad
-        if (totalCapacity > 0) {
-            int barWidth = RIGHT_PANEL_WIDTH - 20;
-            int barHeight = 8;
-            int barX = RIGHT_PANEL_X + 10;
-            int barY = currentY;
-            
-            // Fondo de la barra - más oscuro para modo oscuro
-            guiGraphics.fill(barX, barY, barX + barWidth, barY + barHeight, 0xFF222222);
-            
-            // Barra de progreso
-            int fillWidth = (occupiedSlots * barWidth) / totalCapacity;
-            int fillColor = occupiedSlots > totalCapacity * 0.8 ? 0xFFFF4444 : 
-                           occupiedSlots > totalCapacity * 0.6 ? 0xFFFFAA00 : 0xFF44FF44;
-            
-            if (fillWidth > 0) {
-                guiGraphics.fill(barX, barY, barX + fillWidth, barY + barHeight, fillColor);
-            }
-            
-            // Porcentaje - color claro para modo oscuro
-            String percentText = String.format("%.1f%%", (occupiedSlots * 100.0) / totalCapacity);
-            int textWidth = this.font.width(percentText);
-            guiGraphics.drawString(this.font, percentText, barX + (barWidth - textWidth) / 2, barY + barHeight + 5, 
-                                  0xFFFFFF, false);
         }
     }
     
@@ -746,14 +783,16 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
         if (detailedContainer.uniqueItems.isEmpty()) {
             guiGraphics.drawString(this.font, Component.translatable("gui.indexer.controller.container_empty").getString(), panelX + 10, yOffset, 0x888888, false);
         } else {
-            // Área con scroll para Items
+            // Area with scroll for Items
             int itemSize = 16;
             int itemSpacing = 20;
 
             // Definir viewport para items dentro del panel
             detailedItemsAreaX = panelX + 10;
             detailedItemsAreaY = yOffset;
-            detailedItemsAreaWidth = panelWidth - 20;
+            int scrollbarWidth = 6;
+            int rightMargin = 8;
+            detailedItemsAreaWidth = panelWidth - 20 - (scrollbarWidth + rightMargin);
             // Reservar ~40px al fondo para el texto de cierre y margen, pero asegurar mínimo 2 filas visibles
             detailedItemsAreaHeight = panelY + panelHeight - detailedItemsAreaY - 40;
             detailedItemsAreaHeight = Math.max(itemSpacing * 2 + 8, detailedItemsAreaHeight);
@@ -841,8 +880,7 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
 
             // Scrollbar vertical si hay más filas que visibles
             if (totalRows > visibleRows) {
-                int scrollbarWidth = 6;
-                int scrollbarX = detailedItemsAreaX + detailedItemsAreaWidth - scrollbarWidth;
+                int scrollbarX = detailedItemsAreaX + detailedItemsAreaWidth + rightMargin;
                 int scrollbarY = detailedItemsAreaY;
                 int scrollbarHeight = detailedItemsAreaHeight;
 
@@ -889,11 +927,29 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
             return true; // Consumir el click dentro del panel detallado
         }
         
+        // Click en la barra de scroll del panel izquierdo
+        List<ContainerInfo> filtered = getFilteredContainers();
+        if (filtered.size() > maxVisibleContainers) {
+            int scrollbarX = LEFT_PANEL_X + LEFT_PANEL_WIDTH - 6;
+            int scrollbarY = LEFT_PANEL_Y + 5;
+            int scrollbarHeight = LEFT_PANEL_HEIGHT - 10;
+            if (mouseX >= scrollbarX && mouseX <= scrollbarX + 6 &&
+                mouseY >= scrollbarY && mouseY <= scrollbarY + scrollbarHeight) {
+                int thumbHeight = Math.max(10, (maxVisibleContainers * scrollbarHeight) / filtered.size());
+                int track = Math.max(1, scrollbarHeight - thumbHeight);
+                int pos = (int) Math.max(0, Math.min(track, mouseY - scrollbarY - thumbHeight / 2));
+                int maxScroll = Math.max(0, filtered.size() - maxVisibleContainers);
+                scrollOffset = (pos * maxScroll) / track;
+                draggingLeftScrollbar = true;
+                return true;
+            }
+        }
+        
         // Manejar clics en la lista de contenedores para abrir vista detallada
-        if (mouseX >= LEFT_PANEL_X && mouseX <= LEFT_PANEL_X + LEFT_PANEL_WIDTH &&
+        if (mouseX >= LEFT_PANEL_X && mouseX <= LEFT_PANEL_X + LEFT_PANEL_WIDTH - 8 &&
             mouseY >= LEFT_PANEL_Y + 5 && mouseY <= LEFT_PANEL_Y + LEFT_PANEL_HEIGHT - 5) {
             
-            int itemHeight = 32; // Usar el mismo itemHeight que en renderContainerList
+            int itemHeight = 35; // Coincidir con renderContainerList
             int clickedIndex = ((int)mouseY - LEFT_PANEL_Y - 5) / itemHeight + scrollOffset;
             List<ContainerInfo> filteredContainers = getFilteredContainers();
             
@@ -902,6 +958,32 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
                 detailedContainer = filteredContainers.get(clickedIndex);
                 showDetailedView = true;
                 return true;
+            }
+        }
+        
+        // Click en scrollbar del detalle (cuando modal está abierto)
+        if (showDetailedView && detailedContainer != null) {
+            int itemSpacing = 20;
+            int itemsPerRow = Math.max(1, detailedItemsAreaWidth / itemSpacing);
+            int totalItems = detailedContainer.uniqueItems.size();
+            int totalRows = (int) Math.ceil(totalItems / (double) itemsPerRow);
+            int visibleRows = Math.max(2, detailedItemsAreaHeight / itemSpacing);
+            if (totalRows > visibleRows) {
+                int scrollbarWidth = 6;
+                int rightMargin = 8;
+                int scrollbarX = detailedItemsAreaX + detailedItemsAreaWidth + rightMargin;
+                int scrollbarY = detailedItemsAreaY;
+                int scrollbarHeight = detailedItemsAreaHeight;
+                if (mouseX >= scrollbarX && mouseX <= scrollbarX + scrollbarWidth &&
+                    mouseY >= scrollbarY && mouseY <= scrollbarY + scrollbarHeight) {
+                    int thumbHeight = Math.max(10, (visibleRows * scrollbarHeight) / totalRows);
+                    int track = Math.max(1, scrollbarHeight - thumbHeight);
+                    int pos = (int) Math.max(0, Math.min(track, mouseY - scrollbarY - thumbHeight / 2));
+                    int maxRowOffset = Math.max(0, totalRows - visibleRows);
+                    detailedItemsScrollRowOffset = Math.max(0, Math.min(maxRowOffset, (pos * maxRowOffset) / track));
+                    draggingDetailScrollbar = true;
+                    return true;
+                }
             }
         }
         
@@ -938,6 +1020,43 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
         }
         
         return super.mouseScrolled(mouseX, mouseY, delta);
+    }
+    
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (draggingLeftScrollbar) {
+            List<ContainerInfo> filtered = getFilteredContainers();
+            int scrollbarY = LEFT_PANEL_Y + 5;
+            int scrollbarHeight = LEFT_PANEL_HEIGHT - 10;
+            int thumbHeight = Math.max(10, (maxVisibleContainers * scrollbarHeight) / Math.max(1, filtered.size()));
+            int track = Math.max(1, scrollbarHeight - thumbHeight);
+            int pos = (int) Math.max(0, Math.min(track, mouseY - scrollbarY - thumbHeight / 2));
+            int maxScroll = Math.max(0, filtered.size() - maxVisibleContainers);
+            scrollOffset = (pos * maxScroll) / track;
+            return true;
+        }
+        if (draggingDetailScrollbar && showDetailedView && detailedContainer != null) {
+            int itemSpacing = 20;
+            int itemsPerRow = Math.max(1, detailedItemsAreaWidth / itemSpacing);
+            int totalItems = detailedContainer.uniqueItems.size();
+            int totalRows = (int) Math.ceil(totalItems / (double) itemsPerRow);
+            int visibleRows = Math.max(2, detailedItemsAreaHeight / itemSpacing);
+            int maxRowOffset = Math.max(0, totalRows - visibleRows);
+            int scrollbarHeight = detailedItemsAreaHeight;
+            int thumbHeight = Math.max(10, (visibleRows * scrollbarHeight) / Math.max(1, totalRows));
+            int track = Math.max(1, scrollbarHeight - thumbHeight);
+            int pos = (int) Math.max(0, Math.min(track, mouseY - detailedItemsAreaY - thumbHeight / 2));
+            detailedItemsScrollRowOffset = Math.max(0, Math.min(maxRowOffset, (pos * maxRowOffset) / track));
+            return true;
+        }
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    }
+    
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        draggingLeftScrollbar = false;
+        draggingDetailScrollbar = false;
+        return super.mouseReleased(mouseX, mouseY, button);
     }
     
     @Override

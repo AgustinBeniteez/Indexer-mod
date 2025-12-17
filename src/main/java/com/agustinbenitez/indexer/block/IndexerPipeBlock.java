@@ -145,6 +145,7 @@ public class IndexerPipeBlock extends Block {
         return neighborBlock == this ||
                neighborBlock == ModBlocks.INDEXER_CONTROLLER.get() ||
                neighborBlock == ModBlocks.INDEXER_CONNECTOR.get() ||
+               neighborBlock == ModBlocks.INDEXER_MANAGER.get() ||
                neighborBlock == ModBlocks.DROP_BOX.get() ||
                neighborBlock == ModBlocks.EXTRACTOR.get();
     }

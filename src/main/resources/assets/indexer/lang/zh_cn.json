@@ -99,5 +99,19 @@
   "message.indexer.connector_upgrade.only_connector": "只能应用于索引器连接器",
   "message.indexer.connector_upgrade.already_applied": "连接器已升级",
   "message.indexer.connector_upgrade.success": "连接器已升级至等级2（18个过滤槽）",
-  "item.indexer.indexer_connector.level2": "连接器 等级2"
+  "item.indexer.indexer_connector.level2": "连接器等级2",
+  "gui.indexer.controller.network_summary": "网络摘要",
+  "gui.indexer.controller.total_items": "物品总数",
+  "gui.indexer.controller.unique_types": "唯一类型",
+  "gui.indexer.controller.top_stock": "最高库存",
+  "gui.indexer.controller.efficiency": "效率",
+  "gui.indexer.controller.avg_fill": "平均填充",
+  "gui.indexer.manager.search_placeholder": "搜索",
+  "gui.indexer.manager.sort_cantidad": "数量",
+  "gui.indexer.manager.sort_alfabeto": "字母顺序",
+  "gui.indexer.manager.sort_block": "方块",
+  "gui.indexer.manager.sort_item": "物品",
+  "gui.indexer.manager.sort_mod": "模组",
+  "gui.indexer.controller.container_empty": "未找到物品",
+  "gui.indexer.manager.controller_not_found": "控制器未连接"
 }

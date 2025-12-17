@@ -5,6 +5,7 @@ import com.agustinbenitez.indexer.block.entity.DropBoxBlockEntity;
 import com.agustinbenitez.indexer.block.entity.ExtractorBlockEntity;
 import com.agustinbenitez.indexer.block.entity.IndexerControllerBlockEntity;
 import com.agustinbenitez.indexer.block.entity.IndexerConnectorBlockEntity;
+import com.agustinbenitez.indexer.block.entity.IndexerManagerBlockEntity;
 
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -46,6 +47,14 @@ public class ModBlockEntities {
                     () -> BlockEntityType.Builder.of(
                             ExtractorBlockEntity::new, 
                             ModBlocks.EXTRACTOR.get())
+                    .build(null));
+                    
+    // Entidad de bloque para el Manager
+    public static final RegistryObject<BlockEntityType<IndexerManagerBlockEntity>> INDEXER_MANAGER = 
+            BLOCK_ENTITIES.register("indexer_manager", 
+                    () -> BlockEntityType.Builder.of(
+                            IndexerManagerBlockEntity::new, 
+                            ModBlocks.INDEXER_MANAGER.get())
                     .build(null));
 
     public static void register(IEventBus eventBus) {

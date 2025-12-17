@@ -6,6 +6,7 @@ import com.agustinbenitez.indexer.block.ExtractorBlock;
 import com.agustinbenitez.indexer.block.IndexerControllerBlock;
 import com.agustinbenitez.indexer.block.IndexerPipeBlock;
 import com.agustinbenitez.indexer.block.IndexerConnectorBlock;
+import com.agustinbenitez.indexer.block.IndexerManagerBlock;
 
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
@@ -64,6 +65,15 @@ public class ModBlocks {
                     .instrument(NoteBlockInstrument.IRON_XYLOPHONE)
                     .requiresCorrectToolForDrops()
                     .strength(1.2f, 2.0f) // Aumenta ligeramente la dureza y resistencia
+                    .sound(SoundType.METAL)));
+                    
+    // Registra el bloque Manager que muestra y extrae items agregados
+    public static final RegistryObject<Block> INDEXER_MANAGER = BLOCKS.register("indexer_manager",
+            () -> new IndexerManagerBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.METAL)
+                    .instrument(NoteBlockInstrument.IRON_XYLOPHONE)
+                    .requiresCorrectToolForDrops()
+                    .strength(1.2f, 2.0f)
                     .sound(SoundType.METAL)));
 
     public static void register(IEventBus eventBus) {

@@ -6,6 +6,10 @@ import com.agustinbenitez.indexer.init.ModItems;
 import com.agustinbenitez.indexer.inventory.IndexerConnectorMenu;
 import com.agustinbenitez.indexer.util.FilterUtils;
 
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
+import net.minecraftforge.items.IItemHandler;
+import net.minecraftforge.items.ItemHandlerHelper;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
@@ -34,12 +38,15 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
     private static final int BASE_FILTER_SLOTS = 9; // 3x3 grid of filter slots
     private static final int UPGRADED_FILTER_SLOTS = 18; // 6x3 when upgraded
     private int connectorLevel = 1;
+    private int tickCounter = 0;
     private List<ItemStack> filterItems = new ArrayList<>();
     private BlockPos connectedContainerPos = null;
     private net.minecraft.core.NonNullList<ItemStack> items = net.minecraft.core.NonNullList.withSize(BASE_FILTER_SLOTS, ItemStack.EMPTY);
 
     public IndexerConnectorBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.INDEXER_CONNECTOR.get(), pos, state);
+        // Desfasar el contador de ticks para evitar picos de lag
+        this.tickCounter = (int)(Math.random() * 20);
         // Initialize filter items list with empty stacks
         for (int i = 0; i < BASE_FILTER_SLOTS; i++) {
             filterItems.add(ItemStack.EMPTY);
@@ -129,6 +136,17 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
 
     public static void tick(Level level, BlockPos pos, BlockState state, IndexerConnectorBlockEntity entity) {
         if (level.isClientSide()) return;
+
+        // Actualizar estado de conexión periódicamente (cada 1 segundo/20 ticks)
+        entity.tickCounter++;
+        if (entity.tickCounter >= 20) {
+            entity.tickCounter = 0;
+            
+            boolean isConnected = IndexerConnectorBlock.isConnectedToController(level, pos);
+            if (state.getValue(IndexerConnectorBlock.CONNECTED) != isConnected) {
+                level.setBlock(pos, state.setValue(IndexerConnectorBlock.CONNECTED, isConnected), net.minecraft.world.level.block.Block.UPDATE_ALL);
+            }
+        }
 
         // Verificar si hay un contenedor conectado
         BlockPos previousContainerPos = entity.connectedContainerPos;
@@ -658,36 +676,23 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
             }
         }
 
-        // Verificar si es un cofre doble y manejar como inventario unificado
-        if (isChestBlockEntity(containerEntity)) {
-            BlockPos partnerPos = findDoubleChestPartner(this.connectedContainerPos);
-            if (partnerPos != null) {
-                // Es un cofre doble, determinar el orden correcto (cofre principal primero)
-                BlockPos mainChestPos = getMainChestPosition(this.connectedContainerPos, partnerPos);
-                BlockPos secondChestPos = mainChestPos.equals(this.connectedContainerPos) ? partnerPos : this.connectedContainerPos;
-                
-                // Usar inventario unificado con el orden correcto
-                remainder = insertIntoDoubleChest(remainder, mainChestPos, secondChestPos);
-                
-                // Marcar ambos cofres como cambiados
+        // Intentar usar IItemHandler (Capability) para inserción universal
+        // Esto soluciona problemas con cofres dobles (detectando el inventario completo) y contenedores de mods
+        var cap = containerEntity.getCapability(ForgeCapabilities.ITEM_HANDLER, null);
+        if (cap.isPresent()) {
+            IItemHandler handler = cap.resolve().get();
+            ItemStack result = ItemHandlerHelper.insertItem(handler, remainder, false);
+            
+            // Si hubo cambios (se insertó algo), marcar el bloque como cambiado
+            if (result.getCount() < initialCount) {
                 if (containerEntity instanceof BlockEntity) {
                     ((BlockEntity) containerEntity).setChanged();
                 }
-                BlockEntity partnerEntity = this.level.getBlockEntity(partnerPos);
-                if (partnerEntity instanceof BlockEntity) {
-                    ((BlockEntity) partnerEntity).setChanged();
-                }
-                
-                int inserted = initialCount - remainder.getCount();
-                if (inserted > 0) {
-                    // Ya no enviamos mensajes de notificación al chat
-                } else {
-                    // No se pudo insertar nada
-                }
-                
-                return remainder;
             }
+            return result;
         }
+
+        /* Bloque legacy eliminado: La lógica manual de cofre doble causaba problemas de posicionamiento */
 
         // Comportamiento normal para otros contenedores o cofres simples
         for (int i = 0; i < container.getContainerSize(); i++) {

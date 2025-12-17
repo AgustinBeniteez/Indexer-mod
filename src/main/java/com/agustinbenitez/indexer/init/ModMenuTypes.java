@@ -4,6 +4,7 @@ import com.agustinbenitez.indexer.IndexerMod;
 import com.agustinbenitez.indexer.inventory.IndexerConnectorMenu;
 import com.agustinbenitez.indexer.menu.DropBoxMenu;
 import com.agustinbenitez.indexer.menu.IndexerControllerNetworkMenu;
+import com.agustinbenitez.indexer.menu.IndexerManagerMenu;
 import com.agustinbenitez.indexer.block.entity.IndexerConnectorBlockEntity;
 
 import net.minecraft.core.BlockPos;
@@ -40,6 +41,10 @@ public class ModMenuTypes {
             MENUS.register("drop_box_menu", 
                     () -> IForgeMenuType.create((id, inventory, data) -> 
                             new DropBoxMenu(id, inventory)));
+                            
+    public static final RegistryObject<MenuType<IndexerManagerMenu>> INDEXER_MANAGER_MENU =
+            MENUS.register("indexer_manager_menu",
+                    () -> IForgeMenuType.create(IndexerManagerMenu::new));
 
     public static void register(IEventBus eventBus) {
         MENUS.register(eventBus);
