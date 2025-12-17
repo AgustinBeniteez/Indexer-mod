@@ -61,7 +61,6 @@
   "container.indexer.controller.network": "Controlador Indexer",
   "gui.indexer.controller.search": "Buscar contenedores...",
   "gui.indexer.controller.refresh": "Actualizar",
-  "gui.indexer.controller.network_stats": "Estadísticas de Red",
   "gui.indexer.controller.network_title": "Controlador de Red",
   "gui.indexer.controller.container_enabled": "Habilitado",
   "gui.indexer.controller.container_disabled": "Deshabilitado",
@@ -100,5 +99,13 @@
   "item.indexer.chip_manager": "Chip Manager",
   "item.indexer.chip_manager.tooltip": "Se usa para craftear el Indexer Manager",
   "item.indexer.screen": "Pantalla",
-  "item.indexer.screen.tooltip": "Se usa para craftear el Indexer Manager"
+  "item.indexer.screen.tooltip": "Se usa para craftear el Indexer Manager",
+  "gui.indexer.control.cancel_stack": "Cancelar stack",
+  "gui.indexer.controller.network_summary": "Resumen de Red",
+  "gui.indexer.controller.total_items": "Items Totales",
+  "gui.indexer.controller.unique_types": "Tipos Únicos",
+  "gui.indexer.controller.top_stock": "Mayor Stock",
+  "gui.indexer.controller.efficiency": "Eficiencia",
+  "gui.indexer.controller.avg_fill": "Llenado Promedio",
+  "gui.indexer.controller.network_stats": "Estadísticas de Red"
 }

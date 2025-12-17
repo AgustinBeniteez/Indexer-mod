@@ -98,14 +98,12 @@
   "gui.indexer.controller.connected": "Connected",
   "gui.indexer.controller.containers": "Containers",
   "gui.indexer.controller.capacity_info": "Capacity Info:",
-  "gui.indexer.manager.controller_not_found": "Controller not connected",
   "gui.indexer.controller.slots": "Slots",
   "gui.indexer.controller.stacks": "Stacks",
   "gui.indexer.controller.speed": "Speed",
   "gui.indexer.controller.items_at_once": "items at once",
   "gui.indexer.controller.search": "Search containers...",
   "gui.indexer.controller.refresh": "Refresh",
-  "gui.indexer.controller.network_stats": "Network Statistics",
   "gui.indexer.controller.network_title": "Network Controller",
   "gui.indexer.controller.container_enabled": "Enabled",
   "gui.indexer.controller.container_disabled": "Disabled",
@@ -171,5 +169,12 @@
   "gui.indexer.manager.sort_mod": "Mod",
   "gui.indexer.control.move_stack": "Move stack",
   "gui.indexer.control.move_one": "Move 1",
-  "gui.indexer.control.cancel_stack": "Cancel stack"
+  "gui.indexer.control.cancel_stack": "Cancel stack",
+  "gui.indexer.controller.network_summary": "Network Summary",
+  "gui.indexer.controller.total_items": "Total Items",
+  "gui.indexer.controller.unique_types": "Unique Types",
+  "gui.indexer.controller.top_stock": "Top Stock",
+  "gui.indexer.controller.efficiency": "Efficiency",
+  "gui.indexer.controller.avg_fill": "Avg Fill",
+  "gui.indexer.controller.network_stats": "Network Stats"
 }

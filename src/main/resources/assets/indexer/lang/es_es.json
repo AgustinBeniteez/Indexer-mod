@@ -158,5 +158,12 @@
   "gui.indexer.manager.sort_mod": "Mod",
   "gui.indexer.control.move_stack": "Mover stack",
   "gui.indexer.control.move_one": "Mover 1",
-  "gui.indexer.control.cancel_stack": "Cancelar stack"
+  "gui.indexer.control.cancel_stack": "Cancelar stack",
+  "gui.indexer.controller.network_summary": "Resumen de Red",
+  "gui.indexer.controller.total_items": "Items Totales",
+  "gui.indexer.controller.unique_types": "Tipos Únicos",
+  "gui.indexer.controller.top_stock": "Mayor Stock",
+  "gui.indexer.controller.efficiency": "Eficiencia",
+  "gui.indexer.controller.avg_fill": "Llenado Promedio",
+  "gui.indexer.controller.network_stats": "Estadísticas de Red"
 }

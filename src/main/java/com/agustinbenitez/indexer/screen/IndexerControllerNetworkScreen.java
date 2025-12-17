@@ -43,6 +43,14 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
     
     // Lista de contenedores y scroll
     private List<ContainerInfo> containerList = new ArrayList<>();
+    
+    // Estadísticas cacheadas
+    private int totalNetworkItems = 0;
+    private int totalUniqueTypes = 0;
+    private float averageFillPercentage = 0f;
+    private String topItemName = "";
+    private int topItemCount = 0;
+    
     private int scrollOffset = 0;
     private int maxVisibleContainers = 5; // Reducido de 6 a 5 para evitar que el último elemento se corte
     private ContainerInfo selectedContainer = null;
@@ -149,8 +157,43 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
             containerList.add(info);
         }
         
+        recalculateStats();
+        
         // Ocultar indicador de carga
         isLoading = false;
+    }
+    
+    private void recalculateStats() {
+        totalNetworkItems = 0;
+        Set<String> uniqueTypes = new HashSet<>();
+        Map<String, Integer> itemCounts = new HashMap<>();
+        float totalFill = 0;
+        int filledContainers = 0;
+
+        for (ContainerInfo c : containerList) {
+            totalNetworkItems += c.itemCount;
+            uniqueTypes.addAll(c.uniqueItems.keySet());
+            
+            c.uniqueItems.forEach((k, v) -> itemCounts.merge(k, v, Integer::sum));
+            
+            if (c.maxSlots > 0) {
+                totalFill += (float) c.itemCount / c.maxSlots;
+                filledContainers++;
+            }
+        }
+        
+        totalUniqueTypes = uniqueTypes.size();
+        averageFillPercentage = filledContainers > 0 ? (totalFill / filledContainers) * 100 : 0;
+        
+        // Find top item
+        topItemCount = 0;
+        topItemName = "";
+        for (Map.Entry<String, Integer> entry : itemCounts.entrySet()) {
+            if (entry.getValue() > topItemCount) {
+                topItemCount = entry.getValue();
+                topItemName = entry.getKey();
+            }
+        }
     }
     
     private String getRandomContainerType() {
@@ -248,8 +291,10 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
         // Renderizar lista de contenedores
         renderContainerList(guiGraphics, mouseX, mouseY);
         
-        // Renderizar estadísticas
-        renderNetworkStats(guiGraphics);
+        // Renderizar estadísticas solo si no hay modal abierto
+        if (!showDetailedView) {
+            renderNetworkStats(guiGraphics);
+        }
     }
     
     @Override
@@ -535,82 +580,87 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
     }
     
     private void renderNetworkStats(GuiGraphics guiGraphics) {
+        int startX = RIGHT_PANEL_X + 10;
         int startY = RIGHT_PANEL_Y + 10;
         int lineHeight = 12;
         int currentY = startY;
         
-        // Estadísticas de conexión - colores para modo oscuro
-        guiGraphics.drawString(this.font, Component.translatable("gui.indexer.controller.connection_info"), 
-                              RIGHT_PANEL_X + 10, currentY, 0xCCCCCC, false);
-        currentY += lineHeight + 5;
+        // --- RESUMEN DE RED ---
+        guiGraphics.drawString(this.font, Component.translatable("gui.indexer.controller.network_summary"), 
+                              startX, currentY, 0xCCCCCC, false);
+        currentY += lineHeight + 2;
         
-        String dropBoxText = Component.translatable("gui.indexer.controller.dropbox").getString() + ": " + 
-                           (this.menu.getBlockEntity().hasDropContainer() ? Component.translatable("gui.indexer.controller.connected").getString() : "None");
-        guiGraphics.drawString(this.font, dropBoxText, RIGHT_PANEL_X + 10, currentY, 0xFFFFFF, false);
-        currentY += lineHeight;
-        
+        // Contenedores
         String containersText = Component.translatable("gui.indexer.controller.containers").getString() + ": " + 
                                this.menu.getConnectedContainersCount();
-        guiGraphics.drawString(this.font, containersText, RIGHT_PANEL_X + 10, currentY, 0xFFFFFF, false);
-        currentY += lineHeight + 10;
-        
-        // Estadísticas de capacidad - colores para modo oscuro
-        guiGraphics.drawString(this.font, Component.translatable("gui.indexer.controller.capacity_info"), 
-                              RIGHT_PANEL_X + 10, currentY, 0xCCCCCC, false);
-        currentY += lineHeight + 5;
-        
-        int totalCapacity = this.menu.getTotalCapacity();
-        int occupiedSlots = this.menu.getOccupiedSlots();
-        
-        String slotsText = formatNumber(occupiedSlots) + "/" + formatNumber(totalCapacity);
-        guiGraphics.drawString(this.font, slotsText, RIGHT_PANEL_X + 10, currentY, 0xFFFFFF, false);
+        guiGraphics.drawString(this.font, containersText, startX, currentY, 0xFFFFFF, false);
         currentY += lineHeight;
         
-        // Mostrar información de la mejora aplicada y velocidad en la misma línea
+        // Items Totales
+        String itemsText = Component.translatable("gui.indexer.controller.total_items").getString() + ": " + 
+                           formatNumber(totalNetworkItems);
+        guiGraphics.drawString(this.font, itemsText, startX, currentY, 0xFFFFFF, false);
+        currentY += lineHeight;
+
+        // Tipos Únicos
+        String typesText = Component.translatable("gui.indexer.controller.unique_types").getString() + ": " + 
+                           formatNumber(totalUniqueTypes);
+        guiGraphics.drawString(this.font, typesText, startX, currentY, 0xFFFFFF, false);
+        currentY += lineHeight + 8;
+        
+        // --- MAYOR STOCK ---
+        if (!topItemName.isEmpty()) {
+            guiGraphics.drawString(this.font, Component.translatable("gui.indexer.controller.top_stock"), 
+                                  startX, currentY, 0xCCCCCC, false);
+            currentY += lineHeight + 2;
+            
+            ItemStack topStack = createItemStackFromName(topItemName);
+            if (!topStack.isEmpty()) {
+                // Render Item
+                guiGraphics.renderItem(topStack, startX, currentY);
+                
+                // Name and count
+                String name = topStack.getHoverName().getString();
+                if (name.length() > 18) name = name.substring(0, 15) + "...";
+                
+                guiGraphics.drawString(this.font, name, startX + 20, currentY, 0xFFFFFF, false);
+                guiGraphics.drawString(this.font, formatNumber(topItemCount), startX + 20, currentY + 9, 0xAAAAAA, false);
+                
+                currentY += 20;
+            } else {
+                 currentY += lineHeight;
+            }
+            currentY += 8;
+        }
+
+        // --- EFICIENCIA ---
+        guiGraphics.drawString(this.font, Component.translatable("gui.indexer.controller.efficiency"), 
+                              startX, currentY, 0xCCCCCC, false);
+        currentY += lineHeight + 2;
+        
+        // Avg Fill
+        String fillText = Component.translatable("gui.indexer.controller.avg_fill").getString() + ": ";
+        int fillTextWidth = this.font.width(fillText);
+        guiGraphics.drawString(this.font, fillText, startX, currentY, 0xFFFFFF, false);
+        
+        String pctText = String.format("%.1f%%", averageFillPercentage);
+        int color = averageFillPercentage > 80 ? 0xFF44FF44 : averageFillPercentage > 50 ? 0xFFFFAA00 : 0xFFFF4444;
+        guiGraphics.drawString(this.font, pctText, startX + fillTextWidth, currentY, color, false);
+        currentY += lineHeight + 8;
+        
+        // --- VELOCIDAD (Existing) ---
         int upgradeLevel = this.menu.getCurrentUpgradeLevel();
-        
         String transferRateText = Component.translatable("gui.indexer.controller.speed").getString() + ": " + 
-                                 this.menu.getItemsPerTransfer() + " " + 
-                                 Component.translatable("gui.indexer.controller.items_at_once").getString();
+                                 this.menu.getItemsPerTransfer() + "/t";
         
-        // Renderizar el texto de velocidad
-        guiGraphics.drawString(this.font, transferRateText, RIGHT_PANEL_X + 10, currentY, 0x00FF00, false);
+        guiGraphics.drawString(this.font, transferRateText, startX, currentY, 0x00FF00, false);
         
-        // Renderizar el icono de la mejora a la derecha del texto de velocidad
         if (upgradeLevel > 0) {
             ItemStack upgradeItem = getUpgradeItemForLevel(upgradeLevel);
             if (!upgradeItem.isEmpty()) {
                 int textWidth = this.font.width(transferRateText);
-                guiGraphics.renderItem(upgradeItem, RIGHT_PANEL_X + 15 + textWidth, currentY - 2);
+                guiGraphics.renderItem(upgradeItem, startX + 5 + textWidth, currentY - 4);
             }
-        }
-        
-        currentY += lineHeight + 10;
-        
-        // Barra de progreso de capacidad
-        if (totalCapacity > 0) {
-            int barWidth = RIGHT_PANEL_WIDTH - 20;
-            int barHeight = 8;
-            int barX = RIGHT_PANEL_X + 10;
-            int barY = currentY;
-            
-            // Fondo de la barra - más oscuro para modo oscuro
-            guiGraphics.fill(barX, barY, barX + barWidth, barY + barHeight, 0xFF222222);
-            
-            // Barra de progreso
-            int fillWidth = (occupiedSlots * barWidth) / totalCapacity;
-            int fillColor = occupiedSlots > totalCapacity * 0.8 ? 0xFFFF4444 : 
-                           occupiedSlots > totalCapacity * 0.6 ? 0xFFFFAA00 : 0xFF44FF44;
-            
-            if (fillWidth > 0) {
-                guiGraphics.fill(barX, barY, barX + fillWidth, barY + barHeight, fillColor);
-            }
-            
-            // Porcentaje - color claro para modo oscuro
-            String percentText = String.format("%.1f%%", (occupiedSlots * 100.0) / totalCapacity);
-            int textWidth = this.font.width(percentText);
-            guiGraphics.drawString(this.font, percentText, barX + (barWidth - textWidth) / 2, barY + barHeight + 5, 
-                                  0xFFFFFF, false);
         }
     }
     

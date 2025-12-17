@@ -155,5 +155,13 @@
   "gui.indexer.manager.sort_alfabeto": "Alfabètic",
   "gui.indexer.manager.sort_block": "Bloc",
   "gui.indexer.manager.sort_item": "Ítem",
-  "gui.indexer.manager.sort_mod": "Mod"
+  "gui.indexer.manager.sort_mod": "Mod",
+  "gui.indexer.control.cancel_stack": "Cancel·lar stack",
+  "gui.indexer.controller.network_summary": "Resum de Xarxa",
+  "gui.indexer.controller.total_items": "Items Totals",
+  "gui.indexer.controller.unique_types": "Tipus Únics",
+  "gui.indexer.controller.top_stock": "Major Estoc",
+  "gui.indexer.controller.efficiency": "Eficiència",
+  "gui.indexer.controller.avg_fill": "Ompliment Mitjà",
+  "gui.indexer.controller.network_stats": "Estadístiques de Xarxa"
 }
