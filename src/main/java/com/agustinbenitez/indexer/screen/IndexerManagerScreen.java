@@ -29,7 +29,11 @@ import java.text.DecimalFormat;
 
 public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManagerMenu> {
     private static final ResourceLocation TEXTURE = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/indexer_manager.png");
-    private static final ResourceLocation FILTER_ICON = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/filter.png");
+    private static final ResourceLocation FILTER_CUANTITY_ICON = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/filter_cuantity.png");
+    private static final ResourceLocation FILTER_AZ_ICON = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/filter_az.png");
+    private static final ResourceLocation FILTER_BLOCK_ICON = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/filter_block.png");
+    private static final ResourceLocation FILTER_ITEM_ICON = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/filter_item.png");
+    private static final ResourceLocation FILTER_MOD_ICON = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/filter_mods.png");
     private static final ResourceLocation CONTROL_STACK_ICON = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/controllstack.png");
     private static final ResourceLocation CONTROL_CLICK_ICON = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/controllclick.png");
     private static final ResourceLocation CONTROL_CLICK_RIGHT_ICON = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/controllclickright.png");
@@ -152,6 +156,7 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
             }
             overMenu = mouseX >= menuX && mouseX <= menuX + menuW && mouseY >= menuY && mouseY <= menuY + menuH;
         }
+        List<Component> tooltipToRender = null;
         for (int i = startIndex; i < endIndex; i++) {
             ItemVariantEntry e = filtered.get(i);
             int col = idx % itemsPerRow;
@@ -174,13 +179,13 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
             String countStr = formatCount(e.count);
             graphics.renderItemDecorations(this.font, stack, ix, iy, countStr);
             if (!overMenu && mouseX >= ix && mouseX < ix + 16 && mouseY >= iy && mouseY < iy + 16) {
-                List<Component> tooltip = new ArrayList<>();
+                tooltipToRender = new ArrayList<>();
                 boolean full = isManagerInventoryFull();
                 if (!stack.isEmpty()) {
                     MutableComponent name = Component.literal(Component.translatable(stack.getItem().getDescriptionId()).getString());
-                    tooltip.add(full ? name.withStyle(ChatFormatting.RED) : name);
+                    tooltipToRender.add(full ? name.withStyle(ChatFormatting.RED) : name);
                 }
-                tooltip.add(Component.literal("x" + e.count));
+                tooltipToRender.add(Component.literal("x" + e.count));
                 var tag = stack.getTag();
                 if (tag != null) {
                     java.util.List<Component> enchLines = new java.util.ArrayList<>();
@@ -210,19 +215,19 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
                             enchLines.add(Component.literal(nameTxt + " " + lvlTxt));
                         }
                     }
-                    for (var c : enchLines) tooltip.add(c);
+                    for (var c : enchLines) tooltipToRender.add(c);
                     
                     if (tag.contains("BlockEntityTag")) {
                         var bet = tag.getCompound("BlockEntityTag");
                         if (bet.contains("Items")) {
                             var items = bet.getList("Items", 10);
                             if (!items.isEmpty()) {
-                                tooltip.add(Component.literal("Contents:").withStyle(ChatFormatting.GRAY));
+                                tooltipToRender.add(Component.literal("Contents:").withStyle(ChatFormatting.GRAY));
                                 int limit = 5;
                                 int countShown = 0;
                                 for (int k = 0; k < items.size(); k++) {
                                     if (countShown >= limit) {
-                                        tooltip.add(Component.literal("... and " + (items.size() - limit) + " more").withStyle(ChatFormatting.ITALIC, ChatFormatting.GRAY));
+                                        tooltipToRender.add(Component.literal("... and " + (items.size() - limit) + " more").withStyle(ChatFormatting.ITALIC, ChatFormatting.GRAY));
                                         break;
                                     }
                                     var itemTag = items.getCompound(k);
@@ -237,14 +242,13 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
                                     } else {
                                         line.append(id + " x" + count);
                                     }
-                                    tooltip.add(line.withStyle(ChatFormatting.GRAY));
+                                    tooltipToRender.add(line.withStyle(ChatFormatting.GRAY));
                                     countShown++;
                                 }
                             }
                         }
                     }
                 }
-                graphics.renderComponentTooltip(this.font, tooltip, mouseX, mouseY);
             }
             idx++;
         }
@@ -264,7 +268,19 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
             graphics.drawCenteredString(this.font, "X", failX, failY, 0xFF0000);
             failTicks--;
         }
-        graphics.blit(FILTER_ICON, filterBtnX, filterBtnY, 0, 0, 16, 16, 16, 16);
+
+        ResourceLocation iconToRender;
+        switch (currentSort) {
+            case ALFABETO: iconToRender = FILTER_AZ_ICON; break;
+            case BLOCK: iconToRender = FILTER_BLOCK_ICON; break;
+            case ITEM: iconToRender = FILTER_ITEM_ICON; break;
+            case MOD: iconToRender = FILTER_MOD_ICON; break;
+            case CANTIDAD:
+            case NONE:
+            default: iconToRender = FILTER_CUANTITY_ICON; break;
+        }
+        graphics.blit(iconToRender, filterBtnX, filterBtnY, 0, 0, 16, 16, 16, 16);
+
         if (sortMenuOpen) {
             int menuX = filterBtnX - 2;
             int itemH = 12;
@@ -294,6 +310,10 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
             boolean hoverMod = mouseX >= menuX && mouseX <= menuX + menuW && mouseY >= ty && mouseY <= ty + itemH;
             drawMenuItem(graphics, Component.translatable("gui.indexer.manager.sort_mod"), menuX + 6, ty, currentSort == SortMode.MOD, hoverMod);
             graphics.pose().popPose();
+        }
+        
+        if (tooltipToRender != null) {
+            graphics.renderComponentTooltip(this.font, tooltipToRender, mouseX, mouseY);
         }
         super.renderTooltip(graphics, mouseX, mouseY);
     }
