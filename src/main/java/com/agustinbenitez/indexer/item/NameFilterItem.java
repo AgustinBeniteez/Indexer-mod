@@ -1,6 +1,6 @@
 package com.agustinbenitez.indexer.item;
 
-import net.minecraft.nbt.CompoundTag;
+import com.agustinbenitez.indexer.init.ModDataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
@@ -13,18 +13,20 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.fml.DistExecutor;
 
+import net.minecraft.world.item.Item.TooltipContext;
+
 import java.util.List;
 
 public class NameFilterItem extends Item {
-    
+
     public NameFilterItem(Properties properties) {
         super(properties);
     }
-    
+
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack itemStack = player.getItemInHand(hand);
-        
+
         if (level.isClientSide) {
             // Obtener el índice del slot del item en el inventario
             int slotIndex = -1;
@@ -34,30 +36,30 @@ public class NameFilterItem extends Item {
                     break;
                 }
             }
-            
+
             final int finalSlotIndex = slotIndex;
             openNameFilterScreen(itemStack, finalSlotIndex);
         }
-        
+
         return InteractionResultHolder.sidedSuccess(itemStack, level.isClientSide);
     }
-    
+
     @OnlyIn(Dist.CLIENT)
     private void openNameFilterScreen(ItemStack itemStack, int slotIndex) {
         DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
             net.minecraft.client.Minecraft.getInstance().setScreen(
-                new com.agustinbenitez.indexer.screen.NameFilterScreen(itemStack, slotIndex));
+                    new com.agustinbenitez.indexer.screen.NameFilterScreen(itemStack, slotIndex));
         });
     }
-    
+
     @Override
-    public void appendHoverText(ItemStack stack, Level level, List<Component> tooltipComponents, TooltipFlag isAdvanced) {
+    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltipComponents,
+            TooltipFlag isAdvanced) {
         tooltipComponents.add(Component.translatable("item.indexer.name_filter.tooltip"));
         tooltipComponents.add(Component.translatable("item.indexer.name_filter.description"));
-        
-        CompoundTag tag = stack.getTag();
-        if (tag != null && tag.contains("custom_name")) {
-            String customName = tag.getString("custom_name");
+
+        if (stack.has(ModDataComponents.CUSTOM_NAME.get())) {
+            String customName = stack.get(ModDataComponents.CUSTOM_NAME.get());
             if (!customName.isEmpty()) {
                 tooltipComponents.add(Component.literal("§eNombre configurado: " + customName));
             }
@@ -65,22 +67,21 @@ public class NameFilterItem extends Item {
             tooltipComponents.add(Component.literal("§7Haz clic derecho para configurar"));
         }
     }
-    
+
     /**
      * Obtiene el nombre personalizado configurado en el filtro
      */
     public String getCustomName(ItemStack stack) {
-        CompoundTag tag = stack.getTag();
-        if (tag != null && tag.contains("custom_name")) {
-            return tag.getString("custom_name");
+        if (stack.has(ModDataComponents.CUSTOM_NAME.get())) {
+            return stack.get(ModDataComponents.CUSTOM_NAME.get());
         }
         return "";
     }
-    
+
     /**
      * Establece el nombre personalizado en el filtro
      */
     public void setCustomName(ItemStack stack, String customName) {
-        stack.getOrCreateTag().putString("custom_name", customName);
+        stack.set(ModDataComponents.CUSTOM_NAME.get(), customName);
     }
 }

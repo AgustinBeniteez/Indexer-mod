@@ -19,7 +19,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.network.NetworkHooks;
+import com.mojang.serialization.MapCodec;
 
 import javax.annotation.Nullable;
 import java.util.Map;
@@ -27,7 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class DropBoxBlock extends BaseEntityBlock {
     private static final VoxelShape SHAPE = Block.box(0, 0, 0, 16, 16, 16);
-    
+
     // Mapa para rastrear si un bloque fue roto en modo creativo
     private static final Map<BlockPos, Boolean> creativeModeBreaks = new ConcurrentHashMap<>();
 
@@ -46,11 +46,12 @@ public class DropBoxBlock extends BaseEntityBlock {
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player,
+            BlockHitResult hit) {
         if (!level.isClientSide()) {
             BlockEntity entity = level.getBlockEntity(pos);
             if (entity instanceof DropBoxBlockEntity dropBox) {
-                NetworkHooks.openScreen((ServerPlayer) player, dropBox, pos);
+                ((ServerPlayer) player).openMenu(dropBox, pos);
             } else {
                 throw new IllegalStateException("Our Container provider is missing!");
             }
@@ -66,7 +67,8 @@ public class DropBoxBlock extends BaseEntityBlock {
 
     @Nullable
     @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
+            BlockEntityType<T> type) {
         if (level.isClientSide()) {
             return null;
         }
@@ -75,36 +77,42 @@ public class DropBoxBlock extends BaseEntityBlock {
     }
 
     @Override
-    public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable net.minecraft.world.entity.LivingEntity placer, net.minecraft.world.item.ItemStack stack) {
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state,
+            @Nullable net.minecraft.world.entity.LivingEntity placer, net.minecraft.world.item.ItemStack stack) {
         super.setPlacedBy(level, pos, state, placer, stack);
     }
 
     @Override
-    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         // Registrar si el jugador está en modo creativo
         creativeModeBreaks.put(pos, player.getAbilities().instabuild);
-        super.playerWillDestroy(level, pos, state, player);
+        return super.playerWillDestroy(level, pos, state, player);
     }
-    
+
     @Override
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
         if (state.getBlock() != newState.getBlock()) {
             // Verificar si el bloque fue roto en modo creativo
             Boolean wasCreativeBreak = creativeModeBreaks.remove(pos);
             boolean isCreativeBreak = wasCreativeBreak != null && wasCreativeBreak;
-            
+
             // Solo dropear items si NO fue roto en modo creativo
             if (!isCreativeBreak) {
                 BlockEntity blockEntity = level.getBlockEntity(pos);
                 if (blockEntity instanceof DropBoxBlockEntity) {
                     ((DropBoxBlockEntity) blockEntity).dropContents();
                 }
-                
+
                 // Dropear el ítem del bloque DropBox
                 net.minecraft.world.item.ItemStack itemStack = new net.minecraft.world.item.ItemStack(this);
                 net.minecraft.world.Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), itemStack);
             }
         }
         super.onRemove(state, level, pos, newState, isMoving);
+    }
+
+    @Override
+    protected MapCodec<? extends BaseEntityBlock> codec() {
+        return simpleCodec(DropBoxBlock::new);
     }
 }

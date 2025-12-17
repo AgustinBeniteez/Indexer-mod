@@ -71,23 +71,24 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
     protected Component getDefaultName() {
         return Component.translatable("container.indexer.manager");
     }
+
     @Override
     public int getContainerSize() {
         return CONTAINER_SIZE;
     }
 
     @Override
-    public void load(CompoundTag tag) {
-        super.load(tag);
+    protected void loadAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
         this.items = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
-        net.minecraft.world.ContainerHelper.loadAllItems(tag, this.items);
+        net.minecraft.world.ContainerHelper.loadAllItems(tag, this.items, registries);
         this.extractionCooldown = tag.getInt("ExtractionCooldown");
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag) {
-        super.saveAdditional(tag);
-        net.minecraft.world.ContainerHelper.saveAllItems(tag, this.items);
+    protected void saveAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
+        net.minecraft.world.ContainerHelper.saveAllItems(tag, this.items, registries);
         tag.putInt("ExtractionCooldown", this.extractionCooldown);
     }
 
@@ -95,7 +96,8 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
         if (this.level.getBlockEntity(this.worldPosition) != this) {
             return false;
         } else {
-            return player.distanceToSqr((double)this.worldPosition.getX() + 0.5D, (double)this.worldPosition.getY() + 0.5D, (double)this.worldPosition.getZ() + 0.5D) <= 64.0D;
+            return player.distanceToSqr((double) this.worldPosition.getX() + 0.5D,
+                    (double) this.worldPosition.getY() + 0.5D, (double) this.worldPosition.getZ() + 0.5D) <= 64.0D;
         }
     }
 
@@ -107,9 +109,11 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
         }
         for (IndexerConnectorBlockEntity connector : connectors) {
             BlockPos containerPos = connector.getConnectedContainerPos();
-            if (containerPos == null || level == null) continue;
+            if (containerPos == null || level == null)
+                continue;
             BlockEntity be = level.getBlockEntity(containerPos);
-            if (be == null) continue;
+            if (be == null)
+                continue;
 
             // Usar Capability si está disponible (soporte cofres dobles y mods)
             var cap = be.getCapability(ForgeCapabilities.ITEM_HANDLER, null);
@@ -127,8 +131,10 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
         return new ArrayList<>(variants.values());
     }
 
-    private void aggregateStack(Map<String, com.agustinbenitez.indexer.network.ManagerItemsUpdatePacket.Entry> variants, ItemStack stack) {
-        if (stack.isEmpty()) return;
+    private void aggregateStack(Map<String, com.agustinbenitez.indexer.network.ManagerItemsUpdatePacket.Entry> variants,
+            ItemStack stack) {
+        if (stack.isEmpty())
+            return;
         String key = buildVariantKey(stack);
         com.agustinbenitez.indexer.network.ManagerItemsUpdatePacket.Entry entry = variants.get(key);
         if (entry == null) {
@@ -138,55 +144,61 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
             entry = new com.agustinbenitez.indexer.network.ManagerItemsUpdatePacket.Entry(icon, 0, pend);
             variants.put(key, entry);
         }
-        int newCount = entry.count + stack.getCount();
+        int newCount = entry.count() + stack.getCount();
         boolean pend = pendingExtractions.getOrDefault(key, 0) > 0;
-        variants.put(key, new com.agustinbenitez.indexer.network.ManagerItemsUpdatePacket.Entry(entry.stackVariant, newCount, pend));
+        variants.put(key, new com.agustinbenitez.indexer.network.ManagerItemsUpdatePacket.Entry(entry.stackVariant(),
+                newCount, pend));
     }
-    
+
     private String buildVariantKey(ItemStack stack) {
         ResourceLocation base = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(stack.getItem());
-        if (base == null) return "unknown";
+        if (base == null)
+            return "unknown";
         StringBuilder sb = new StringBuilder(base.toString());
-        if (stack.hasTag() && stack.getTag() != null) {
-            var tag = stack.getTag();
-            java.util.List<String> parts = new java.util.ArrayList<>();
-            if (tag.contains("Enchantments")) {
-                var list = tag.getList("Enchantments", 10);
-                for (int i = 0; i < list.size(); i++) {
-                    var ench = list.getCompound(i);
-                    String id = ench.getString("id");
-                    int lvl = ench.getInt("lvl");
-                    parts.add(id + ":" + lvl);
-                }
-            }
-            if (tag.contains("StoredEnchantments")) {
-                var list = tag.getList("StoredEnchantments", 10);
-                for (int i = 0; i < list.size(); i++) {
-                    var ench = list.getCompound(i);
-                    String id = ench.getString("id");
-                    int lvl = ench.getInt("lvl");
-                    parts.add(id + ":" + lvl);
-                }
-            }
-            java.util.Collections.sort(parts);
-            if (!parts.isEmpty()) {
-                sb.append("|E:");
-                for (String p : parts) {
-                    sb.append(p).append(",");
-                }
-            }
-            if (tag.contains("BlockEntityTag")) {
-                sb.append("|BET:").append(tag.getCompound("BlockEntityTag").toString());
+
+        // Enchantments
+        var enchantments = stack.get(net.minecraft.core.component.DataComponents.ENCHANTMENTS);
+        java.util.List<String> parts = new java.util.ArrayList<>();
+        if (enchantments != null) {
+            for (var entry : enchantments.entrySet()) {
+                String id = String.valueOf(entry.getKey().unwrapKey().map(k -> k.location()).orElse(null));
+                int lvl = entry.getIntValue();
+                parts.add(id + ":" + lvl);
             }
         }
+
+        // Stored Enchantments
+        var storedEnchantments = stack.get(net.minecraft.core.component.DataComponents.STORED_ENCHANTMENTS);
+        if (storedEnchantments != null) {
+            for (var entry : storedEnchantments.entrySet()) {
+                String id = String.valueOf(entry.getKey().unwrapKey().map(k -> k.location()).orElse(null));
+                int lvl = entry.getIntValue();
+                parts.add(id + ":" + lvl);
+            }
+        }
+
+        java.util.Collections.sort(parts);
+        if (!parts.isEmpty()) {
+            sb.append("|E:");
+            for (String p : parts) {
+                sb.append(p).append(",");
+            }
+        }
+
+        // Block Entity Data
+        var blockEntityData = stack.get(net.minecraft.core.component.DataComponents.BLOCK_ENTITY_DATA);
+        if (blockEntityData != null) {
+            sb.append("|BET:").append(blockEntityData.copyTag().toString());
+        }
+
         return sb.toString();
     }
-    
+
     private ResourceLocation parseBaseIdFromKey(String key) {
         int idx = key.indexOf("|E:");
         String base = idx >= 0 ? key.substring(0, idx) : key;
         try {
-            return new ResourceLocation(base);
+            return ResourceLocation.parse(base);
         } catch (Exception e) {
             return net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(net.minecraft.world.item.Items.AIR);
         }
@@ -196,37 +208,44 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
         java.util.List<com.agustinbenitez.indexer.network.ManagerItemsUpdatePacket.Entry> data = getAggregatedItemVariants();
         ModNetworking.sendToPlayer(new com.agustinbenitez.indexer.network.ManagerItemsUpdatePacket(data), player);
     }
-    
+
     private void sendItemsToOpenPlayers() {
-        if (!(this.level instanceof ServerLevel serverLevel)) return;
+        if (!(this.level instanceof ServerLevel serverLevel))
+            return;
         java.util.List<com.agustinbenitez.indexer.network.ManagerItemsUpdatePacket.Entry> data = getAggregatedItemVariants();
         for (ServerPlayer sp : serverLevel.players()) {
             AbstractContainerMenu menu = sp.containerMenu;
             if (menu instanceof com.agustinbenitez.indexer.menu.IndexerManagerMenu managerMenu) {
                 if (managerMenu.getBlockEntity() == this) {
-                    ModNetworking.sendToPlayer(new com.agustinbenitez.indexer.network.ManagerItemsUpdatePacket(data), sp);
+                    ModNetworking.sendToPlayer(new com.agustinbenitez.indexer.network.ManagerItemsUpdatePacket(data),
+                            sp);
                 }
             }
         }
     }
-    
+
     public void syncOpenPlayers() {
         sendItemsToOpenPlayers();
     }
 
     public void queueExtraction(ResourceLocation itemId, int amount, ItemStack variantStack) {
-        if (amount <= 0) return;
-        ItemStack icon = variantStack.isEmpty() ? new ItemStack(net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(itemId)) : variantStack.copy();
-        if (!icon.isEmpty()) icon.setCount(1);
+        if (amount <= 0)
+            return;
+        ItemStack icon = variantStack.isEmpty()
+                ? new ItemStack(net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(itemId))
+                : variantStack.copy();
+        if (!icon.isEmpty())
+            icon.setCount(1);
         String key = buildVariantKey(icon);
         int current = pendingExtractions.getOrDefault(key, 0);
         pendingExtractions.put(key, current + amount);
         pendingVariantByKey.put(key, icon);
         this.setChanged();
     }
-    
+
     public void cancelPendingExtraction(ItemStack variantStack) {
-        if (variantStack.isEmpty()) return;
+        if (variantStack.isEmpty())
+            return;
         ItemStack icon = variantStack.copy();
         icon.setCount(1);
         String key = buildVariantKey(icon);
@@ -237,7 +256,7 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
             sendItemsToOpenPlayers();
         }
     }
-    
+
     public int extractImmediately(ResourceLocation itemId, int amount, ItemStack variantStack) {
         int perTransfer = Math.max(1, getItemsPerTransferFromNearestController());
         int limit = Math.max(0, Math.min(amount, perTransfer));
@@ -249,10 +268,12 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
     }
 
     public void tick(Level level, BlockPos pos, BlockState state) {
-        if (level.isClientSide()) return;
-        
+        if (level.isClientSide())
+            return;
+
         // Sincronizar con los clientes abiertos cada 10 ticks (0.5 segundos)
-        // Esto permite ver cambios en tiempo real (ej: items entrando desde hornos/extractores)
+        // Esto permite ver cambios en tiempo real (ej: items entrando desde
+        // hornos/extractores)
         this.syncTicker++;
         if (this.syncTicker >= 10) {
             this.syncTicker = 0;
@@ -260,8 +281,8 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
             if (this.level instanceof ServerLevel serverLevel) {
                 boolean hasOpenPlayers = false;
                 for (ServerPlayer sp : serverLevel.players()) {
-                    if (sp.containerMenu instanceof com.agustinbenitez.indexer.menu.IndexerManagerMenu managerMenu && 
-                        managerMenu.getBlockEntity() == this) {
+                    if (sp.containerMenu instanceof com.agustinbenitez.indexer.menu.IndexerManagerMenu managerMenu &&
+                            managerMenu.getBlockEntity() == this) {
                         hasOpenPlayers = true;
                         break;
                     }
@@ -272,7 +293,8 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
             }
         }
 
-        if (pendingExtractions.isEmpty()) return;
+        if (pendingExtractions.isEmpty())
+            return;
         if (this.extractionCooldown > 0) {
             this.extractionCooldown--;
             return;
@@ -289,7 +311,8 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
         int perTick = getItemsPerTransferFromNearestController();
         int toTransferThisTick = Math.min(perTick, remainingRequest);
         ItemStack var = pendingVariantByKey.getOrDefault(nextKey, ItemStack.EMPTY);
-        ResourceLocation nextId = var.isEmpty() ? parseBaseIdFromKey(nextKey) : net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(var.getItem());
+        ResourceLocation nextId = var.isEmpty() ? parseBaseIdFromKey(nextKey)
+                : net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(var.getItem());
         int moved = moveFromNetworkIntoInventory(nextId, toTransferThisTick, var);
         if (moved > 0) {
             pendingExtractions.put(nextKey, remainingRequest - moved);
@@ -305,48 +328,59 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
             pendingVariantByKey.remove(nextKey);
         }
     }
-    
+
     public boolean isInventoryFull() {
         for (int i = 0; i < this.getContainerSize(); i++) {
             ItemStack s = this.getItem(i);
-            if (s.isEmpty()) return false;
-            if (s.getCount() < s.getMaxStackSize()) return false;
+            if (s.isEmpty())
+                return false;
+            if (s.getCount() < s.getMaxStackSize())
+                return false;
         }
         return true;
     }
 
     private int moveFromNetworkIntoInventory(ResourceLocation itemId, int maxAmount, ItemStack variantStack) {
-        if (this.level == null || maxAmount <= 0) return 0;
+        if (this.level == null || maxAmount <= 0)
+            return 0;
         int remaining = maxAmount;
         List<IndexerConnectorBlockEntity> connectors = findConnectors();
         for (IndexerConnectorBlockEntity connector : connectors) {
-            if (remaining <= 0) break;
+            if (remaining <= 0)
+                break;
             BlockPos containerPos = connector.getConnectedContainerPos();
-            if (containerPos == null) continue;
+            if (containerPos == null)
+                continue;
             BlockEntity be = level.getBlockEntity(containerPos);
-            if (be == null) continue;
+            if (be == null)
+                continue;
 
             // Intentar usar Capability primero
             var cap = be.getCapability(ForgeCapabilities.ITEM_HANDLER, null);
             if (cap.isPresent()) {
                 IItemHandler handler = cap.resolve().get();
                 for (int i = 0; i < handler.getSlots(); i++) {
-                    if (remaining <= 0) break;
+                    if (remaining <= 0)
+                        break;
                     ItemStack slot = handler.getStackInSlot(i);
-                    if (slot.isEmpty()) continue;
-                    
+                    if (slot.isEmpty())
+                        continue;
+
                     ResourceLocation key = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(slot.getItem());
-                    if (key == null || !key.equals(itemId)) continue;
-                    if (!variantMatches(slot, variantStack)) continue;
-                    
+                    if (key == null || !key.equals(itemId))
+                        continue;
+                    if (!variantMatches(slot, variantStack))
+                        continue;
+
                     // Simular extracción para ver cuánto podemos tomar
                     ItemStack extractedSim = handler.extractItem(i, remaining, true);
-                    if (extractedSim.isEmpty()) continue;
-                    
+                    if (extractedSim.isEmpty())
+                        continue;
+
                     // Intentar insertar en el Manager
                     ItemStack toMove = extractedSim.copy();
                     int inserted = insertIntoSelf(toMove);
-                    
+
                     // Si se pudo insertar algo, extraer realmente del inventario origen
                     if (inserted > 0) {
                         handler.extractItem(i, inserted, false);
@@ -359,15 +393,20 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
                 continue; // Procesado con capability, pasar al siguiente conector
             }
 
-            if (!(be instanceof Container container)) continue;
+            if (!(be instanceof Container container))
+                continue;
             for (int i = 0; i < container.getContainerSize(); i++) {
                 ItemStack slot = container.getItem(i);
-                if (slot.isEmpty()) continue;
+                if (slot.isEmpty())
+                    continue;
                 ResourceLocation key = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(slot.getItem());
-                if (key == null || !key.equals(itemId)) continue;
-                if (!variantMatches(slot, variantStack)) continue;
+                if (key == null || !key.equals(itemId))
+                    continue;
+                if (!variantMatches(slot, variantStack))
+                    continue;
                 int take = Math.min(remaining, slot.getCount());
-                if (take <= 0) continue;
+                if (take <= 0)
+                    continue;
                 ItemStack toMove = slot.copy();
                 toMove.setCount(take);
                 int inserted = insertIntoSelf(toMove);
@@ -379,59 +418,73 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
                 if (be instanceof BlockEntity) {
                     ((BlockEntity) be).setChanged();
                 }
-                if (remaining <= 0) break;
+                if (remaining <= 0)
+                    break;
             }
         }
         return maxAmount - remaining;
     }
-    
+
     private boolean variantMatches(ItemStack a, ItemStack variant) {
-        if (variant.isEmpty()) return true;
-        var ta = a.hasTag() ? a.getTag() : null;
-        var tv = variant.hasTag() ? variant.getTag() : null;
-        
-        // Check BlockEntityTag (Shulker Box content)
-        boolean aHasBet = ta != null && ta.contains("BlockEntityTag");
-        boolean vHasBet = tv != null && tv.contains("BlockEntityTag");
-        if (aHasBet != vHasBet) return false;
-        if (aHasBet) {
-            if (!ta.getCompound("BlockEntityTag").equals(tv.getCompound("BlockEntityTag"))) return false;
+        if (variant.isEmpty())
+            return true;
+
+        // Comparación básica de componentes
+        // En 1.20.5+ Components sustituyen a NBT para la mayoría de cosas
+
+        // 1. Comparar BlockEntityData (contenido de Shulker Box, etc)
+        var aData = a.get(net.minecraft.core.component.DataComponents.BLOCK_ENTITY_DATA);
+        var vData = variant.get(net.minecraft.core.component.DataComponents.BLOCK_ENTITY_DATA);
+
+        if (!java.util.Objects.equals(aData, vData)) {
+            return false;
         }
 
-        boolean aHas = ta != null && (ta.contains("Enchantments") || ta.contains("StoredEnchantments"));
-        boolean vHas = tv != null && (tv.contains("Enchantments") || tv.contains("StoredEnchantments"));
-        if (!aHas && !vHas) return true;
-        if (aHas != vHas) return false;
+        // 2. Comparar Encantamientos y Encantamientos Almacenados
+        var aEnch = a.get(net.minecraft.core.component.DataComponents.ENCHANTMENTS);
+        var vEnch = variant.get(net.minecraft.core.component.DataComponents.ENCHANTMENTS);
+        var aStored = a.get(net.minecraft.core.component.DataComponents.STORED_ENCHANTMENTS);
+        var vStored = variant.get(net.minecraft.core.component.DataComponents.STORED_ENCHANTMENTS);
+
+        boolean aHas = (aEnch != null && !aEnch.isEmpty()) || (aStored != null && !aStored.isEmpty());
+        boolean vHas = (vEnch != null && !vEnch.isEmpty()) || (vStored != null && !vStored.isEmpty());
+
+        if (!aHas && !vHas)
+            return true;
+        if (aHas != vHas)
+            return false;
+
         java.util.List<String> pa = new java.util.ArrayList<>();
         java.util.List<String> pv = new java.util.ArrayList<>();
-        if (ta != null && ta.contains("Enchantments")) {
-            var la = ta.getList("Enchantments", 10);
-            for (int i = 0; i < la.size(); i++) {
-                var ench = la.getCompound(i);
-                pa.add(ench.getString("id") + ":" + ench.getInt("lvl"));
+
+        // Colectar encantamientos de A
+        if (aEnch != null) {
+            for (var entry : aEnch.entrySet()) {
+                pa.add(String.valueOf(entry.getKey().unwrapKey().map(k -> k.location()).orElse(null)) + ":"
+                        + entry.getIntValue());
             }
         }
-        if (ta != null && ta.contains("StoredEnchantments")) {
-            var la2 = ta.getList("StoredEnchantments", 10);
-            for (int i = 0; i < la2.size(); i++) {
-                var ench = la2.getCompound(i);
-                pa.add(ench.getString("id") + ":" + ench.getInt("lvl"));
+        if (aStored != null) {
+            for (var entry : aStored.entrySet()) {
+                pa.add(String.valueOf(entry.getKey().unwrapKey().map(k -> k.location()).orElse(null)) + ":"
+                        + entry.getIntValue());
             }
         }
-        if (tv != null && tv.contains("Enchantments")) {
-            var lv = tv.getList("Enchantments", 10);
-            for (int i = 0; i < lv.size(); i++) {
-                var ench = lv.getCompound(i);
-                pv.add(ench.getString("id") + ":" + ench.getInt("lvl"));
+
+        // Colectar encantamientos de Variant
+        if (vEnch != null) {
+            for (var entry : vEnch.entrySet()) {
+                pv.add(String.valueOf(entry.getKey().unwrapKey().map(k -> k.location()).orElse(null)) + ":"
+                        + entry.getIntValue());
             }
         }
-        if (tv != null && tv.contains("StoredEnchantments")) {
-            var lv2 = tv.getList("StoredEnchantments", 10);
-            for (int i = 0; i < lv2.size(); i++) {
-                var ench = lv2.getCompound(i);
-                pv.add(ench.getString("id") + ":" + ench.getInt("lvl"));
+        if (vStored != null) {
+            for (var entry : vStored.entrySet()) {
+                pv.add(String.valueOf(entry.getKey().unwrapKey().map(k -> k.location()).orElse(null)) + ":"
+                        + entry.getIntValue());
             }
         }
+
         java.util.Collections.sort(pa);
         java.util.Collections.sort(pv);
         return pa.equals(pv);
@@ -450,7 +503,8 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
                 existing.grow(canAdd);
                 stack.shrink(canAdd);
                 this.setItem(i, existing);
-                if (stack.isEmpty()) return originalCount;
+                if (stack.isEmpty())
+                    return originalCount;
             }
         }
         if (!stack.isEmpty()) {
@@ -471,17 +525,19 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
 
     @Nullable
     public IndexerControllerBlockEntity findNearestController() {
-        if (this.level == null) return null;
+        if (this.level == null)
+            return null;
         Set<BlockPos> visited = new HashSet<>();
         Queue<BlockPos> queue = new LinkedList<>();
-        
+
         for (Direction direction : Direction.values()) {
             BlockPos adjacentPos = this.worldPosition.relative(direction);
             BlockState adjacentState = this.level.getBlockState(adjacentPos);
             Block adjacentBlock = adjacentState.getBlock();
-            
+
             if (adjacentBlock instanceof com.agustinbenitez.indexer.block.IndexerPipeBlock) {
-                if (adjacentState.getValue(com.agustinbenitez.indexer.block.IndexerPipeBlock.getPropertyForDirection(direction.getOpposite()))) {
+                if (adjacentState.getValue(com.agustinbenitez.indexer.block.IndexerPipeBlock
+                        .getPropertyForDirection(direction.getOpposite()))) {
                     queue.add(adjacentPos);
                     visited.add(adjacentPos);
                 }
@@ -493,18 +549,19 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
                 visited.add(adjacentPos);
             }
         }
-        
+
         while (!queue.isEmpty()) {
             BlockPos currentPos = queue.poll();
             BlockState currentState = this.level.getBlockState(currentPos);
-            
+
             for (Direction direction : Direction.values()) {
                 BlockPos nextPos = currentPos.relative(direction);
-                if (visited.contains(nextPos)) continue;
-                
+                if (visited.contains(nextPos))
+                    continue;
+
                 BlockState nextState = this.level.getBlockState(nextPos);
                 Block nextBlock = nextState.getBlock();
-                
+
                 if (nextBlock instanceof com.agustinbenitez.indexer.block.IndexerControllerBlock) {
                     BlockEntity entity = this.level.getBlockEntity(nextPos);
                     if (entity instanceof IndexerControllerBlockEntity controller) {
@@ -512,10 +569,13 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
                     }
                     visited.add(nextPos);
                 } else if (nextBlock instanceof com.agustinbenitez.indexer.block.IndexerPipeBlock) {
-                    boolean currentPipeConnected = currentState.getBlock() instanceof com.agustinbenitez.indexer.block.IndexerPipeBlock &&
-                            currentState.getValue(com.agustinbenitez.indexer.block.IndexerPipeBlock.getPropertyForDirection(direction));
-                    boolean nextPipeConnected = nextState.getValue(com.agustinbenitez.indexer.block.IndexerPipeBlock.getPropertyForDirection(direction.getOpposite()));
-                    
+                    boolean currentPipeConnected = currentState
+                            .getBlock() instanceof com.agustinbenitez.indexer.block.IndexerPipeBlock &&
+                            currentState.getValue(com.agustinbenitez.indexer.block.IndexerPipeBlock
+                                    .getPropertyForDirection(direction));
+                    boolean nextPipeConnected = nextState.getValue(com.agustinbenitez.indexer.block.IndexerPipeBlock
+                            .getPropertyForDirection(direction.getOpposite()));
+
                     if (currentPipeConnected && nextPipeConnected) {
                         queue.add(nextPos);
                         visited.add(nextPos);
@@ -529,11 +589,13 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
     private List<IndexerConnectorBlockEntity> findConnectors() {
         // Intenta usar el controlador conectado para obtener la lista de conectores
         // Esto asegura que el Manager vea exactamente lo mismo que el Controller
-        // Siempre consultamos al controlador primero, ya que él gestiona su propio caché de red
+        // Siempre consultamos al controlador primero, ya que él gestiona su propio
+        // caché de red
         IndexerControllerBlockEntity controller = findNearestController();
         if (controller != null) {
             List<IndexerConnectorBlockEntity> controllerConnectors = controller.findConnectors();
-            // Actualizamos nuestro caché local solo para referencia, aunque delegamos al controlador
+            // Actualizamos nuestro caché local solo para referencia, aunque delegamos al
+            // controlador
             this.connectorCache = controllerConnectors;
             this.networkChanged = false;
             return controllerConnectors;
@@ -542,7 +604,7 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
         if (!networkChanged && connectorCache != null) {
             return connectorCache;
         }
-        
+
         List<IndexerConnectorBlockEntity> connectors = new ArrayList<>();
         Set<BlockPos> visited = new HashSet<>();
         Queue<BlockPos> queue = new LinkedList<>();
@@ -550,7 +612,8 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
             BlockPos adjacentPos = this.worldPosition.relative(direction);
             BlockState adjacentState = this.level.getBlockState(adjacentPos);
             if (adjacentState.getBlock() instanceof com.agustinbenitez.indexer.block.IndexerPipeBlock) {
-                if (adjacentState.getValue(com.agustinbenitez.indexer.block.IndexerPipeBlock.getPropertyForDirection(direction.getOpposite()))) {
+                if (adjacentState.getValue(com.agustinbenitez.indexer.block.IndexerPipeBlock
+                        .getPropertyForDirection(direction.getOpposite()))) {
                     queue.add(adjacentPos);
                     visited.add(adjacentPos);
                 }
@@ -574,20 +637,25 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
             }
             for (Direction direction : Direction.values()) {
                 BlockPos nextPos = currentPos.relative(direction);
-                if (visited.contains(nextPos)) continue;
+                if (visited.contains(nextPos))
+                    continue;
                 BlockState nextState = this.level.getBlockState(nextPos);
                 Block nextBlock = nextState.getBlock();
-                
-                boolean isCurrentPipe = currentState.getBlock() instanceof com.agustinbenitez.indexer.block.IndexerPipeBlock;
-                boolean isCurrentController = currentState.getBlock() instanceof com.agustinbenitez.indexer.block.IndexerControllerBlock;
-                
+
+                boolean isCurrentPipe = currentState
+                        .getBlock() instanceof com.agustinbenitez.indexer.block.IndexerPipeBlock;
+                boolean isCurrentController = currentState
+                        .getBlock() instanceof com.agustinbenitez.indexer.block.IndexerControllerBlock;
+
                 if (nextBlock instanceof com.agustinbenitez.indexer.block.IndexerPipeBlock) {
                     boolean validSource = isCurrentController;
                     if (isCurrentPipe) {
-                        validSource = currentState.getValue(com.agustinbenitez.indexer.block.IndexerPipeBlock.getPropertyForDirection(direction));
+                        validSource = currentState.getValue(
+                                com.agustinbenitez.indexer.block.IndexerPipeBlock.getPropertyForDirection(direction));
                     }
-                    
-                    boolean nextPipeConnected = nextState.getValue(com.agustinbenitez.indexer.block.IndexerPipeBlock.getPropertyForDirection(direction.getOpposite()));
+
+                    boolean nextPipeConnected = nextState.getValue(com.agustinbenitez.indexer.block.IndexerPipeBlock
+                            .getPropertyForDirection(direction.getOpposite()));
                     if (validSource && nextPipeConnected) {
                         queue.add(nextPos);
                         visited.add(nextPos);
@@ -595,9 +663,10 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
                 } else if (nextBlock instanceof com.agustinbenitez.indexer.block.IndexerConnectorBlock) {
                     boolean validSource = isCurrentController;
                     if (isCurrentPipe) {
-                        validSource = currentState.getValue(com.agustinbenitez.indexer.block.IndexerPipeBlock.getPropertyForDirection(direction));
+                        validSource = currentState.getValue(
+                                com.agustinbenitez.indexer.block.IndexerPipeBlock.getPropertyForDirection(direction));
                     }
-                    
+
                     if (validSource) {
                         BlockEntity nextEntity = this.level.getBlockEntity(nextPos);
                         if (nextEntity instanceof IndexerConnectorBlockEntity) {
@@ -608,9 +677,10 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
                 } else if (nextBlock instanceof com.agustinbenitez.indexer.block.IndexerControllerBlock) {
                     boolean validSource = isCurrentController;
                     if (isCurrentPipe) {
-                        validSource = currentState.getValue(com.agustinbenitez.indexer.block.IndexerPipeBlock.getPropertyForDirection(direction));
+                        validSource = currentState.getValue(
+                                com.agustinbenitez.indexer.block.IndexerPipeBlock.getPropertyForDirection(direction));
                     }
-                    
+
                     if (validSource) {
                         queue.add(nextPos);
                         visited.add(nextPos);
@@ -622,7 +692,7 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
         networkChanged = false;
         return connectors;
     }
-    
+
     public void markNetworkChanged() {
         this.networkChanged = true;
         this.connectorCache = null;

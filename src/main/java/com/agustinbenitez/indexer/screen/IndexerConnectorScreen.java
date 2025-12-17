@@ -12,9 +12,11 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
 public class IndexerConnectorScreen extends AbstractContainerScreen<IndexerConnectorMenu> {
-    private static final ResourceLocation TEXTURE_BASE = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/menu_conector.png");
-    private static final ResourceLocation TEXTURE_LVL2 = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/menu_conector_lvl2.png");
-    
+    private static final ResourceLocation TEXTURE_BASE = ResourceLocation.fromNamespaceAndPath(IndexerMod.MOD_ID,
+            "textures/gui/menu_conector.png");
+    private static final ResourceLocation TEXTURE_LVL2 = ResourceLocation.fromNamespaceAndPath(IndexerMod.MOD_ID,
+            "textures/gui/menu_conector_lvl2.png");
+
     public IndexerConnectorScreen(IndexerConnectorMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
         // Ajustar ancho según el número de slots de filtro
@@ -23,17 +25,17 @@ public class IndexerConnectorScreen extends AbstractContainerScreen<IndexerConne
         this.inventoryLabelY = 74; // Posición de la etiqueta del inventario
         this.titleLabelY = 6; // Posición del título
     }
-    
+
     @Override
     protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
         int x = (this.width - this.imageWidth) / 2;
         int y = (this.height - this.imageHeight) / 2;
-        
+
         // Seleccionar textura según niveles/slots del conector
         ResourceLocation tex = (this.menu.getFilterSlots() == 18) ? TEXTURE_LVL2 : TEXTURE_BASE;
         guiGraphics.blit(tex, x, y, 0, 0, this.imageWidth, this.imageHeight);
     }
-    
+
     @Override
     protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         // Se han eliminado las etiquetas de título e inventario

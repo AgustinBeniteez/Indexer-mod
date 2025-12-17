@@ -1,49 +1,46 @@
 package com.agustinbenitez.indexer.network;
 
+import com.agustinbenitez.indexer.IndexerMod;
+import com.agustinbenitez.indexer.init.ModDataComponents;
 import com.agustinbenitez.indexer.item.AttributeFilterItem;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.network.NetworkEvent;
+import net.minecraftforge.event.network.CustomPayloadEvent;
 
-import java.util.function.Supplier;
+public record AttributeFilterPacket(int slotIndex, String attribute) implements CustomPacketPayload {
+    public static final Type<AttributeFilterPacket> TYPE = new Type<>(
+            ResourceLocation.fromNamespaceAndPath(IndexerMod.MOD_ID, "attribute_filter"));
 
-public class AttributeFilterPacket {
-    private final int slotIndex;
-    private final String attribute;
-    
-    public AttributeFilterPacket(int slotIndex, String attribute) {
-        this.slotIndex = slotIndex;
-        this.attribute = attribute;
+    public static final StreamCodec<RegistryFriendlyByteBuf, AttributeFilterPacket> STREAM_CODEC = StreamCodec
+            .composite(
+                    ByteBufCodecs.INT, AttributeFilterPacket::slotIndex,
+                    ByteBufCodecs.STRING_UTF8, AttributeFilterPacket::attribute,
+                    AttributeFilterPacket::new);
+
+    @Override
+    public Type<? extends CustomPacketPayload> type() {
+        return TYPE;
     }
-    
-    public AttributeFilterPacket(FriendlyByteBuf buf) {
-        this.slotIndex = buf.readInt();
-        this.attribute = buf.readUtf();
-    }
-    
-    public void toBytes(FriendlyByteBuf buf) {
-        buf.writeInt(this.slotIndex);
-        buf.writeUtf(this.attribute);
-    }
-    
-    public boolean handle(Supplier<NetworkEvent.Context> supplier) {
-        NetworkEvent.Context context = supplier.get();
+
+    public void handle(CustomPayloadEvent.Context context) {
         context.enqueueWork(() -> {
             ServerPlayer player = context.getSender();
             if (player != null) {
                 ItemStack itemStack = player.getInventory().getItem(this.slotIndex);
-                
+
                 if (itemStack.getItem() instanceof AttributeFilterItem) {
-                    CompoundTag tag = itemStack.getOrCreateTag();
-                    tag.putString("attribute_filter", this.attribute);
-                    
-                    player.sendSystemMessage(Component.translatable("message.indexer.attribute_filter.attribute_updated", this.attribute));
+                    itemStack.set(ModDataComponents.ATTRIBUTE_FILTER.get(), this.attribute);
+
+                    player.sendSystemMessage(Component
+                            .translatable("message.indexer.attribute_filter.attribute_updated", this.attribute));
                 }
             }
         });
-        return true;
     }
 }

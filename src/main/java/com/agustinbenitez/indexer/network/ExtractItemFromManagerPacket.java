@@ -1,46 +1,44 @@
 package com.agustinbenitez.indexer.network;
 
+import com.agustinbenitez.indexer.IndexerMod;
 import com.agustinbenitez.indexer.block.entity.IndexerManagerBlockEntity;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.network.NetworkEvent;
+import net.minecraftforge.event.network.CustomPayloadEvent;
 
-import java.util.function.Supplier;
+public record ExtractItemFromManagerPacket(BlockPos managerPos, ResourceLocation itemId, int count,
+        ItemStack variantStack) implements CustomPacketPayload {
+    public static final Type<ExtractItemFromManagerPacket> TYPE = new Type<>(
+            ResourceLocation.fromNamespaceAndPath(IndexerMod.MOD_ID, "extract_item_from_manager"));
 
-public class ExtractItemFromManagerPacket {
-    private final BlockPos managerPos;
-    private final ResourceLocation itemId;
-    private final int count;
-    private final ItemStack variantStack;
+    public static final StreamCodec<RegistryFriendlyByteBuf, ExtractItemFromManagerPacket> STREAM_CODEC = StreamCodec
+            .composite(
+                    BlockPos.STREAM_CODEC, ExtractItemFromManagerPacket::managerPos,
+                    ResourceLocation.STREAM_CODEC, ExtractItemFromManagerPacket::itemId,
+                    ByteBufCodecs.INT, ExtractItemFromManagerPacket::count,
+                    ItemStack.STREAM_CODEC, ExtractItemFromManagerPacket::variantStack,
+                    ExtractItemFromManagerPacket::new);
 
-    public ExtractItemFromManagerPacket(BlockPos managerPos, ResourceLocation itemId, int count, ItemStack variantStack) {
-        this.managerPos = managerPos;
-        this.itemId = itemId;
-        this.count = count;
-        this.variantStack = variantStack.copy();
-        this.variantStack.setCount(1);
+    public static ExtractItemFromManagerPacket create(BlockPos managerPos, ResourceLocation itemId, int count,
+            ItemStack variantStack) {
+        ItemStack copy = variantStack.copy();
+        copy.setCount(1);
+        return new ExtractItemFromManagerPacket(managerPos, itemId, count, copy);
     }
 
-    public ExtractItemFromManagerPacket(FriendlyByteBuf buf) {
-        this.managerPos = buf.readBlockPos();
-        this.itemId = buf.readResourceLocation();
-        this.count = buf.readInt();
-        this.variantStack = buf.readItem();
+    @Override
+    public Type<? extends CustomPacketPayload> type() {
+        return TYPE;
     }
 
-    public void toBytes(FriendlyByteBuf buf) {
-        buf.writeBlockPos(managerPos);
-        buf.writeResourceLocation(itemId);
-        buf.writeInt(count);
-        buf.writeItem(variantStack);
-    }
-
-    public boolean handle(Supplier<NetworkEvent.Context> supplier) {
-        NetworkEvent.Context context = supplier.get();
+    public void handle(CustomPayloadEvent.Context context) {
         context.enqueueWork(() -> {
             ServerPlayer player = context.getSender();
             if (player != null) {
@@ -55,6 +53,5 @@ public class ExtractItemFromManagerPacket {
                 }
             }
         });
-        return true;
     }
 }

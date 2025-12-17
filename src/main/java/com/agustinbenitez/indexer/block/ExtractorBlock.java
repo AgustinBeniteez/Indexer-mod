@@ -23,16 +23,24 @@ import net.minecraft.core.Direction;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.mojang.serialization.MapCodec;
+
 import javax.annotation.Nullable;
 
 public class ExtractorBlock extends BaseEntityBlock {
+    public static final MapCodec<ExtractorBlock> CODEC = simpleCodec(ExtractorBlock::new);
     private static final VoxelShape SHAPE = Block.box(0, 0, 0, 16, 16, 16);
-    
+
     // Mapa para rastrear si un bloque fue roto en modo creativo
     private static final Map<BlockPos, Boolean> creativeModeBreaks = new ConcurrentHashMap<>();
 
     public ExtractorBlock(Properties properties) {
         super(properties);
+    }
+
+    @Override
+    protected MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
     }
 
     @Override
@@ -46,17 +54,19 @@ public class ExtractorBlock extends BaseEntityBlock {
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player,
+            BlockHitResult hit) {
         if (!level.isClientSide()) {
             // Verificar si hay un cofre arriba y permitir abrirlo
             BlockPos abovePos = pos.above();
             BlockEntity aboveEntity = level.getBlockEntity(abovePos);
-            
-            if (aboveEntity instanceof Container && 
-                aboveEntity.getClass().getName().contains("ChestBlockEntity")) {
+
+            if (aboveEntity instanceof Container &&
+                    aboveEntity.getClass().getName().contains("ChestBlockEntity")) {
                 // Si hay un cofre arriba, permitir que el jugador lo abra
-                BlockHitResult newHit = new BlockHitResult(hit.getLocation(), hit.getDirection(), abovePos, hit.isInside());
-                return level.getBlockState(abovePos).use(level, player, hand, newHit);
+                BlockHitResult newHit = new BlockHitResult(hit.getLocation(), hit.getDirection(), abovePos,
+                        hit.isInside());
+                return level.getBlockState(abovePos).useWithoutItem(level, player, newHit);
             }
         }
         // No tiene interfaz propia, solo retorna éxito
@@ -71,7 +81,8 @@ public class ExtractorBlock extends BaseEntityBlock {
 
     @Nullable
     @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
+            BlockEntityType<T> type) {
         if (level.isClientSide()) {
             return null;
         }
@@ -80,19 +91,19 @@ public class ExtractorBlock extends BaseEntityBlock {
     }
 
     @Override
-    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         // Registrar si el jugador está en modo creativo
         creativeModeBreaks.put(pos, player.getAbilities().instabuild);
-        super.playerWillDestroy(level, pos, state, player);
+        return super.playerWillDestroy(level, pos, state, player);
     }
-    
+
     @Override
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
         if (state.getBlock() != newState.getBlock()) {
             // Verificar si el bloque fue roto en modo creativo
             Boolean wasCreativeBreak = creativeModeBreaks.remove(pos);
             boolean isCreativeBreak = wasCreativeBreak != null && wasCreativeBreak;
-            
+
             // Solo dropear items si NO fue roto en modo creativo
             if (!isCreativeBreak) {
                 // Dropear el ítem del bloque Extractor

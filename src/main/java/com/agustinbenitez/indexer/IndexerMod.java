@@ -5,6 +5,7 @@ import com.agustinbenitez.indexer.init.ModItems;
 import com.agustinbenitez.indexer.init.ModCreativeTabs;
 import com.agustinbenitez.indexer.init.ModBlockEntities;
 import com.agustinbenitez.indexer.init.ModMenuTypes;
+import com.agustinbenitez.indexer.init.ModDataComponents;
 import com.agustinbenitez.indexer.network.ModNetworking;
 
 import net.minecraft.resources.ResourceLocation;
@@ -29,15 +30,13 @@ public class IndexerMod {
         ModCreativeTabs.register(modEventBus);
         ModBlockEntities.register(modEventBus);
         ModMenuTypes.register(modEventBus);
-        
-        // Register networking
-        ModNetworking.register();
+        ModDataComponents.register(modEventBus);
 
         // Register ourselves for server and other game events
         MinecraftForge.EVENT_BUS.register(this);
     }
 
     public static ResourceLocation id(String path) {
-        return new ResourceLocation(MOD_ID, path);
+        return ResourceLocation.fromNamespaceAndPath(MOD_ID, path);
     }
 }

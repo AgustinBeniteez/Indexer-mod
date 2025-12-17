@@ -1,7 +1,8 @@
 package com.agustinbenitez.indexer.item;
 
-import net.minecraft.nbt.CompoundTag;
+import com.agustinbenitez.indexer.init.ModDataComponents;
 import net.minecraft.network.chat.Component;
+import net.minecraftforge.registries.RegistryObject;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.player.Player;
@@ -13,18 +14,20 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.fml.DistExecutor;
 
+import net.minecraft.world.item.Item.TooltipContext;
+
 import java.util.List;
 
 public class CustomTagFilterItem extends Item {
-    
+
     public CustomTagFilterItem(Properties properties) {
         super(properties);
     }
-    
+
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack itemStack = player.getItemInHand(hand);
-        
+
         if (level.isClientSide) {
             // Abrir la GUI en el cliente
             int slotIndex = player.getInventory().selected;
@@ -33,46 +36,44 @@ public class CustomTagFilterItem extends Item {
             }
             openCustomTagFilterScreen(itemStack, slotIndex);
         }
-        
+
         return InteractionResultHolder.sidedSuccess(itemStack, level.isClientSide);
     }
-    
+
     @OnlyIn(Dist.CLIENT)
     private void openCustomTagFilterScreen(ItemStack itemStack, int slotIndex) {
         DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
             net.minecraft.client.Minecraft.getInstance().setScreen(
-                new com.agustinbenitez.indexer.screen.CustomTagFilterScreen(itemStack, slotIndex));
+                    new com.agustinbenitez.indexer.screen.CustomTagFilterScreen(itemStack, slotIndex));
         });
     }
-    
+
     @Override
-    public void appendHoverText(ItemStack stack, Level level, List<Component> tooltipComponents, TooltipFlag isAdvanced) {
+    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltipComponents,
+            TooltipFlag isAdvanced) {
         tooltipComponents.add(Component.translatable("item.indexer.custom_tag_blocker.tooltip"));
         tooltipComponents.add(Component.translatable("item.indexer.custom_tag_blocker.description"));
-        
-        CompoundTag tag = stack.getTag();
-        if (tag != null && tag.contains("custom_tag")) {
-            String customTag = tag.getString("custom_tag");
-            Component tagComponent = Component.translatable("item.indexer.custom_tag_blocker.current_tag", 
-                Component.literal(customTag).withStyle(style -> style.withColor(0x5555FF))); // Azul
+
+        if (stack.has(ModDataComponents.CUSTOM_TAG.get())) {
+            String customTag = stack.get(ModDataComponents.CUSTOM_TAG.get());
+            Component tagComponent = Component.translatable("item.indexer.custom_tag_blocker.current_tag",
+                    Component.literal(customTag).withStyle(style -> style.withColor(0x5555FF))); // Azul
             tooltipComponents.add(tagComponent);
         } else {
             tooltipComponents.add(Component.translatable("item.indexer.custom_tag_blocker.no_tag"));
         }
-        
-        super.appendHoverText(stack, level, tooltipComponents, isAdvanced);
+
+        super.appendHoverText(stack, context, tooltipComponents, isAdvanced);
     }
-    
+
     public String getCustomTag(ItemStack stack) {
-        CompoundTag tag = stack.getTag();
-        if (tag != null && tag.contains("custom_tag")) {
-            return tag.getString("custom_tag");
+        if (stack.has(ModDataComponents.CUSTOM_TAG.get())) {
+            return stack.get(ModDataComponents.CUSTOM_TAG.get());
         }
         return "";
     }
-    
+
     public void setCustomTag(ItemStack stack, String customTag) {
-        CompoundTag tag = stack.getOrCreateTag();
-        tag.putString("custom_tag", customTag);
+        stack.set(ModDataComponents.CUSTOM_TAG.get(), customTag);
     }
 }

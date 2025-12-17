@@ -1,5 +1,5 @@
 modLoader="javafml"
-loaderVersion="[47,)"
+loaderVersion="[52,)"
 license="MIT"
 
 [[mods]]
@@ -8,21 +8,18 @@ version="1.0.7"
 displayName="Indexer"
 authors="AgustinBenitez"
 logoFile="assets/indexer/textures/gui/logo.png"
-description='''Indexer is an advanced system for automatically filtering and organizing the contents of your chest/containers in Minecraft. Organize your storage and automate item sorting with Indexer!
-Visit our GitHub repository: https://github.com/AgustinBeniteez/Indexer-mod
-Download new versions at: https://www.curseforge.com/minecraft/mc-mods/indexer
-Video Tutorial : https://youtu.be/rm9Hx_9Qvbw'''
+description="Indexer is an advanced system for automatically filtering and organizing the contents of your chest/containers in Minecraft."
 
 [[dependencies.indexer]]
 modId="forge"
 mandatory=true
-versionRange="[47,)"
+versionRange="[52,)"
 ordering="NONE"
 side="BOTH"
 
 [[dependencies.indexer]]
 modId="minecraft"
 mandatory=true
-versionRange="[1.20.1]"
+versionRange="[1.21.1]"
 ordering="NONE"
 side="BOTH"

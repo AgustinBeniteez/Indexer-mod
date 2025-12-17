@@ -1,48 +1,54 @@
 package com.agustinbenitez.indexer.network;
 
+import com.agustinbenitez.indexer.IndexerMod;
 import com.agustinbenitez.indexer.block.entity.IndexerControllerBlockEntity;
 import com.agustinbenitez.indexer.screen.IndexerControllerNetworkScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.event.network.CustomPayloadEvent;
 import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkEvent;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Supplier;
 
-public class ContainerListUpdatePacket {
-    private final List<ContainerData> containers;
-    
-    public ContainerListUpdatePacket(List<IndexerControllerBlockEntity.ContainerNetworkInfo> networkContainers) {
-        this.containers = new ArrayList<>();
+public record ContainerListUpdatePacket(List<NetworkContainerData> containers) implements CustomPacketPayload {
+    public static final Type<ContainerListUpdatePacket> TYPE = new Type<>(
+            ResourceLocation.fromNamespaceAndPath(IndexerMod.MOD_ID, "container_list_update"));
+
+    public static final StreamCodec<RegistryFriendlyByteBuf, ContainerListUpdatePacket> STREAM_CODEC = StreamCodec
+            .composite(
+                    NetworkContainerData.STREAM_CODEC.apply(net.minecraft.network.codec.ByteBufCodecs.list()),
+                    ContainerListUpdatePacket::containers,
+                    ContainerListUpdatePacket::new);
+
+    public static ContainerListUpdatePacket create(
+            List<IndexerControllerBlockEntity.ContainerNetworkInfo> networkContainers) {
+        return new ContainerListUpdatePacket(convert(networkContainers));
+    }
+
+    private static List<NetworkContainerData> convert(
+            List<IndexerControllerBlockEntity.ContainerNetworkInfo> networkContainers) {
+        List<NetworkContainerData> list = new ArrayList<>();
         for (IndexerControllerBlockEntity.ContainerNetworkInfo info : networkContainers) {
-            this.containers.add(new ContainerData(info));
+            list.add(new NetworkContainerData(info));
         }
+        return list;
     }
-    
-    public ContainerListUpdatePacket(FriendlyByteBuf buf) {
-        int size = buf.readInt();
-        this.containers = new ArrayList<>();
-        for (int i = 0; i < size; i++) {
-            this.containers.add(ContainerData.fromBuffer(buf));
-        }
+
+    @Override
+    public Type<? extends CustomPacketPayload> type() {
+        return TYPE;
     }
-    
-    public void toBytes(FriendlyByteBuf buf) {
-        buf.writeInt(containers.size());
-        for (ContainerData container : containers) {
-            container.toBuffer(buf);
-        }
-    }
-    
-    public boolean handle(Supplier<NetworkEvent.Context> supplier) {
-        NetworkEvent.Context context = supplier.get();
+
+    public void handle(CustomPayloadEvent.Context context) {
         context.enqueueWork(() -> {
             DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
                 Minecraft mc = Minecraft.getInstance();
@@ -51,18 +57,20 @@ public class ContainerListUpdatePacket {
                 }
             });
         });
-        return true;
     }
-    
-    public static class ContainerData {
+
+    public static class NetworkContainerData {
         public BlockPos position;
         public String containerType;
         public int itemCount;
         public int maxSlots;
         public List<ItemStack> filters;
         public Map<String, Integer> uniqueItems;
-        
-        public ContainerData(IndexerControllerBlockEntity.ContainerNetworkInfo info) {
+
+        public static final StreamCodec<RegistryFriendlyByteBuf, NetworkContainerData> STREAM_CODEC = StreamCodec
+                .of((buf, data) -> data.toBuffer(buf), NetworkContainerData::fromBuffer);
+
+        public NetworkContainerData(IndexerControllerBlockEntity.ContainerNetworkInfo info) {
             this.position = info.position;
             this.containerType = info.containerType;
             this.itemCount = info.itemCount;
@@ -70,20 +78,20 @@ public class ContainerListUpdatePacket {
             this.filters = new ArrayList<>(info.filters);
             this.uniqueItems = new HashMap<>(info.uniqueItems);
         }
-        
-        public ContainerData() {
+
+        public NetworkContainerData() {
             this.filters = new ArrayList<>();
             this.uniqueItems = new HashMap<>();
         }
-        
-        public void toBuffer(FriendlyByteBuf buf) {
+
+        public void toBuffer(RegistryFriendlyByteBuf buf) {
             buf.writeBlockPos(position);
             buf.writeUtf(containerType);
             buf.writeInt(itemCount);
             buf.writeInt(maxSlots);
             buf.writeInt(filters.size());
             for (ItemStack filter : filters) {
-                buf.writeItem(filter);
+                ItemStack.STREAM_CODEC.encode(buf, filter);
             }
             buf.writeInt(uniqueItems.size());
             for (Map.Entry<String, Integer> entry : uniqueItems.entrySet()) {
@@ -91,9 +99,9 @@ public class ContainerListUpdatePacket {
                 buf.writeInt(entry.getValue());
             }
         }
-        
-        public static ContainerData fromBuffer(FriendlyByteBuf buf) {
-            ContainerData data = new ContainerData();
+
+        public static NetworkContainerData fromBuffer(RegistryFriendlyByteBuf buf) {
+            NetworkContainerData data = new NetworkContainerData();
             data.position = buf.readBlockPos();
             data.containerType = buf.readUtf();
             data.itemCount = buf.readInt();
@@ -101,7 +109,7 @@ public class ContainerListUpdatePacket {
             int filterCount = buf.readInt();
             data.filters = new ArrayList<>();
             for (int i = 0; i < filterCount; i++) {
-                data.filters.add(buf.readItem());
+                data.filters.add(ItemStack.STREAM_CODEC.decode(buf));
             }
             int uniqueItemsCount = buf.readInt();
             data.uniqueItems = new HashMap<>();

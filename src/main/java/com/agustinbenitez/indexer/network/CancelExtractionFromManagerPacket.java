@@ -1,37 +1,40 @@
 package com.agustinbenitez.indexer.network;
 
+import com.agustinbenitez.indexer.IndexerMod;
 import com.agustinbenitez.indexer.block.entity.IndexerManagerBlockEntity;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.network.NetworkEvent;
+import net.minecraftforge.event.network.CustomPayloadEvent;
 
-import java.util.function.Supplier;
+public record CancelExtractionFromManagerPacket(BlockPos managerPos, ItemStack variantStack)
+        implements CustomPacketPayload {
+    public static final Type<CancelExtractionFromManagerPacket> TYPE = new Type<>(
+            ResourceLocation.fromNamespaceAndPath(IndexerMod.MOD_ID, "cancel_extraction"));
 
-public class CancelExtractionFromManagerPacket {
-    private final BlockPos managerPos;
-    private final ItemStack variantStack;
+    public static final StreamCodec<RegistryFriendlyByteBuf, CancelExtractionFromManagerPacket> STREAM_CODEC = StreamCodec
+            .composite(
+                    BlockPos.STREAM_CODEC, CancelExtractionFromManagerPacket::managerPos,
+                    ItemStack.STREAM_CODEC, CancelExtractionFromManagerPacket::variantStack,
+                    CancelExtractionFromManagerPacket::new);
 
-    public CancelExtractionFromManagerPacket(BlockPos managerPos, ItemStack variantStack) {
-        this.managerPos = managerPos;
-        this.variantStack = variantStack.copy();
-        this.variantStack.setCount(1);
+    public static CancelExtractionFromManagerPacket create(BlockPos managerPos, ItemStack variantStack) {
+        ItemStack copy = variantStack.copy();
+        copy.setCount(1);
+        return new CancelExtractionFromManagerPacket(managerPos, copy);
     }
 
-    public CancelExtractionFromManagerPacket(FriendlyByteBuf buf) {
-        this.managerPos = buf.readBlockPos();
-        this.variantStack = buf.readItem();
+    @Override
+    public Type<? extends CustomPacketPayload> type() {
+        return TYPE;
     }
 
-    public void toBytes(FriendlyByteBuf buf) {
-        buf.writeBlockPos(managerPos);
-        buf.writeItem(variantStack);
-    }
-
-    public boolean handle(Supplier<NetworkEvent.Context> supplier) {
-        NetworkEvent.Context context = supplier.get();
+    public void handle(CustomPayloadEvent.Context context) {
         context.enqueueWork(() -> {
             ServerPlayer player = context.getSender();
             if (player != null) {
@@ -42,6 +45,5 @@ public class CancelExtractionFromManagerPacket {
                 }
             }
         });
-        return true;
     }
 }

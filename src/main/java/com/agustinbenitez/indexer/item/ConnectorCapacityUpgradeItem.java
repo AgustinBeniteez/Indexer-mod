@@ -22,11 +22,13 @@ public class ConnectorCapacityUpgradeItem extends Item {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.translatable("item.indexer.connector_capacity_upgrade.tooltip").withStyle(ChatFormatting.GRAY));
+    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+        tooltip.add(Component.translatable("item.indexer.connector_capacity_upgrade.tooltip")
+                .withStyle(ChatFormatting.GRAY));
         int remainingUses = stack.getMaxDamage() - stack.getDamageValue();
-        tooltip.add(Component.translatable("item.indexer.connector_capacity_upgrade.uses_info", remainingUses).withStyle(ChatFormatting.AQUA));
-        super.appendHoverText(stack, level, tooltip, flag);
+        tooltip.add(Component.translatable("item.indexer.connector_capacity_upgrade.uses_info", remainingUses)
+                .withStyle(ChatFormatting.AQUA));
+        super.appendHoverText(stack, context, tooltip, flag);
     }
 
     @Override
@@ -42,13 +44,15 @@ public class ConnectorCapacityUpgradeItem extends Item {
 
         BlockEntity blockEntity = level.getBlockEntity(pos);
         if (!(blockEntity instanceof IndexerConnectorBlockEntity connector)) {
-            player.sendSystemMessage(Component.translatable("message.indexer.connector_upgrade.only_connector").withStyle(ChatFormatting.RED));
+            player.sendSystemMessage(Component.translatable("message.indexer.connector_upgrade.only_connector")
+                    .withStyle(ChatFormatting.RED));
             return InteractionResult.FAIL;
         }
 
         // Evitar aplicar si ya tiene la mejora
         if (connector.getConnectorLevel() >= 2) {
-            player.sendSystemMessage(Component.translatable("message.indexer.connector_upgrade.already_applied").withStyle(ChatFormatting.YELLOW));
+            player.sendSystemMessage(Component.translatable("message.indexer.connector_upgrade.already_applied")
+                    .withStyle(ChatFormatting.YELLOW));
             return InteractionResult.FAIL;
         }
 
@@ -57,11 +61,17 @@ public class ConnectorCapacityUpgradeItem extends Item {
         connector.ensureFilterCapacity();
         connector.setChanged();
 
-        player.sendSystemMessage(Component.translatable("message.indexer.connector_upgrade.success").withStyle(ChatFormatting.GREEN));
+        player.sendSystemMessage(
+                Component.translatable("message.indexer.connector_upgrade.success").withStyle(ChatFormatting.GREEN));
 
         // Consumir un uso del ítem (durabilidad)
-        if (!player.getAbilities().instabuild) {
-            itemstack.hurtAndBreak(1, player, p -> p.broadcastBreakEvent(context.getHand()));
+        if (!player.getAbilities().instabuild && level instanceof net.minecraft.server.level.ServerLevel serverLevel
+                && player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
+            itemstack.hurtAndBreak(1, serverLevel, serverPlayer,
+                    item -> serverPlayer.onEquippedItemBroken(item,
+                            context.getHand() == net.minecraft.world.InteractionHand.MAIN_HAND
+                                    ? net.minecraft.world.entity.EquipmentSlot.MAINHAND
+                                    : net.minecraft.world.entity.EquipmentSlot.OFFHAND));
         }
 
         return InteractionResult.CONSUME;

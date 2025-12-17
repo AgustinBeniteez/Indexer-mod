@@ -28,7 +28,7 @@ public class IndexerPipeBlock extends Block {
     public static final BooleanProperty WEST = BooleanProperty.create("west");
     public static final BooleanProperty UP = BooleanProperty.create("up");
     public static final BooleanProperty DOWN = BooleanProperty.create("down");
-    
+
     // Mapa para rastrear si un bloque fue roto en modo creativo
     private static final Map<BlockPos, Boolean> creativeModeBreaks = new ConcurrentHashMap<>();
 
@@ -63,19 +63,21 @@ public class IndexerPipeBlock extends Block {
     }
 
     @Override
-    public void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos fromPos, boolean isMoving) {
+    public void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos fromPos,
+            boolean isMoving) {
         BlockState newState = getConnectionState(level, pos);
         if (!newState.equals(state)) {
             level.setBlock(pos, newState, 3);
         }
-        
+
         // Notificar a los controladores cercanos sobre el cambio
         notifyNearbyControllers(level, pos);
     }
-    
+
     private void notifyNearbyControllers(Level level, BlockPos pos) {
-        if (level.isClientSide()) return;
-        
+        if (level.isClientSide())
+            return;
+
         // Buscar controladores en un radio de 16 bloques
         int searchRadius = 16;
         for (int x = -searchRadius; x <= searchRadius; x++) {
@@ -83,23 +85,26 @@ public class IndexerPipeBlock extends Block {
                 for (int z = -searchRadius; z <= searchRadius; z++) {
                     BlockPos checkPos = pos.offset(x, y, z);
                     BlockEntity blockEntity = level.getBlockEntity(checkPos);
-                    
+
                     if (blockEntity instanceof IndexerControllerBlockEntity controller) {
                         controller.markNetworkChanged();
-                        // Solo necesitamos notificar a un controlador, ya que cada uno gestionará su propia red
+                        // Solo necesitamos notificar a un controlador, ya que cada uno gestionará su
+                        // propia red
                         return;
                     }
                 }
             }
         }
-        
-        // También notificar a conectores cercanos para que actualicen su estado de conexión
+
+        // También notificar a conectores cercanos para que actualicen su estado de
+        // conexión
         notifyNearbyConnectors(level, pos);
     }
-    
+
     private void notifyNearbyConnectors(Level level, BlockPos pos) {
-        if (level.isClientSide()) return;
-        
+        if (level.isClientSide())
+            return;
+
         // Buscar conectores en un radio de 16 bloques
         int searchRadius = 16;
         for (int x = -searchRadius; x <= searchRadius; x++) {
@@ -107,12 +112,13 @@ public class IndexerPipeBlock extends Block {
                 for (int z = -searchRadius; z <= searchRadius; z++) {
                     BlockPos checkPos = pos.offset(x, y, z);
                     BlockState blockState = level.getBlockState(checkPos);
-                    
+
                     if (blockState.getBlock() instanceof IndexerConnectorBlock) {
                         // Verificar si el estado de conexión del conector ha cambiado
                         boolean isConnected = IndexerConnectorBlock.isConnectedToController(level, checkPos);
                         if (blockState.getValue(IndexerConnectorBlock.CONNECTED) != isConnected) {
-                            level.setBlock(checkPos, blockState.setValue(IndexerConnectorBlock.CONNECTED, isConnected), Block.UPDATE_ALL);
+                            level.setBlock(checkPos, blockState.setValue(IndexerConnectorBlock.CONNECTED, isConnected),
+                                    Block.UPDATE_ALL);
                         }
                     }
                 }
@@ -143,13 +149,13 @@ public class IndexerPipeBlock extends Block {
         Block neighborBlock = neighborState.getBlock();
 
         return neighborBlock == this ||
-               neighborBlock == ModBlocks.INDEXER_CONTROLLER.get() ||
-               neighborBlock == ModBlocks.INDEXER_CONNECTOR.get() ||
-               neighborBlock == ModBlocks.INDEXER_MANAGER.get() ||
-               neighborBlock == ModBlocks.DROP_BOX.get() ||
-               neighborBlock == ModBlocks.EXTRACTOR.get();
+                neighborBlock == ModBlocks.INDEXER_CONTROLLER.get() ||
+                neighborBlock == ModBlocks.INDEXER_CONNECTOR.get() ||
+                neighborBlock == ModBlocks.INDEXER_MANAGER.get() ||
+                neighborBlock == ModBlocks.DROP_BOX.get() ||
+                neighborBlock == ModBlocks.EXTRACTOR.get();
     }
-    
+
     public static BooleanProperty getPropertyForDirection(Direction direction) {
         return switch (direction) {
             case NORTH -> NORTH;
@@ -186,20 +192,21 @@ public class IndexerPipeBlock extends Block {
 
         return shape;
     }
-    
-    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+
+    @Override
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         // Registrar si el jugador está en modo creativo
         creativeModeBreaks.put(pos, player.getAbilities().instabuild);
-        super.playerWillDestroy(level, pos, state, player);
+        return super.playerWillDestroy(level, pos, state, player);
     }
-    
+
     @Override
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
         if (state.getBlock() != newState.getBlock()) {
             // Verificar si el bloque fue roto en modo creativo
             Boolean wasCreativeBreak = creativeModeBreaks.remove(pos);
             boolean isCreativeBreak = wasCreativeBreak != null && wasCreativeBreak;
-            
+
             // Solo dropear items si NO fue roto en modo creativo
             if (!isCreativeBreak) {
                 // Dropear el ítem de la tubería cuando se rompe el bloque
