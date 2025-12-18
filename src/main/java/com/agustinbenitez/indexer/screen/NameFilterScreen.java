@@ -92,19 +92,27 @@ public class NameFilterScreen extends Screen {
         int guiLeft = (this.width - GUI_WIDTH) / 2;
         int guiTop = (this.height - GUI_HEIGHT) / 2;
 
-        // Fondo de la GUI (igual que otros filtros)
+        // 1. Background Rectangles (Z=500)
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0, 0, 500);
         guiGraphics.fill(guiLeft, guiTop, guiLeft + GUI_WIDTH, guiTop + GUI_HEIGHT, 0xC0101010);
         guiGraphics.fill(guiLeft + 1, guiTop + 1, guiLeft + GUI_WIDTH - 1, guiTop + GUI_HEIGHT - 1, 0xFF2D2D30);
+        guiGraphics.pose().popPose();
 
-        // Título (centrado como otros filtros)
+        // 2. Widgets (Z=600)
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0, 0, 600);
+        super.render(guiGraphics, mouseX, mouseY, partialTick);
+        guiGraphics.pose().popPose();
+
+        // 3. Text (Z=700)
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0, 0, 700);
         Component title = Component.translatable("gui.indexer.name_filter.title");
         guiGraphics.drawCenteredString(this.font, title, guiLeft + GUI_WIDTH / 2, guiTop + 20, 0xFFFFFF);
-
-        // Instrucciones (igual que otros filtros)
         Component instructions = Component.translatable("gui.indexer.name_filter.instructions");
         guiGraphics.drawString(this.font, instructions, guiLeft + 20, guiTop + 40, 0xCCCCCC, false);
-
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
+        guiGraphics.pose().popPose();
     }
 
     private void confirmName() {

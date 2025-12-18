@@ -1,0 +1,307 @@
+[
+  {
+    "type": "minecraft:crafting_shaped",
+    "pattern": [
+      " E ",
+      " F ",
+      " N "
+    ],
+    "key": {
+      "E": { "item": "minecraft:enchanted_book" },
+      "F": { "item": "indexer:base_filter" },
+      "N": { "item": "minecraft:name_tag" }
+    },
+    "result": { "item": "indexer:attribute_filter" }
+  },
+  {
+    "type": "minecraft:crafting_shaped",
+    "pattern": [
+      "LLL",
+      "LIL",
+      "LLL"
+    ],
+    "key": {
+      "L": { "item": "minecraft:leather" },
+      "I": { "tag": "forge:ingots/iron" }
+    },
+    "result": { "item": "indexer:base_filter" }
+  },
+  {
+    "type": "minecraft:crafting_shaped",
+    "pattern": [
+      "NTN",
+      "NSN",
+      "NTN"
+    ],
+    "key": {
+      "N": { "tag": "forge:nuggets/gold" },
+      "T": { "item": "minecraft:repeater" },
+      "S": { "item": "minecraft:redstone" }
+    },
+    "result": { "item": "indexer:chip_manager", "count": 1 }
+  },
+  {
+    "type": "minecraft:crafting_shaped",
+    "pattern": [
+      "DDD",
+      "RCR",
+      "DDD"
+    ],
+    "key": {
+      "D": { "item": "minecraft:diamond" },
+      "R": { "item": "minecraft:repeater" },
+      "C": { "item": "indexer:indexer_connector" }
+    },
+    "result": { "item": "indexer:connector_capacity_upgrade", "count": 1 }
+  },
+  {
+    "type": "minecraft:crafting_shaped",
+    "pattern": [
+      " R ",
+      "RFR",
+      " N "
+    ],
+    "key": {
+      "R": { "item": "minecraft:redstone" },
+      "F": { "item": "indexer:base_filter" },
+      "N": { "item": "minecraft:name_tag" }
+    },
+    "result": { "item": "indexer:custom_tag_blocker" }
+  },
+  {
+    "type": "minecraft:crafting_shaped",
+    "pattern": [
+      "IRI",
+      "RHR",
+      "ICI"
+    ],
+    "key": {
+      "I": { "tag": "forge:ingots/iron" },
+      "R": { "item": "minecraft:redstone" },
+      "H": { "item": "minecraft:hopper" },
+      "C": { "item": "minecraft:chest" }
+    },
+    "result": { "item": "indexer:drop_box" }
+  },
+  {
+    "type": "minecraft:crafting_shaped",
+    "pattern": [
+      "IHI",
+      "RCR",
+      "IPI"
+    ],
+    "key": {
+      "I": { "tag": "forge:ingots/iron" },
+      "H": { "item": "minecraft:hopper" },
+      "R": { "item": "minecraft:redstone" },
+      "C": { "item": "minecraft:chest" },
+      "P": { "item": "minecraft:piston" }
+    },
+    "result": { "item": "indexer:extractor" }
+  },
+  {
+    "type": "minecraft:crafting_shaped",
+    "pattern": [
+      "LLL",
+      "SFP",
+      "LLL"
+    ],
+    "key": {
+      "L": { "item": "minecraft:leather" },
+      "S": { "item": "minecraft:cooked_beef" },
+      "F": { "item": "indexer:base_filter" },
+      "P": { "item": "minecraft:potato" }
+    },
+    "result": { "item": "indexer:food_filter" }
+  },
+  {
+    "type": "minecraft:crafting_shaped",
+    "pattern": [
+      "LCL",
+      "CFC",
+      "LBL"
+    ],
+    "key": {
+      "L": { "item": "minecraft:leather" },
+      "C": { "item": "minecraft:coal" },
+      "F": { "item": "indexer:base_filter" },
+      "B": { "item": "minecraft:charcoal" }
+    },
+    "result": { "item": "indexer:fuel_filter", "count": 1 }
+  },
+  {
+    "type": "minecraft:crafting_shaped",
+    "pattern": [
+      "ITI",
+      "RFR",
+      "ITI"
+    ],
+    "key": {
+      "I": { "tag": "forge:ingots/iron" },
+      "T": { "item": "minecraft:redstone_torch" },
+      "R": { "item": "minecraft:redstone" },
+      "F": { "item": "minecraft:item_frame" }
+    },
+    "result": { "item": "indexer:indexer_connector" }
+  },
+  {
+    "type": "minecraft:crafting_shaped",
+    "pattern": [
+      "IBI",
+      "RCR",
+      "III"
+    ],
+    "key": {
+      "I": { "tag": "forge:ingots/iron" },
+      "B": { "item": "minecraft:iron_block" },
+      "R": { "item": "minecraft:repeater" },
+      "C": { "item": "minecraft:chest" }
+    },
+    "result": { "item": "indexer:indexer_controller" }
+  },
+  {
+    "type": "minecraft:crafting_shaped",
+    "pattern": [
+      "RSR",
+      "ICI",
+      "RBR"
+    ],
+    "key": {
+      "S": { "item": "indexer:screen" },
+      "I": { "tag": "forge:ingots/iron" },
+      "R": { "item": "minecraft:redstone" },
+      "C": { "item": "indexer:chip_manager" },
+      "B": { "item": "minecraft:chest" }
+    },
+    "result": { "item": "indexer:indexer_manager", "count": 1 }
+  },
+  {
+    "type": "minecraft:crafting_shapeless",
+    "ingredients": [
+      { "item": "minecraft:book" },
+      { "item": "minecraft:chest" },
+      { "item": "indexer:indexer_pipe" }
+    ],
+    "result": { "item": "indexer:indexer_manual" }
+  },
+  {
+    "type": "minecraft:crafting_shaped",
+    "pattern": [
+      "III"
+    ],
+    "key": {
+      "I": { "tag": "forge:ingots/iron" }
+    },
+    "result": { "item": "indexer:indexer_pipe", "count": 10 }
+  },
+  {
+    "type": "minecraft:crafting_shaped",
+    "pattern": [
+      " P ",
+      "PFP",
+      " N "
+    ],
+    "key": {
+      "P": { "item": "minecraft:paper" },
+      "F": { "item": "indexer:base_filter" },
+      "N": { "item": "minecraft:name_tag" }
+    },
+    "result": { "item": "indexer:name_filter" }
+  },
+  {
+    "type": "minecraft:crafting_shaped",
+    "pattern": [
+      "PPP",
+      "RRR"
+    ],
+    "key": {
+      "P": { "item": "minecraft:glass_pane" },
+      "R": { "item": "minecraft:redstone" }
+    },
+    "result": { "item": "indexer:screen", "count": 1 }
+  },
+  {
+    "type": "minecraft:crafting_shaped",
+    "pattern": [
+      "LFL",
+      "PAH",
+      "LLL"
+    ],
+    "key": {
+      "L": { "item": "minecraft:leather" },
+      "F": { "item": "indexer:base_filter" },
+      "P": { "item": "minecraft:iron_pickaxe" },
+      "A": { "item": "minecraft:iron_axe" },
+      "H": { "item": "minecraft:iron_hoe" }
+    },
+    "result": { "item": "indexer:tools_filter" }
+  },
+  {
+    "type": "minecraft:crafting_shaped",
+    "pattern": [
+      "DDD",
+      "DUD",
+      "DDD"
+    ],
+    "key": {
+      "D": { "item": "minecraft:diamond" },
+      "U": { "item": "indexer:transfer_speed_upgrade_copper" }
+    },
+    "result": { "item": "indexer:transfer_speed_upgrade_advanced", "count": 1 }
+  },
+  {
+    "type": "minecraft:crafting_shaped",
+    "pattern": [
+      "GRG",
+      "RIR",
+      "GRG"
+    ],
+    "key": {
+      "G": { "item": "minecraft:gold_ingot" },
+      "R": { "item": "minecraft:redstone" },
+      "I": { "item": "indexer:indexer_controller" }
+    },
+    "result": { "item": "indexer:transfer_speed_upgrade_basic", "count": 1 }
+  },
+  {
+    "type": "minecraft:crafting_shaped",
+    "pattern": [
+      "CCC",
+      "CUC",
+      "CCC"
+    ],
+    "key": {
+      "C": { "item": "minecraft:copper_ingot" },
+      "U": { "item": "indexer:transfer_speed_upgrade_basic" }
+    },
+    "result": { "item": "indexer:transfer_speed_upgrade_copper", "count": 1 }
+  },
+  {
+    "type": "minecraft:crafting_shaped",
+    "pattern": [
+      "WSW",
+      "NUN",
+      "WSW"
+    ],
+    "key": {
+      "W": { "item": "minecraft:nether_star" },
+      "S": { "item": "minecraft:netherite_ingot" },
+      "N": { "item": "minecraft:netherite_ingot" },
+      "U": { "item": "indexer:transfer_speed_upgrade_elite" }
+    },
+    "result": { "item": "indexer:transfer_speed_upgrade_definitive", "count": 1 }
+  },
+  {
+    "type": "minecraft:crafting_shaped",
+    "pattern": [
+      "NNN",
+      "NUN",
+      "NNN"
+    ],
+    "key": {
+      "N": { "item": "minecraft:netherite_scrap" },
+      "U": { "item": "indexer:transfer_speed_upgrade_advanced" }
+    },
+    "result": { "item": "indexer:transfer_speed_upgrade_elite", "count": 1 }
+  }
+]

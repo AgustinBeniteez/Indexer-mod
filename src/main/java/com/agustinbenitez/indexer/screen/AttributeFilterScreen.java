@@ -144,22 +144,33 @@ public class AttributeFilterScreen extends Screen {
         int guiLeft = (this.width - GUI_WIDTH) / 2;
         int guiTop = (this.height - GUI_HEIGHT) / 2;
 
-        // Fondo de la GUI
+        // 1. Background Rectangles (Z=500)
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0, 0, 500);
         guiGraphics.fill(guiLeft, guiTop, guiLeft + GUI_WIDTH, guiTop + GUI_HEIGHT, 0xC0101010);
         guiGraphics.fill(guiLeft + 1, guiTop + 1, guiLeft + GUI_WIDTH - 1, guiTop + GUI_HEIGHT - 1, 0xFF2D2D30);
+        guiGraphics.pose().popPose();
 
-        // Título
+        // 2. Widgets (EditBox, Buttons) (Z=600)
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0, 0, 600);
+        super.render(guiGraphics, mouseX, mouseY, partialTick);
+        guiGraphics.pose().popPose();
+
+        // 3. Text (Z=700)
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0, 0, 700);
         Component title = Component.translatable("gui.indexer.attribute_filter.title");
         guiGraphics.drawCenteredString(this.font, title, guiLeft + GUI_WIDTH / 2, guiTop + 20, 0xFFFFFF);
-
-        // Instrucciones
         Component instructions = Component.translatable("gui.indexer.attribute_filter.instructions");
         guiGraphics.drawString(this.font, instructions, guiLeft + 20, guiTop + 40, 0xCCCCCC, false);
+        guiGraphics.pose().popPose();
 
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
-
-        // Renderizar sugerencias
+        // 4. Suggestions (Z=800)
         if (this.showSuggestions && !this.suggestions.isEmpty()) {
+            guiGraphics.pose().pushPose();
+            guiGraphics.pose().translate(0, 0, 800);
+
             int suggestionsX = this.attributeEditBox.getX();
             int suggestionsY = this.attributeEditBox.getY() + this.attributeEditBox.getHeight() + 2;
             int suggestionsWidth = this.attributeEditBox.getWidth();
@@ -183,6 +194,7 @@ public class AttributeFilterScreen extends Screen {
 
                 guiGraphics.drawString(this.font, suggestion, suggestionsX + 4, y + 2, 0xFFFFFF, false);
             }
+            guiGraphics.pose().popPose();
         }
     }
 
