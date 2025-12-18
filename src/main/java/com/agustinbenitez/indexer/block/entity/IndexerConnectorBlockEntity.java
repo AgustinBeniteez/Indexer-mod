@@ -1335,7 +1335,22 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
 
     @Override
     public net.minecraft.nbt.CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider registries) {
-        return super.getUpdateTag(registries);
+        CompoundTag tag = super.getUpdateTag(registries);
+        tag.putInt("ConnectorLevel", this.connectorLevel);
+
+        // Save current filters to the tag so client gets them immediately
+        CompoundTag filterItemsTag = new CompoundTag();
+        for (int i = 0; i < this.filterItems.size() && i < UPGRADED_FILTER_SLOTS; i++) {
+            ItemStack filterItem = this.filterItems.get(i);
+            if (!filterItem.isEmpty()) {
+                CompoundTag itemTag = new CompoundTag();
+                filterItem.save(registries, itemTag);
+                filterItemsTag.put("Item" + i, itemTag);
+            }
+        }
+        tag.put("FilterItems", filterItemsTag);
+
+        return tag;
     }
 
     @Override

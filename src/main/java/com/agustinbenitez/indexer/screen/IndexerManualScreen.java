@@ -218,6 +218,11 @@ public class IndexerManualScreen extends Screen {
                 pose.pushPose();
                 pose.translate(centerX, topPos + SCREEN_HEIGHT / 2, 0); // centrado vertical dentro del manual
                 pose.mulPose(Axis.ZP.rotationDegrees(angle));
+
+                com.mojang.blaze3d.systems.RenderSystem.setShaderTexture(0, LOGO);
+                com.mojang.blaze3d.platform.GlStateManager._texParameter(3553, 10241, 9728);
+                com.mojang.blaze3d.platform.GlStateManager._texParameter(3553, 10240, 9728);
+
                 guiGraphics.blit(LOGO, -logoSize / 2, -logoSize / 2, 0, 0, logoSize, logoSize, logoSize, logoSize);
                 pose.popPose();
                 return; // No renderizar botones/menú durante el splash
@@ -242,6 +247,13 @@ public class IndexerManualScreen extends Screen {
                 guiGraphics.drawString(this.font, pageText, centerX - (this.font.width(pageText) / 2),
                         topPos + SCREEN_HEIGHT - 15, 0xFFFFFF, false);
                 try {
+                    // Forzar el filtrado NEAREST para evitar que las imágenes se vean borrosas
+                    com.mojang.blaze3d.systems.RenderSystem.setShaderTexture(0, pageImages[currentPage]);
+                    com.mojang.blaze3d.platform.GlStateManager._texParameter(3553, 10241, 9728); // GL_TEXTURE_MIN_FILTER,
+                                                                                                 // GL_NEAREST
+                    com.mojang.blaze3d.platform.GlStateManager._texParameter(3553, 10240, 9728); // GL_TEXTURE_MAG_FILTER,
+                                                                                                 // GL_NEAREST
+
                     guiGraphics.blit(pageImages[currentPage], leftPos + 28, topPos + 30, 0, 0, 200, 120, 200, 120);
                 } catch (Exception e) {
                     guiGraphics.drawString(this.font,

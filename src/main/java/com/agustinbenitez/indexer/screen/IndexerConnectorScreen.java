@@ -20,8 +20,8 @@ public class IndexerConnectorScreen extends AbstractContainerScreen<IndexerConne
     public IndexerConnectorScreen(IndexerConnectorMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
         // Ajustar ancho según el número de slots de filtro
-        this.imageWidth = (menu.getFilterSlots() == 18) ? 256 : 176; // 256 para textura LVL2
-        this.imageHeight = 166; // Altura estándar para incluir el inventario del jugador
+        this.imageWidth = (menu.getFilterSlots() == 18) ? 210 : 176;
+        this.imageHeight = 166;
         this.inventoryLabelY = 74; // Posición de la etiqueta del inventario
         this.titleLabelY = 6; // Posición del título
     }
