@@ -21,6 +21,8 @@ java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 minecraft {
     mappings channel: 'official', version: '1.21.1'
 
+    copyIdeResources = true
+
     runs {
         client {
             workingDirectory project.file('run')
@@ -85,5 +87,11 @@ publishing {
         maven {
             url "file://${project.projectDir}/mcmodsrepo"
         }
+    }
+}
+
+sourceSets {
+    main {
+        output.setResourcesDir(file("${buildDir}/classes/java/main"))
     }
 }

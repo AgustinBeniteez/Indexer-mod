@@ -16,7 +16,7 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Mod(IndexerMod.MOD_ID)
+@Mod("indexer")
 public class IndexerMod {
     public static final String MOD_ID = "indexer";
     public static final Logger LOGGER = LoggerFactory.getLogger("indexer");
