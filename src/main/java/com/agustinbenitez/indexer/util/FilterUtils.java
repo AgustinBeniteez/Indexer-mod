@@ -1,5 +1,5 @@
 package com.agustinbenitez.indexer.util;
-
+ 
 import com.agustinbenitez.indexer.init.ModItems;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
@@ -91,25 +91,37 @@ public class FilterUtils {
         
         CompoundTag tag = customData.copyTag();
         String customTag = tag.getString("custom_tag_filter");
+        if (customTag.isEmpty() && tag.contains("custom_tag")) {
+            customTag = tag.getString("custom_tag");
+        }
         if (customTag.isEmpty()) {
             return true; // Sin tag configurado, permite todo (no bloquea nada)
         }
         
         // COMPORTAMIENTO DE BLOQUEO: Bloquear SOLO el item exacto configurado
         
-        // Verificar si es exactamente el mismo item
         String itemName = itemToCheck.getItem().getDescriptionId();
-        String filterItemName = customTag;
-        
-        // Si el customTag contiene el ID completo del item (ej: "item.minecraft.iron_pickaxe")
-        if (itemName.equals(filterItemName)) {
-            return false; // Bloquear este item específico
-        }
-        
-        // Si el customTag solo contiene el nombre corto (ej: "iron_pickaxe")
         String shortItemName = itemName.replace("item.minecraft.", "").replace("block.minecraft.", "");
-        if (shortItemName.equals(filterItemName)) {
-            return false; // Bloquear este item específico
+        net.minecraft.resources.ResourceLocation itemKey = BuiltInRegistries.ITEM.getKey(itemToCheck.getItem());
+        String rlFull = itemKey != null ? itemKey.toString() : "";
+        String rlPath = itemKey != null ? itemKey.getPath() : "";
+
+        String filterValue = customTag;
+
+        if (itemName.equals(filterValue)) {
+            return false;
+        }
+
+        if (shortItemName.equals(filterValue)) {
+            return false;
+        }
+
+        if (!rlFull.isEmpty() && rlFull.equals(filterValue)) {
+            return false;
+        }
+
+        if (!rlPath.isEmpty() && rlPath.equals(filterValue)) {
+            return false;
         }
         
         return true; // Permitir todos los demás items
@@ -118,17 +130,63 @@ public class FilterUtils {
     private static boolean passesAttributeFilter(ItemStack itemToCheck, ItemStack filterItem) {
         net.minecraft.world.item.component.CustomData customData = filterItem.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
         if (customData == null) {
-            return false; // Sin atributo configurado, no pasa nada
+            return false;
         }
         
         CompoundTag tag = customData.copyTag();
         String attributeFilter = tag.getString("attribute_filter");
         if (attributeFilter.isEmpty()) {
-            return false; // Sin atributo configurado, no pasa nada
+            return false;
         }
         
-        // Verificar si el item tiene el atributo especificado
         String filterLower = attributeFilter.toLowerCase();
+
+        net.minecraft.world.item.enchantment.ItemEnchantments enchantments = itemToCheck.get(net.minecraft.core.component.DataComponents.ENCHANTMENTS);
+        if (enchantments != null && !enchantments.isEmpty()) {
+            for (it.unimi.dsi.fastutil.objects.Object2IntMap.Entry<net.minecraft.core.Holder<net.minecraft.world.item.enchantment.Enchantment>> entry : enchantments.entrySet()) {
+                net.minecraft.resources.ResourceLocation enchId = entry.getKey().unwrapKey().map(net.minecraft.resources.ResourceKey::location).orElse(null);
+                if (enchId != null && enchId.toString().toLowerCase().contains(filterLower)) {
+                    return true;
+                }
+            }
+        }
+
+        net.minecraft.world.item.enchantment.ItemEnchantments storedEnchantments = itemToCheck.get(net.minecraft.core.component.DataComponents.STORED_ENCHANTMENTS);
+        if (storedEnchantments != null && !storedEnchantments.isEmpty()) {
+            for (it.unimi.dsi.fastutil.objects.Object2IntMap.Entry<net.minecraft.core.Holder<net.minecraft.world.item.enchantment.Enchantment>> entry : storedEnchantments.entrySet()) {
+                net.minecraft.resources.ResourceLocation enchId = entry.getKey().unwrapKey().map(net.minecraft.resources.ResourceKey::location).orElse(null);
+                if (enchId != null && enchId.toString().toLowerCase().contains(filterLower)) {
+                    return true;
+                }
+            }
+        }
+        
+        net.minecraft.world.item.component.CustomData itemCustomData = itemToCheck.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+        if (itemCustomData != null) {
+            CompoundTag itemTag = itemCustomData.copyTag();
+            
+            if (itemTag.contains("Enchantments")) {
+                net.minecraft.nbt.ListTag list = itemTag.getList("Enchantments", 10);
+                for (int i = 0; i < list.size(); i++) {
+                    CompoundTag ench = list.getCompound(i);
+                    String id = ench.getString("id").toLowerCase();
+                    if (id.contains(filterLower)) {
+                        return true;
+                    }
+                }
+            }
+            
+            if (itemTag.contains("StoredEnchantments")) {
+                net.minecraft.nbt.ListTag list = itemTag.getList("StoredEnchantments", 10);
+                for (int i = 0; i < list.size(); i++) {
+                    CompoundTag ench = list.getCompound(i);
+                    String id = ench.getString("id").toLowerCase();
+                    if (id.contains(filterLower)) {
+                        return true;
+                    }
+                }
+            }
+        }
         
         String itemName = itemToCheck.getItem().getDescriptionId().toLowerCase();
         String displayName = itemToCheck.getHoverName().getString().toLowerCase();

@@ -60,7 +60,9 @@ public class CustomTagFilterScreen extends Screen {
         CustomData customData = this.filterItem.get(DataComponents.CUSTOM_DATA);
         if (customData != null) {
             CompoundTag tag = customData.copyTag();
-            if (tag.contains("custom_tag")) {
+            if (tag.contains("custom_tag_filter")) {
+                this.tagEditBox.setValue(tag.getString("custom_tag_filter"));
+            } else if (tag.contains("custom_tag")) {
                 this.tagEditBox.setValue(tag.getString("custom_tag"));
             }
         }

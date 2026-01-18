@@ -323,24 +323,21 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
         
         BlockEntity containerEntity = this.level.getBlockEntity(this.connectedContainerPos);
         if (!(containerEntity instanceof Container) || containerEntity instanceof IndexerConnectorBlockEntity) {
-            this.connectedContainerPos = null; // Resetear la conexión si el contenedor ya no existe o es otro conector
+            this.connectedContainerPos = null;
             return false;
         }
 
-        // Verificar si es combustible válido y si el contenedor es un horno
+        if (isItemBlocked(stack)) {
+            return false;
+        }
+
         boolean isCoalOrCharcoal = stack.getItem().getDescriptionId().equals("item.minecraft.coal") || 
                                   stack.getItem().getDescriptionId().equals("item.minecraft.charcoal");
         boolean isLavaBucket = stack.getItem().getDescriptionId().equals("item.minecraft.lava_bucket");
         boolean isFurnace = containerEntity.getClass().getName().contains("FurnaceBlockEntity");
         
-        // Si es combustible válido (carbón, carbón vegetal o cubo de lava) y el contenedor es un horno, permitir siempre
         if ((isCoalOrCharcoal || isLavaBucket) && isFurnace) {
             return true;
-        }
-
-        // PRIORIDAD ABSOLUTA: Verificar si el item está bloqueado por un filtro de bloqueo
-        if (isItemBlocked(stack)) {
-            return false;
         }
 
         // Verificar si hay filtros positivos (no de bloqueo) configurados

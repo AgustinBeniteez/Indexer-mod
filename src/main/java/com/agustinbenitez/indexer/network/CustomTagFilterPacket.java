@@ -38,7 +38,7 @@ public record CustomTagFilterPacket(int slotIndex, String customTag) implements 
                 if (itemStack.getItem() instanceof CustomTagFilterItem) {
                     CustomData customData = itemStack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY);
                     CompoundTag tag = customData.copyTag();
-                    tag.putString("custom_tag", payload.customTag());
+                    tag.putString("custom_tag_filter", payload.customTag());
                     itemStack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
                     
                     player.sendSystemMessage(Component.translatable("message.indexer.custom_filter.tag_updated", payload.customTag()));

@@ -458,7 +458,10 @@ public class ExtractorBlockEntity extends BlockEntity {
                     if (entity instanceof IndexerConnectorBlockEntity) {
                         IndexerConnectorBlockEntity connector = (IndexerConnectorBlockEntity) entity;
                         
-                        // Verificar si el conector tiene un filtro específico para este ítem
+                        if (connector.isItemBlocked(stack)) {
+                            continue;
+                        }
+
                         ItemStack filterItem = connector.getFilterItem(0);
                         if (!filterItem.isEmpty() && FilterUtils.passesFilter(stack, filterItem)) {
                             // Intentar insertar el item en el conector con filtro específico
@@ -489,7 +492,10 @@ public class ExtractorBlockEntity extends BlockEntity {
                     if (entity instanceof IndexerConnectorBlockEntity) {
                         IndexerConnectorBlockEntity connector = (IndexerConnectorBlockEntity) entity;
                         
-                        // Verificar si el conector NO tiene filtro específico para este ítem
+                        if (connector.isItemBlocked(stack)) {
+                            continue;
+                        }
+
                         ItemStack filterItem = connector.getFilterItem(0);
                         if (filterItem.isEmpty() || filterItem.getItem() != stack.getItem()) {
                             // Intentar insertar el item en el conector sin filtro específico
@@ -545,6 +551,10 @@ public class ExtractorBlockEntity extends BlockEntity {
                     BlockEntity entity = level.getBlockEntity(checkPos);
 
                     if (entity instanceof IndexerConnectorBlockEntity connector) {
+                        if (connector.isItemBlocked(stack)) {
+                            continue;
+                        }
+
                         ItemStack filterItem = connector.getFilterItem(0);
                         if (!filterItem.isEmpty() && FilterUtils.passesFilter(stack, filterItem)) {
                             // Verificar capacidad del contenedor conectado (solo cofres/barriles, evitar hornos)
@@ -581,6 +591,10 @@ public class ExtractorBlockEntity extends BlockEntity {
                     BlockEntity entity = level.getBlockEntity(checkPos);
 
                     if (entity instanceof IndexerConnectorBlockEntity connector) {
+                        if (connector.isItemBlocked(stack)) {
+                            continue;
+                        }
+
                         ItemStack filterItem = connector.getFilterItem(0);
                         if (filterItem.isEmpty() || filterItem.getItem() != stack.getItem()) {
                             BlockPos containerPos = connector.getConnectedContainerPos();

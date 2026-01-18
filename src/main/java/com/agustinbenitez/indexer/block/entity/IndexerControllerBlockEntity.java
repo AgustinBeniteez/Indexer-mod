@@ -8,6 +8,7 @@ import com.agustinbenitez.indexer.block.IndexerManagerBlock;
 import com.agustinbenitez.indexer.block.IndexerPipeBlock;
 import com.agustinbenitez.indexer.init.ModBlockEntities;
 import com.agustinbenitez.indexer.init.ModBlocks;
+import com.agustinbenitez.indexer.init.ModItems;
 import com.agustinbenitez.indexer.init.ModMenuTypes;
 import com.agustinbenitez.indexer.menu.IndexerControllerNetworkMenu;
 import com.agustinbenitez.indexer.util.FilterUtils;
@@ -436,9 +437,13 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
             if (isBeingUsed) {
             }
             
-            // Separar conectores en dos grupos: los que tienen filtro específico y los que no tienen filtro
-            // Ahora también excluimos los conectores que bloquean este item específico
-            List<IndexerConnectorBlockEntity> connectorsWithFilter = new ArrayList<>();
+            // Separar conectores en tres grupos:
+            // 1) Conectores con filtros de atributo que aceptan este item
+            // 2) Conectores con otros filtros positivos que aceptan este item
+            // 3) Conectores sin filtros positivos (solo bloqueadores o sin filtros) que aceptan este item
+            // Además, siempre excluimos los conectores que bloquean este item específico
+            List<IndexerConnectorBlockEntity> connectorsWithAttributeFilter = new ArrayList<>();
+            List<IndexerConnectorBlockEntity> connectorsWithOtherFilters = new ArrayList<>();
             List<IndexerConnectorBlockEntity> connectorsWithoutFilter = new ArrayList<>();
             
             for (IndexerConnectorBlockEntity connector : connectors) {
@@ -448,19 +453,24 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                 }
                 
                 if (connector.canAcceptItem(stack)) {
-                    // Verificar si el conector tiene un filtro específico configurado
-                    boolean hasSpecificFilter = false;
-                    
-                    // Verificar todos los slots de filtro para determinar si hay un filtro específico
+                    boolean hasAttributeFilter = false;
+                    boolean hasOtherPositiveFilter = false;
+
                     for (ItemStack filterItem : connector.getFilterItems()) {
-                        if (!filterItem.isEmpty()) {
-                            hasSpecificFilter = true;
-                            break;
+                        if (filterItem.isEmpty()) {
+                            continue;
+                        }
+                        if (filterItem.getItem() == ModItems.ATTRIBUTE_FILTER) {
+                            hasAttributeFilter = true;
+                        } else if (filterItem.getItem() != ModItems.CUSTOM_TAG_BLOCKER) {
+                            hasOtherPositiveFilter = true;
                         }
                     }
-                    
-                    if (hasSpecificFilter) {
-                        connectorsWithFilter.add(connector);
+
+                    if (hasAttributeFilter) {
+                        connectorsWithAttributeFilter.add(connector);
+                    } else if (hasOtherPositiveFilter) {
+                        connectorsWithOtherFilters.add(connector);
                     } else {
                         connectorsWithoutFilter.add(connector);
                     }
@@ -471,12 +481,12 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
 
             }
             
-            // Primero intentar con conectores que tienen filtro específico
+            // Primero intentar con conectores que tienen filtro de atributo que coincida
             boolean itemTransferred = false;
             ItemStack remainder = stack.copy();
             
-            // Intentar primero con los conectores que tienen filtro específico
-            for (IndexerConnectorBlockEntity connector : connectorsWithFilter) {
+            // Intentar primero con los conectores que tienen filtro de atributo
+            for (IndexerConnectorBlockEntity connector : connectorsWithAttributeFilter) {
                 if (isBeingUsed) {
 
                 }
@@ -515,15 +525,53 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                 }
             }
             
+            // Si ningún conector con filtro de atributo aceptó el item, intentar con otros filtros positivos
+            if (!remainder.isEmpty() && !connectorsWithOtherFilters.isEmpty() &&
+                itemsTransferredThisCycle < this.itemsPerTransfer) {
+
+                for (IndexerConnectorBlockEntity connector : connectorsWithOtherFilters) {
+                    if (isBeingUsed) {
+
+                    }
+
+                    ItemStack transferStack = remainder.copy();
+                    int itemsToTransfer = Math.min(transferStack.getCount(), this.itemsPerTransfer);
+                    transferStack.setCount(itemsToTransfer);
+
+                    ItemStack newRemainder = connector.insertItem(transferStack);
+
+                    if (newRemainder.getCount() < transferStack.getCount()) {
+                        int itemsTransferred = transferStack.getCount() - newRemainder.getCount();
+
+                        remainder.shrink(itemsTransferred);
+                        dropContainer.setItem(i, remainder);
+
+                        if (isBeingUsed) {
+
+                        }
+                        transferred = true;
+                        itemTransferred = true;
+                        itemsTransferredThisCycle += itemsTransferred;
+
+                        if (remainder.isEmpty()) {
+                            break;
+                        }
+                    }
+
+                    if (itemsTransferredThisCycle >= this.itemsPerTransfer) {
+                        break;
+                    }
+                }
+            }
+
             // COMPORTAMIENTO CORREGIDO: NO usar conectores sin filtro como fallback
-            // Si hay conectores con filtros específicos, SOLO usar esos conectores
-            // Los items que no puedan ir a conectores con filtros deben quedarse en el dropbox
-            // Solo usar conectores sin filtro si NO HAY conectores con filtros para este item
-            
-            // Solo intentar con conectores sin filtro si NO había conectores con filtros específicos
-            // que pudieran aceptar este item
+            // si existe al menos un conector con filtros positivos para este item.
+            // Los items que no puedan ir a conectores con filtros deben quedarse en el dropbox.
+            // Solo usar conectores sin filtro si NO HAY conectores con filtros positivos
+            // que puedan aceptar este item.
             if (!remainder.isEmpty() && !connectorsWithoutFilter.isEmpty() && 
-                connectorsWithFilter.isEmpty() && itemsTransferredThisCycle < this.itemsPerTransfer) {
+                connectorsWithAttributeFilter.isEmpty() && connectorsWithOtherFilters.isEmpty() &&
+                itemsTransferredThisCycle < this.itemsPerTransfer) {
                 
                 for (IndexerConnectorBlockEntity connector : connectorsWithoutFilter) {
                     if (isBeingUsed) {
