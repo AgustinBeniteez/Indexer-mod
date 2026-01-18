@@ -23,6 +23,10 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.TieredItem;
 import net.minecraft.world.item.SwordItem;
 import net.minecraft.world.item.ShearsItem;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.enchantment.ItemEnchantments;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.component.ItemContainerContents;
 
 import java.util.*;
 import java.text.DecimalFormat;
@@ -184,6 +188,8 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
                 if (!stack.isEmpty()) {
                     MutableComponent name = Component.literal(Component.translatable(stack.getItem().getDescriptionId()).getString());
                     tooltipToRender.add(full ? name.withStyle(ChatFormatting.RED) : name);
+                    appendEnchantmentTooltips(stack, tooltipToRender);
+                    appendContainerTooltips(stack, tooltipToRender);
                 }
                 tooltipToRender.add(Component.literal("x" + e.count));
             }
@@ -600,8 +606,55 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
         return Component.translatable(e.stack.getItem().getDescriptionId()).getString();
     }
     
+    private void appendEnchantmentTooltips(ItemStack stack, List<Component> tooltip) {
+        ItemEnchantments enchantments = stack.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY);
+        if (!enchantments.isEmpty()) {
+            for (var entry : enchantments.entrySet()) {
+                tooltip.add(Enchantment.getFullname(entry.getKey(), entry.getIntValue()).copy().withStyle(ChatFormatting.BLUE));
+            }
+        }
+        
+        ItemEnchantments stored = stack.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY);
+        if (!stored.isEmpty()) {
+            for (var entry : stored.entrySet()) {
+                tooltip.add(Enchantment.getFullname(entry.getKey(), entry.getIntValue()).copy().withStyle(ChatFormatting.BLUE));
+            }
+        }
+    }
+
+    private void appendContainerTooltips(ItemStack stack, List<Component> tooltip) {
+        ItemContainerContents contents = stack.get(DataComponents.CONTAINER);
+        if (contents != null && !contents.equals(ItemContainerContents.EMPTY)) {
+            int shown = 0;
+            int maxShown = 5;
+            for (ItemStack s : contents.stream().toList()) {
+                 if (s.isEmpty()) continue;
+                 if (shown < maxShown) {
+                     tooltip.add(Component.literal("- " + s.getCount() + "x ").append(Component.translatable(s.getItem().getDescriptionId())).withStyle(ChatFormatting.GRAY));
+                     shown++;
+                 } else {
+                     tooltip.add(Component.literal("...").withStyle(ChatFormatting.GRAY));
+                     break;
+                 }
+            }
+        }
+    }
+
     private String getEnchantSearchTokens(ItemStack stack) {
-        return "";
+        StringBuilder sb = new StringBuilder();
+        ItemEnchantments enchantments = stack.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY);
+        if (!enchantments.isEmpty()) {
+            for (var entry : enchantments.entrySet()) {
+                sb.append(Enchantment.getFullname(entry.getKey(), entry.getIntValue()).getString()).append(" ");
+            }
+        }
+        ItemEnchantments stored = stack.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY);
+        if (!stored.isEmpty()) {
+            for (var entry : stored.entrySet()) {
+                sb.append(Enchantment.getFullname(entry.getKey(), entry.getIntValue()).getString()).append(" ");
+            }
+        }
+        return sb.toString().toLowerCase(Locale.ROOT);
     }
     
     private boolean isConstruction(ItemVariantEntry e) {

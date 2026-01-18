@@ -29,6 +29,8 @@ import net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.component.CustomData;
+import net.minecraft.world.item.enchantment.ItemEnchantments;
+import net.minecraft.world.item.component.ItemContainerContents;
 import java.util.*;
 import org.jetbrains.annotations.Nullable;
 import com.agustinbenitez.indexer.init.ModMenuTypes;
@@ -148,35 +150,51 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
         ResourceLocation base = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem());
         if (base == null) return "unknown";
         StringBuilder sb = new StringBuilder(base.toString());
-        CustomData customData = stack.get(DataComponents.CUSTOM_DATA);
-        if (customData != null) {
-            CompoundTag tag = customData.copyTag();
-            java.util.List<String> parts = new java.util.ArrayList<>();
-            if (tag.contains("Enchantments")) {
-                var list = tag.getList("Enchantments", 10);
-                for (int i = 0; i < list.size(); i++) {
-                    var ench = list.getCompound(i);
-                    String id = ench.getString("id");
-                    int lvl = ench.getInt("lvl");
-                    parts.add(id + ":" + lvl);
-                }
+        
+        java.util.List<String> parts = new java.util.ArrayList<>();
+        
+        ItemEnchantments enchantments = stack.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY);
+        for (var entry : enchantments.entrySet()) {
+            String id = entry.getKey().unwrapKey().map(k -> k.location().toString()).orElse("unknown");
+            int lvl = entry.getIntValue();
+            parts.add(id + ":" + lvl);
+        }
+        
+        ItemEnchantments stored = stack.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY);
+        for (var entry : stored.entrySet()) {
+            String id = entry.getKey().unwrapKey().map(k -> k.location().toString()).orElse("unknown");
+            int lvl = entry.getIntValue();
+            parts.add(id + ":" + lvl);
+        }
+
+        java.util.Collections.sort(parts);
+        if (!parts.isEmpty()) {
+            sb.append("|E:");
+            for (String p : parts) {
+                sb.append(p).append(",");
             }
-            if (tag.contains("StoredEnchantments")) {
-                var list = tag.getList("StoredEnchantments", 10);
-                for (int i = 0; i < list.size(); i++) {
-                    var ench = list.getCompound(i);
-                    String id = ench.getString("id");
-                    int lvl = ench.getInt("lvl");
-                    parts.add(id + ":" + lvl);
+        }
+        
+        ItemContainerContents containerContents = stack.get(DataComponents.CONTAINER);
+        if (containerContents != null && !containerContents.equals(ItemContainerContents.EMPTY)) {
+            List<String> contentParts = new ArrayList<>();
+            containerContents.stream().forEach(s -> {
+                if (!s.isEmpty()) {
+                    ResourceLocation k = BuiltInRegistries.ITEM.getKey(s.getItem());
+                    if (k != null) contentParts.add(k.toString() + "x" + s.getCount());
                 }
-            }
-            java.util.Collections.sort(parts);
-            if (!parts.isEmpty()) {
-                sb.append("|E:");
-                for (String p : parts) {
+            });
+            if (!contentParts.isEmpty()) {
+                sb.append("|C:");
+                for (String p : contentParts) {
                     sb.append(p).append(",");
                 }
             }
+        }
+
+        CustomData customData = stack.get(DataComponents.CUSTOM_DATA);
+        if (customData != null) {
+            CompoundTag tag = customData.copyTag();
             if (tag.contains("BlockEntityTag")) {
                 sb.append("|BET:").append(tag.getCompound("BlockEntityTag").toString());
             }
