@@ -7,7 +7,7 @@
   ],
   "key": {
     "N": {
-      "tag": "forge:nuggets/gold"
+      "item": "minecraft:gold_nugget"
     },
     "T": {
       "item": "minecraft:repeater"

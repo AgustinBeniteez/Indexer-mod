@@ -175,32 +175,31 @@ public class IndexerManualScreen extends Screen {
     
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        // Renderizar fondo oscuro
-        this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
+        guiGraphics.fill(0, 0, this.width, this.height, 0xA0000000);
         
-        // Calcular posiciones centradas
         int centerX = this.width / 2;
         int centerY = this.height / 2;
         int leftPos = centerX - (SCREEN_WIDTH / 2);
         int topPos = centerY - (SCREEN_HEIGHT / 2);
         
-        // Renderizar fondo del manual
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0, 0, 500);
         guiGraphics.blit(BACKGROUND, leftPos, topPos, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-        // Splash con logo por 1s (centrado y girando)
         if (inSplash) {
             long now = System.currentTimeMillis();
             if (now < splashEndMillis) {
                 int logoSize = 80;
                 long elapsed = Math.max(0L, 1000L - (splashEndMillis - now));
-                float angle = (elapsed * 180f) / 1000f; // gira más lento (180° en 1s)
+                float angle = (elapsed * 180f) / 1000f;
                 var pose = guiGraphics.pose();
                 pose.pushPose();
-                pose.translate(centerX, topPos + SCREEN_HEIGHT / 2, 0); // centrado vertical dentro del manual
+                pose.translate(centerX, topPos + SCREEN_HEIGHT / 2, 0);
                 pose.mulPose(Axis.ZP.rotationDegrees(angle));
                 guiGraphics.blit(LOGO, -logoSize / 2, -logoSize / 2, 0, 0, logoSize, logoSize, logoSize, logoSize);
                 pose.popPose();
-                return; // No renderizar botones/menú durante el splash
+                guiGraphics.pose().popPose();
+                return;
             } else {
                 inSplash = false;
                 currentView = ViewMode.MENU;
@@ -208,15 +207,12 @@ public class IndexerManualScreen extends Screen {
             }
         }
 
-        // Render según la vista actual
         switch (currentView) {
             case MENU -> {
                 String title = net.minecraft.client.resources.language.I18n.get("item.indexer.indexer_manual");
                 guiGraphics.drawString(this.font, title, centerX - (this.font.width(title) / 2), topPos + 30, 0xFFFFFF, false);
-                // Los botones del menú ya están visibles por updateVisibilityForView
             }
             case TUTORIAL -> {
-                // Renderizar número de página
                 String pageText = (currentPage + 1) + "/" + totalPages;
                 guiGraphics.drawString(this.font, pageText, centerX - (this.font.width(pageText) / 2), topPos + SCREEN_HEIGHT - 15, 0xFFFFFF, false);
                 try {
@@ -229,8 +225,17 @@ public class IndexerManualScreen extends Screen {
                 renderCraftingList(guiGraphics, leftPos, topPos, mouseX, mouseY);
             }
         }
-        // Renderizar botones y otros elementos
+        guiGraphics.pose().popPose();
+
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0, 0, 600);
         super.render(guiGraphics, mouseX, mouseY, partialTick);
+        guiGraphics.pose().popPose();
+    }
+    
+    @Override
+    public void renderBackground(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        guiGraphics.fill(0, 0, this.width, this.height, 0xA0000000);
     }
     
     /**

@@ -155,44 +155,45 @@ public class AttributeFilterScreen extends Screen {
         int guiLeft = (this.width - GUI_WIDTH) / 2;
         int guiTop = (this.height - GUI_HEIGHT) / 2;
         
-        // Fondo de la GUI
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0, 0, 500);
         guiGraphics.fill(guiLeft, guiTop, guiLeft + GUI_WIDTH, guiTop + GUI_HEIGHT, 0xC0101010);
         guiGraphics.fill(guiLeft + 1, guiTop + 1, guiLeft + GUI_WIDTH - 1, guiTop + GUI_HEIGHT - 1, 0xFF2D2D30);
+        guiGraphics.pose().popPose();
         
-        // Título
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0, 0, 600);
+        super.render(guiGraphics, mouseX, mouseY, partialTick);
+        guiGraphics.pose().popPose();
+        
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0, 0, 700);
         Component title = Component.translatable("gui.indexer.attribute_filter.title");
         guiGraphics.drawCenteredString(this.font, title, guiLeft + GUI_WIDTH / 2, guiTop + 20, 0xFFFFFF);
-        
-        // Instrucciones
         Component instructions = Component.translatable("gui.indexer.attribute_filter.instructions");
         guiGraphics.drawString(this.font, instructions, guiLeft + 20, guiTop + 40, 0xCCCCCC, false);
+        guiGraphics.pose().popPose();
         
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
-        
-        // Renderizar sugerencias
         if (this.showSuggestions && !this.suggestions.isEmpty()) {
+            guiGraphics.pose().pushPose();
+            guiGraphics.pose().translate(0, 0, 750);
             int suggestionsX = this.attributeEditBox.getX();
             int suggestionsY = this.attributeEditBox.getY() + this.attributeEditBox.getHeight() + 2;
             int suggestionsWidth = this.attributeEditBox.getWidth();
             int suggestionHeight = 12;
             int maxSuggestions = Math.min(this.suggestions.size(), 8);
-            
-            // Fondo de las sugerencias
             guiGraphics.fill(suggestionsX, suggestionsY, 
                     suggestionsX + suggestionsWidth, 
                     suggestionsY + maxSuggestions * suggestionHeight, 0xE0000000);
-            
             for (int i = 0; i < maxSuggestions; i++) {
                 String suggestion = this.suggestions.get(i);
                 int y = suggestionsY + i * suggestionHeight;
-                
-                // Resaltar la sugerencia seleccionada
                 if (i == this.selectedSuggestion) {
                     guiGraphics.fill(suggestionsX, y, suggestionsX + suggestionsWidth, y + suggestionHeight, 0xFF4A4A4A);
                 }
-                
                 guiGraphics.drawString(this.font, suggestion, suggestionsX + 4, y + 2, 0xFFFFFF, false);
             }
+            guiGraphics.pose().popPose();
         }
     }
     
