@@ -1,12 +1,12 @@
 # Guía de Desarrollo para Indexer Mod
 
-Esta guía está destinada a desarrolladores que deseen compilar, modificar o probar el mod Indexer para Minecraft 1.20.1.
+Esta guía está destinada a desarrolladores que deseen compilar, modificar o probar el mod Indexer para Minecraft 1.21.1 usando Fabric.
 
 ## Requisitos Previos
 
-- JDK 17 o superior
-- Gradle 7.6 o superior (incluido en el wrapper del proyecto)
-- IDE recomendado: IntelliJ IDEA, Eclipse con soporte para Gradle, o Visual Studio Code con extensiones para Java
+- JDK 21 (el proyecto está configurado para Java 21)
+- Gradle (se usa el wrapper incluido en el proyecto, no necesitas instalarlo aparte)
+- IDE recomendado: IntelliJ IDEA o Visual Studio Code con soporte para Gradle/Java
 - Git (opcional, para control de versiones)
 
 ## Configuración del Entorno de Desarrollo
@@ -14,39 +14,29 @@ Esta guía está destinada a desarrolladores que deseen compilar, modificar o pr
 ### Clonar el Repositorio
 
 ```bash
-git clone https://github.com/tu-usuario/Indexer-mod.git
+git clone https://github.com/AgustinBeniteez/Indexer-mod.git
 cd Indexer-mod
 ```
 
-### Configurar el Entorno de Forge
+### Configurar el Entorno de Fabric
 
-El proyecto utiliza Gradle para gestionar dependencias y tareas de compilación. Para configurar el entorno de desarrollo de Forge:
+El proyecto utiliza Fabric Loom para gestionar dependencias y tareas de compilación.
+
+- Abre el proyecto como proyecto Gradle en tu IDE.
+- Espera a que Gradle sincronice y descargue dependencias.
+- Loom generará configuraciones de ejecución como `runClient` y `runServer`.
+
+Si quieres verificar desde la línea de comandos que todo está correcto:
 
 ```bash
 # En Windows
-.\gradlew setupDecompWorkspace
-
-# Para IntelliJ IDEA
-.\gradlew genIntellijRuns
-
-# Para Eclipse
-.\gradlew genEclipseRuns
-
-# Para Visual Studio Code
-.\gradlew genVSCodeRuns
+.\gradlew build
 
 # En Linux/macOS
-./gradlew setupDecompWorkspace
-
-# Para IntelliJ IDEA
-./gradlew genIntellijRuns
-
-# Para Eclipse
-./gradlew genEclipseRuns
-
-# Para Visual Studio Code
-./gradlew genVSCodeRuns
+./gradlew build
 ```
+
+Si la compilación termina correctamente, el entorno está listo.
 
 ## Compilación del Mod
 
@@ -60,31 +50,39 @@ Para compilar el mod y generar el archivo JAR:
 ./gradlew build
 ```
 
-El archivo JAR compilado se encontrará en la carpeta `build/libs/`.
+El archivo JAR compilado se encontrará en la carpeta `build/libs/` (por ejemplo `indexer-fabric-1.21.1-1.0.7.jar`, según `gradle.properties`).
 
 ## Ejecución y Pruebas
 
 ### Ejecutar en el Entorno de Desarrollo
 
-Puedes ejecutar el mod directamente desde tu IDE:
+Puedes ejecutar el mod directamente desde tu IDE o desde Gradle:
 
-- **IntelliJ IDEA**: Ejecuta la configuración "runClient" que se generó automáticamente.
-- **Eclipse**: Ejecuta la configuración de lanzamiento "runClient" que se generó automáticamente.
-- **Visual Studio Code**: 
-  1. Instala la extensión "Minecraft Development" para VS Code.
-  2. Abre la paleta de comandos (Ctrl+Shift+P) y busca "Minecraft: Run Client".
-  3. Alternativamente, puedes usar el comando `.\gradlew runClient` desde la terminal.
+- **IntelliJ IDEA**: Usa la configuración `runClient` generada automáticamente por Loom.
+- **Visual Studio Code**:
+  - Usa las tareas de Gradle (`runClient`) desde la vista de tareas, o
+  - Ejecuta el comando:
+
+    ```bash
+    # En Windows
+    .\gradlew runClient
+
+    # En Linux/macOS
+    ./gradlew runClient
+    ```
 
 ### Pruebas Manuales
 
-Para probar el mod manualmente:
+Para probar el mod manualmente en un cliente normal de Minecraft:
 
 1. Compila el mod como se indicó anteriormente.
-2. Copia el archivo JAR generado (`build/libs/indexer-<version>.jar`) a la carpeta `mods` de tu instalación de Minecraft con Forge 1.20.1.
-3. Inicia Minecraft con Forge instalado.
-4. Verifica que el mod aparezca en la lista de mods cargados.
-5. Prueba la funcionalidad en el juego:
-   - Crea los bloques del mod (Controlador Indexador, Tubería Indexadora, Conector Indexador)
+2. Asegúrate de tener instalado Fabric Loader 0.16.5 (o superior) para Minecraft 1.21.1.
+3. Instala Fabric API compatible con 1.21.1 (por ejemplo `fabric-api-0.104.0+1.21.1`).
+4. Copia el archivo JAR generado (`build/libs/indexer-fabric-1.21.1-<versión>.jar`) a la carpeta `mods` de tu instalación de Minecraft con Fabric.
+5. Inicia Minecraft con el perfil de Fabric.
+6. Verifica que el mod aparezca en la lista de mods cargados.
+7. Prueba la funcionalidad en el juego:
+   - Crea los bloques del mod (Controlador Indexador, Tubería Indexadora, Conector Indexador, DropBox, etc.)
    - Configura un sistema básico de indexación
    - Verifica que los ítems se distribuyan correctamente según los filtros configurados
 
@@ -93,28 +91,27 @@ Para probar el mod manualmente:
 ```
 src/
 ├── main/
-│   ├── java/         # Código fuente Java
+│   ├── java/
 │   │   └── com/
 │   │       └── agustinbenitez/
 │   │           └── indexer/
-│   │               ├── Indexer.java                    # Clase principal del mod
-│   │               ├── ModBlocks.java                  # Registro de bloques
-│   │               ├── ModBlockEntities.java           # Registro de entidades de bloque
-│   │               ├── ModItems.java                   # Registro de ítems
-│   │               ├── block/                          # Definiciones de bloques
-│   │               ├── blockentity/                    # Entidades de bloque
-│   │               ├── item/                           # Definiciones de ítems
-│   │               └── screen/                         # Interfaces de usuario
-│   └── resources/   # Recursos del mod (modelos, texturas, traducciones, etc.)
-│       ├── META-INF/
-│       │   └── mods.toml                              # Archivo de configuración del mod
+│   │               ├── IndexerMod.java          # Clase principal del mod (Fabric)
+│   │               ├── init/                    # Registro de bloques, ítems, entidades, menús, etc.
+│   │               ├── block/                   # Definiciones de bloques
+│   │               ├── block/entity/            # Entidades de bloque
+│   │               ├── item/                    # Definiciones de ítems
+│   │               ├── menu/                    # Menús (containers) del servidor
+│   │               ├── network/                 # Paquetes de red
+│   │               └── screen/                  # Interfaces de usuario (pantallas)
+│   └── resources/
+│       ├── fabric.mod.json                      # Archivo de configuración del mod para Fabric
 │       └── assets/
 │           └── indexer/
-│               ├── blockstates/                       # Estados de bloques
-│               ├── lang/                              # Archivos de traducción
-│               ├── models/                            # Modelos 3D
-│               └── textures/                          # Texturas
-└── test/            # Pruebas unitarias (si las hay)
+│               ├── blockstates/
+│               ├── lang/
+│               ├── models/
+│               └── textures/
+└── test/                                        # Pruebas unitarias (si las hay)
 ```
 
 ## Modificación del Mod
@@ -150,13 +147,13 @@ Para crear un archivo JAR listo para distribución:
 ./gradlew build
 ```
 
-El archivo JAR resultante en `build/libs/` puede distribuirse a los usuarios finales para su instalación en la carpeta `mods` de Minecraft con Forge.
+El archivo JAR resultante en `build/libs/` puede distribuirse a los usuarios finales para su instalación en la carpeta `mods` de una instancia de Minecraft 1.21.1 con Fabric Loader y Fabric API.
 
 ## Solución de Problemas Comunes
 
 ### Errores de Compilación
 
-- Verifica que estás utilizando JDK 17.
+- Verifica que estás utilizando JDK 21.
 - Ejecuta `.\gradlew clean` y luego `.\gradlew build` para limpiar archivos temporales.
 - Asegúrate de que todas las dependencias estén correctamente configuradas en `build.gradle`.
 
@@ -178,7 +175,7 @@ Si el archivo `gradlew.bat` no existe en la carpeta raíz del proyecto (lo cual 
 
 2. **Genera el wrapper de Gradle**:
    - Navega a la carpeta raíz del proyecto en la terminal
-   - Ejecuta el comando: `gradle wrapper --gradle-version=7.6`
+   - Ejecuta el comando: `gradle wrapper --gradle-version=8.14.2`
    - Esto generará los archivos `gradlew`, `gradlew.bat` y la carpeta `gradle/wrapper`
 
 3. **Ahora puedes usar los comandos gradlew**:
