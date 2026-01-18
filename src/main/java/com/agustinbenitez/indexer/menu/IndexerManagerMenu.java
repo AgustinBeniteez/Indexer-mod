@@ -33,36 +33,18 @@ public class IndexerManagerMenu extends AbstractContainerMenu {
     private static final int MANAGER_GRID_START_Y = 86;
 
     public IndexerManagerMenu(int id, Inventory inv, FriendlyByteBuf extraData) {
-        super(ModMenuTypes.INDEXER_MANAGER_MENU, id);
-        BlockEntity be = inv.player.level().getBlockEntity(extraData.readBlockPos());
-        this.blockEntity = (IndexerManagerBlockEntity) be;
-        this.level = inv.player.level();
-        this.data = new SimpleContainerData(6);
-        this.addDataSlots(this.data);
-        for (int col = 0; col < 9; col++) {
-            this.addSlot(new Slot(blockEntity, col,
-                    MANAGER_GRID_START_X + col * SLOT_SIZE,
-                    MANAGER_GRID_START_Y));
-        }
-        for (int row = 0; row < 3; row++) {
-            for (int col = 0; col < 9; col++) {
-                this.addSlot(new Slot(inv, col + row * 9 + 9,
-                        INVENTORY_START_X + col * SLOT_SIZE,
-                        INVENTORY_START_Y + row * SLOT_SIZE));
-            }
-        }
-        for (int col = 0; col < 9; col++) {
-            this.addSlot(new Slot(inv, col,
-                    INVENTORY_START_X + col * SLOT_SIZE,
-                    HOTBAR_START_Y));
-        }
+        this(id, inv, inv.player.level().getBlockEntity(extraData.readBlockPos()));
     }
 
     public IndexerManagerMenu(int id, Inventory inv, BlockEntity entity) {
         super(ModMenuTypes.INDEXER_MANAGER_MENU, id);
         this.blockEntity = (IndexerManagerBlockEntity) entity;
         this.level = inv.player.level();
-        this.data = createContainerData();
+        if (this.level != null && this.level.isClientSide()) {
+            this.data = new SimpleContainerData(6);
+        } else {
+            this.data = createContainerData();
+        }
         this.addDataSlots(this.data);
         for (int col = 0; col < 9; col++) {
             this.addSlot(new Slot(blockEntity, col,
