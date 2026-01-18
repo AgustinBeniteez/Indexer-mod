@@ -14,7 +14,7 @@ Esta guía está destinada a desarrolladores que deseen compilar, modificar o pr
 ### Clonar el Repositorio
 
 ```bash
-git clone https://github.com/tu-usuario/Indexer-mod.git
+git clone https://github.com/AgustinBeniteez/Indexer-mod.git
 cd Indexer-mod
 ```
 
