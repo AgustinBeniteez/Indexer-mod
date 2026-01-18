@@ -1,0 +1,36 @@
+{
+	"schemaVersion": 1,
+	"id": "indexer",
+	"version": "${version}",
+	"name": "Indexer Mod",
+	"description": "This is the Indexer Mod converted to Fabric.",
+	"authors": [
+		"AgustinBenitez"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/AgustinBenitez/Indexer-mod"
+	},
+	"license": "MIT",
+	"icon": "assets/indexer/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.agustinbenitez.indexer.IndexerMod"
+		],
+		"client": [
+			"com.agustinbenitez.indexer.client.ClientSetup"
+		]
+	},
+	"mixins": [
+	],
+	"depends": {
+		"fabricloader": ">=0.16.5",
+		"minecraft": "~1.21.1",
+		"java": ">=21",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"another-mod": "*"
+	}
+}

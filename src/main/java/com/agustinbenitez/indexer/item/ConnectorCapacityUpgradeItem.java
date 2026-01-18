@@ -12,8 +12,6 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
-
-import javax.annotation.Nullable;
 import java.util.List;
 
 public class ConnectorCapacityUpgradeItem extends Item {
@@ -22,11 +20,11 @@ public class ConnectorCapacityUpgradeItem extends Item {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("item.indexer.connector_capacity_upgrade.tooltip").withStyle(ChatFormatting.GRAY));
         int remainingUses = stack.getMaxDamage() - stack.getDamageValue();
         tooltip.add(Component.translatable("item.indexer.connector_capacity_upgrade.uses_info", remainingUses).withStyle(ChatFormatting.AQUA));
-        super.appendHoverText(stack, level, tooltip, flag);
+        super.appendHoverText(stack, context, tooltip, flag);
     }
 
     @Override
@@ -61,7 +59,10 @@ public class ConnectorCapacityUpgradeItem extends Item {
 
         // Consumir un uso del ítem (durabilidad)
         if (!player.getAbilities().instabuild) {
-            itemstack.hurtAndBreak(1, player, p -> p.broadcastBreakEvent(context.getHand()));
+            net.minecraft.world.entity.EquipmentSlot slot = context.getHand() == net.minecraft.world.InteractionHand.MAIN_HAND
+                    ? net.minecraft.world.entity.EquipmentSlot.MAINHAND
+                    : net.minecraft.world.entity.EquipmentSlot.OFFHAND;
+            itemstack.hurtAndBreak(1, player, slot);
         }
 
         return InteractionResult.CONSUME;

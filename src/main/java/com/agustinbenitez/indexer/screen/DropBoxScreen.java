@@ -12,7 +12,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.util.Mth;
 
 public class DropBoxScreen extends AbstractContainerScreen<DropBoxMenu> {
-    private static final ResourceLocation TEXTURE = new ResourceLocation("indexer", "textures/gui/drop_box.png");
+    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath("indexer", "textures/gui/drop_box.png");
     
     private Button transferAllButton;
     private static final int STATS_PANEL_WIDTH = 100;
@@ -167,19 +167,19 @@ public class DropBoxScreen extends AbstractContainerScreen<DropBoxMenu> {
     
     private net.minecraft.world.item.ItemStack getUpgradeItemForLevel(int level) {
         switch (level) {
-            case 0: return new net.minecraft.world.item.ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_ZERO.get());
-            case 1: return new net.minecraft.world.item.ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_BASIC.get());
-            case 2: return new net.minecraft.world.item.ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_COPPER.get());
-            case 3: return new net.minecraft.world.item.ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_ADVANCED.get());
-            case 4: return new net.minecraft.world.item.ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_ELITE.get());
-            case 5: return new net.minecraft.world.item.ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_DEFINITIVE.get());
+            case 0: return new net.minecraft.world.item.ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_ZERO);
+            case 1: return new net.minecraft.world.item.ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_BASIC);
+            case 2: return new net.minecraft.world.item.ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_COPPER);
+            case 3: return new net.minecraft.world.item.ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_ADVANCED);
+            case 4: return new net.minecraft.world.item.ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_ELITE);
+            case 5: return new net.minecraft.world.item.ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_DEFINITIVE);
             default: return net.minecraft.world.item.ItemStack.EMPTY;
         }
     }
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        this.renderBackground(guiGraphics);
+        this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
         super.render(guiGraphics, mouseX, mouseY, partialTick);
         this.renderTooltip(guiGraphics, mouseX, mouseY);
     }

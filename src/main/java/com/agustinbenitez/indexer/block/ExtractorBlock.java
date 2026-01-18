@@ -22,10 +22,10 @@ import net.minecraft.world.Container;
 import net.minecraft.core.Direction;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
-import javax.annotation.Nullable;
+import com.mojang.serialization.MapCodec;
 
 public class ExtractorBlock extends BaseEntityBlock {
+    public static final MapCodec<ExtractorBlock> CODEC = simpleCodec(ExtractorBlock::new);
     private static final VoxelShape SHAPE = Block.box(0, 0, 0, 16, 16, 16);
     
     // Mapa para rastrear si un bloque fue roto en modo creativo
@@ -33,6 +33,11 @@ public class ExtractorBlock extends BaseEntityBlock {
 
     public ExtractorBlock(Properties properties) {
         super(properties);
+    }
+
+    @Override
+    protected MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
     }
 
     @Override
@@ -46,7 +51,7 @@ public class ExtractorBlock extends BaseEntityBlock {
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (!level.isClientSide()) {
             // Verificar si hay un cofre arriba y permitir abrirlo
             BlockPos abovePos = pos.above();
@@ -56,34 +61,32 @@ public class ExtractorBlock extends BaseEntityBlock {
                 aboveEntity.getClass().getName().contains("ChestBlockEntity")) {
                 // Si hay un cofre arriba, permitir que el jugador lo abra
                 BlockHitResult newHit = new BlockHitResult(hit.getLocation(), hit.getDirection(), abovePos, hit.isInside());
-                return level.getBlockState(abovePos).use(level, player, hand, newHit);
+                return level.getBlockState(abovePos).useWithoutItem(level, player, newHit);
             }
         }
         // No tiene interfaz propia, solo retorna éxito
         return InteractionResult.sidedSuccess(level.isClientSide());
     }
 
-    @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new ExtractorBlockEntity(pos, state);
     }
 
-    @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
         if (level.isClientSide()) {
             return null;
         }
-        return createTickerHelper(type, ModBlockEntities.EXTRACTOR.get(),
+        return createTickerHelper(type, ModBlockEntities.EXTRACTOR,
                 (level1, pos, state1, blockEntity) -> ExtractorBlockEntity.tick(level1, pos, state1, blockEntity));
     }
 
     @Override
-    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         // Registrar si el jugador está en modo creativo
         creativeModeBreaks.put(pos, player.getAbilities().instabuild);
-        super.playerWillDestroy(level, pos, state, player);
+        return super.playerWillDestroy(level, pos, state, player);
     }
     
     @Override

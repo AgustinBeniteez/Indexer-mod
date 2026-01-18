@@ -9,11 +9,10 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.fml.DistExecutor;
-
 import java.util.List;
+
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.component.CustomData;
 
 public class AttributeFilterItem extends Item {
     
@@ -42,42 +41,48 @@ public class AttributeFilterItem extends Item {
         return InteractionResultHolder.success(itemStack);
     }
     
-    @OnlyIn(Dist.CLIENT)
     private void openAttributeFilterScreen(ItemStack itemStack, int slotIndex) {
-        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
-            net.minecraft.client.Minecraft.getInstance().setScreen(
-                new com.agustinbenitez.indexer.screen.AttributeFilterScreen(itemStack, slotIndex));
-        });
+        net.minecraft.client.Minecraft.getInstance().setScreen(
+            new com.agustinbenitez.indexer.screen.AttributeFilterScreen(itemStack, slotIndex));
     }
     
     @Override
-    public void appendHoverText(ItemStack stack, Level level, List<Component> tooltipComponents, TooltipFlag isAdvanced) {
+    public void appendHoverText(ItemStack stack, net.minecraft.world.item.Item.TooltipContext context, List<Component> tooltipComponents, TooltipFlag isAdvanced) {
         tooltipComponents.add(Component.translatable("item.indexer.attribute_filter.tooltip"));
         tooltipComponents.add(Component.translatable("item.indexer.attribute_filter.description"));
         
-        CompoundTag tag = stack.getTag();
-        if (tag != null && tag.contains("attribute_filter")) {
-            String attribute = tag.getString("attribute_filter");
-            Component attributeComponent = Component.translatable("item.indexer.attribute_filter.current_attribute", 
-                Component.literal(attribute).withStyle(style -> style.withColor(0x55FF55))); // Verde
-            tooltipComponents.add(attributeComponent);
-        } else {
-            tooltipComponents.add(Component.translatable("item.indexer.attribute_filter.no_attribute"));
+        CustomData customData = stack.get(DataComponents.CUSTOM_DATA);
+        if (customData != null) {
+            CompoundTag tag = customData.copyTag();
+            if (tag.contains("attribute_filter")) {
+                String attribute = tag.getString("attribute_filter");
+                Component attributeComponent = Component.translatable("item.indexer.attribute_filter.current_attribute", 
+                    Component.literal(attribute).withStyle(style -> style.withColor(0x55FF55))); // Verde
+                tooltipComponents.add(attributeComponent);
+                
+                super.appendHoverText(stack, context, tooltipComponents, isAdvanced);
+                return;
+            }
         }
+        tooltipComponents.add(Component.translatable("item.indexer.attribute_filter.no_attribute"));
         
-        super.appendHoverText(stack, level, tooltipComponents, isAdvanced);
+        super.appendHoverText(stack, context, tooltipComponents, isAdvanced);
     }
     
     public String getAttribute(ItemStack stack) {
-        CompoundTag tag = stack.getTag();
-        if (tag != null && tag.contains("attribute_filter")) {
-            return tag.getString("attribute_filter");
+        CustomData customData = stack.get(DataComponents.CUSTOM_DATA);
+        if (customData != null) {
+            CompoundTag tag = customData.copyTag();
+            if (tag.contains("attribute_filter")) {
+                return tag.getString("attribute_filter");
+            }
         }
         return "";
     }
     
     public void setAttribute(ItemStack stack, String attribute) {
-        CompoundTag tag = stack.getOrCreateTag();
-        tag.putString("attribute_filter", attribute);
+        CustomData.update(DataComponents.CUSTOM_DATA, stack, (tag) -> {
+            tag.putString("attribute_filter", attribute);
+        });
     }
 }

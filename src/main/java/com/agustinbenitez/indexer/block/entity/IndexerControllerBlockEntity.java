@@ -13,9 +13,11 @@ import com.agustinbenitez.indexer.util.FilterUtils;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.Container;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
@@ -29,8 +31,6 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-
-import javax.annotation.Nullable;
 import java.util.*;
 
 public class IndexerControllerBlockEntity extends BlockEntity implements MenuProvider {
@@ -51,7 +51,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
     protected final ContainerData data;
     
     public IndexerControllerBlockEntity(BlockPos pos, BlockState state) {
-        super(ModBlockEntities.INDEXER_CONTROLLER.get(), pos, state);
+        super(ModBlockEntities.INDEXER_CONTROLLER, pos, state);
         
         this.data = new ContainerData() {
             @Override
@@ -103,8 +103,8 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
     }
 
     @Override
-    public void load(CompoundTag tag) {
-        super.load(tag);
+    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
         this.enabled = tag.getBoolean("Enabled");
         this.transferCooldown = tag.getInt("TransferCooldown");
         this.previousConnectorCount = tag.getInt("PreviousConnectorCount");
@@ -134,8 +134,8 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag) {
-        super.saveAdditional(tag);
+    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
         tag.putBoolean("Enabled", this.enabled);
         tag.putInt("TransferCooldown", this.transferCooldown);
         tag.putInt("PreviousConnectorCount", this.previousConnectorCount);
@@ -1324,8 +1324,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
     }
     
     private String getContainerTypeName(BlockEntity blockEntity) {
-        // Usar el ResourceLocation del bloque para obtener un nombre consistente
-        ResourceLocation blockId = net.minecraftforge.registries.ForgeRegistries.BLOCKS.getKey(blockEntity.getBlockState().getBlock());
+        ResourceLocation blockId = BuiltInRegistries.BLOCK.getKey(blockEntity.getBlockState().getBlock());
         if (blockId != null) {
             String path = blockId.getPath();
             // Devolver los nombres en inglés para que coincidan con las claves de traducción
@@ -1376,8 +1375,7 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         for (int i = 0; i < container.getContainerSize(); i++) {
             ItemStack stack = container.getItem(i);
             if (!stack.isEmpty()) {
-                // Usar el ResourceLocation del item en lugar del description ID
-                ResourceLocation itemLocation = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(stack.getItem());
+                ResourceLocation itemLocation = BuiltInRegistries.ITEM.getKey(stack.getItem());
                 if (itemLocation != null) {
                     String itemKey = itemLocation.toString();
                     uniqueItems.put(itemKey, uniqueItems.getOrDefault(itemKey, 0) + stack.getCount());
@@ -1400,19 +1398,8 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
         return filters;
     }
     
-    // Método para abrir la GUI de red
     public void openNetworkScreen(net.minecraft.server.level.ServerPlayer player, BlockPos pos) {
-        net.minecraftforge.network.NetworkHooks.openScreen(player, new MenuProvider() {
-            @Override
-            public Component getDisplayName() {
-                return Component.translatable("gui.indexer.controller.network_title");
-            }
-            
-            @Override
-            public AbstractContainerMenu createMenu(int id, Inventory inventory, Player player) {
-                return new com.agustinbenitez.indexer.menu.IndexerControllerNetworkMenu(id, inventory, IndexerControllerBlockEntity.this, data);
-            }
-        }, pos);
+        player.openMenu(this);
     }
     
     // Clase para almacenar información de contenedores de red

@@ -1,40 +1,38 @@
 package com.agustinbenitez.indexer.network;
 
+import com.agustinbenitez.indexer.IndexerMod;
 import com.agustinbenitez.indexer.block.entity.IndexerManagerBlockEntity;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.network.NetworkEvent;
 
-import java.util.function.Supplier;
+public record RequestManagerItemsPacket(BlockPos managerPos) implements CustomPacketPayload {
+    
+    public static final CustomPacketPayload.Type<RequestManagerItemsPacket> ID = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(IndexerMod.MOD_ID, "request_manager_items"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, RequestManagerItemsPacket> CODEC = StreamCodec.composite(
+        BlockPos.STREAM_CODEC, RequestManagerItemsPacket::managerPos,
+        RequestManagerItemsPacket::new
+    );
 
-public class RequestManagerItemsPacket {
-    private final BlockPos managerPos;
-
-    public RequestManagerItemsPacket(BlockPos managerPos) {
-        this.managerPos = managerPos;
+    @Override
+    public Type<? extends CustomPacketPayload> type() {
+        return ID;
     }
 
-    public RequestManagerItemsPacket(FriendlyByteBuf buf) {
-        this.managerPos = buf.readBlockPos();
-    }
-
-    public void toBytes(FriendlyByteBuf buf) {
-        buf.writeBlockPos(managerPos);
-    }
-
-    public boolean handle(Supplier<NetworkEvent.Context> supplier) {
-        NetworkEvent.Context context = supplier.get();
-        context.enqueueWork(() -> {
-            ServerPlayer player = context.getSender();
+    public static void handle(RequestManagerItemsPacket payload, ServerPlayNetworking.Context context) {
+        context.server().execute(() -> {
+            ServerPlayer player = context.player();
             if (player != null) {
-                BlockEntity be = player.level().getBlockEntity(managerPos);
+                BlockEntity be = player.level().getBlockEntity(payload.managerPos());
                 if (be instanceof IndexerManagerBlockEntity manager) {
                     manager.sendItemsTo(player);
                 }
             }
         });
-        return true;
     }
 }

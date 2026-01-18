@@ -3,7 +3,6 @@ package com.agustinbenitez.indexer.block;
 import com.agustinbenitez.indexer.block.entity.DropBoxBlockEntity;
 import com.agustinbenitez.indexer.init.ModBlockEntities;
 import net.minecraft.core.BlockPos;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -19,13 +18,12 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.network.NetworkHooks;
-
-import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import com.mojang.serialization.MapCodec;
 
 public class DropBoxBlock extends BaseEntityBlock {
+    public static final MapCodec<DropBoxBlock> CODEC = simpleCodec(DropBoxBlock::new);
     private static final VoxelShape SHAPE = Block.box(0, 0, 0, 16, 16, 16);
     
     // Mapa para rastrear si un bloque fue roto en modo creativo
@@ -33,6 +31,11 @@ public class DropBoxBlock extends BaseEntityBlock {
 
     public DropBoxBlock(Properties properties) {
         super(properties);
+    }
+
+    @Override
+    protected MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
     }
 
     @Override
@@ -46,11 +49,11 @@ public class DropBoxBlock extends BaseEntityBlock {
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (!level.isClientSide()) {
             BlockEntity entity = level.getBlockEntity(pos);
             if (entity instanceof DropBoxBlockEntity dropBox) {
-                NetworkHooks.openScreen((ServerPlayer) player, dropBox, pos);
+                player.openMenu(dropBox);
             } else {
                 throw new IllegalStateException("Our Container provider is missing!");
             }
@@ -58,32 +61,30 @@ public class DropBoxBlock extends BaseEntityBlock {
         return InteractionResult.sidedSuccess(level.isClientSide());
     }
 
-    @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new DropBoxBlockEntity(pos, state);
     }
 
-    @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
         if (level.isClientSide()) {
             return null;
         }
-        return createTickerHelper(type, ModBlockEntities.DROP_BOX.get(),
+        return createTickerHelper(type, ModBlockEntities.DROP_BOX,
                 (level1, pos, state1, blockEntity) -> blockEntity.tick(level1, pos, state1));
     }
 
     @Override
-    public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable net.minecraft.world.entity.LivingEntity placer, net.minecraft.world.item.ItemStack stack) {
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state, net.minecraft.world.entity.LivingEntity placer, net.minecraft.world.item.ItemStack stack) {
         super.setPlacedBy(level, pos, state, placer, stack);
     }
 
     @Override
-    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         // Registrar si el jugador está en modo creativo
         creativeModeBreaks.put(pos, player.getAbilities().instabuild);
-        super.playerWillDestroy(level, pos, state, player);
+        return super.playerWillDestroy(level, pos, state, player);
     }
     
     @Override

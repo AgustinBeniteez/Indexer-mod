@@ -1,14 +1,10 @@
 package com.agustinbenitez.indexer.block;
 
 import com.agustinbenitez.indexer.block.entity.IndexerConnectorBlockEntity;
-import com.agustinbenitez.indexer.block.entity.IndexerControllerBlockEntity;
 import com.agustinbenitez.indexer.init.ModBlockEntities;
-import com.agustinbenitez.indexer.block.IndexerControllerBlock;
-import com.agustinbenitez.indexer.block.IndexerPipeBlock;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -25,19 +21,20 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import org.jetbrains.annotations.Nullable;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.network.NetworkHooks;
 import net.minecraft.network.chat.Component;
+import com.agustinbenitez.indexer.block.entity.IndexerControllerBlockEntity;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.Container;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.component.CustomData;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -46,8 +43,10 @@ import java.util.LinkedList;
 import java.util.Set;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import com.mojang.serialization.MapCodec;
 
 public class IndexerConnectorBlock extends BaseEntityBlock {
+    public static final MapCodec<IndexerConnectorBlock> CODEC = simpleCodec(IndexerConnectorBlock::new);
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final BooleanProperty CONNECTED = BooleanProperty.create("connected");
     private static final VoxelShape SHAPE = Block.box(0, 0, 0, 16, 16, 16);
@@ -60,6 +59,11 @@ public class IndexerConnectorBlock extends BaseEntityBlock {
         this.registerDefaultState(this.stateDefinition.any()
             .setValue(FACING, Direction.NORTH)
             .setValue(CONNECTED, false));
+    }
+
+    @Override
+    protected MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
     }
 
     @Override
@@ -150,11 +154,11 @@ public class IndexerConnectorBlock extends BaseEntityBlock {
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (!level.isClientSide()) {
             BlockEntity entity = level.getBlockEntity(pos);
-            if (entity instanceof IndexerConnectorBlockEntity) {
-                NetworkHooks.openScreen((ServerPlayer) player, (IndexerConnectorBlockEntity) entity, pos);
+            if (entity instanceof IndexerConnectorBlockEntity connector) {
+                player.openMenu(connector);
                 return InteractionResult.CONSUME;
             }
         }
@@ -184,8 +188,9 @@ public class IndexerConnectorBlock extends BaseEntityBlock {
             }
 
             // Restaurar nivel del conector desde el NBT del item si existe
-            if (stack.hasTag()) {
-                net.minecraft.nbt.CompoundTag nbt = stack.getTag();
+            CustomData customData = stack.get(DataComponents.CUSTOM_DATA);
+            if (customData != null) {
+                net.minecraft.nbt.CompoundTag nbt = customData.copyTag();
                 if (nbt.contains("ConnectorLevel")) {
                     int levelVal = nbt.getInt("ConnectorLevel");
                     connector.setConnectorLevel(levelVal);
@@ -197,14 +202,14 @@ public class IndexerConnectorBlock extends BaseEntityBlock {
     @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-        return createTickerHelper(type, ModBlockEntities.INDEXER_CONNECTOR.get(), IndexerConnectorBlockEntity::tick);
+        return createTickerHelper(type, ModBlockEntities.INDEXER_CONNECTOR, IndexerConnectorBlockEntity::tick);
     }
     
     @Override
-    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         // Registrar si el jugador está en modo creativo
         creativeModeBreaks.put(pos, player.getAbilities().instabuild);
-        super.playerWillDestroy(level, pos, state, player);
+        return super.playerWillDestroy(level, pos, state, player);
     }
     
     @Override
@@ -232,8 +237,9 @@ public class IndexerConnectorBlock extends BaseEntityBlock {
                     // Guardar nivel del conector en el NBT del item
                     int connectorLevel = connectorEntity.getConnectorLevel();
                     if (connectorLevel > 1) {
-                        net.minecraft.nbt.CompoundTag nbt = itemStack.getOrCreateTag();
-                        nbt.putInt("ConnectorLevel", connectorLevel);
+                        CustomData.update(DataComponents.CUSTOM_DATA, itemStack, (tag) -> {
+                            tag.putInt("ConnectorLevel", connectorLevel);
+                        });
                     }
                 }
                 net.minecraft.world.Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), itemStack);

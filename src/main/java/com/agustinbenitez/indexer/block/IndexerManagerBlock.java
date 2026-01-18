@@ -3,7 +3,6 @@ package com.agustinbenitez.indexer.block;
 import com.agustinbenitez.indexer.block.entity.IndexerManagerBlockEntity;
 import com.agustinbenitez.indexer.init.ModBlockEntities;
 import net.minecraft.core.BlockPos;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -23,17 +22,22 @@ import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.network.NetworkHooks;
-
-import javax.annotation.Nullable;
 
 import com.agustinbenitez.indexer.block.entity.IndexerControllerBlockEntity;
+import com.mojang.serialization.MapCodec;
+
 public class IndexerManagerBlock extends BaseEntityBlock {
+    public static final MapCodec<IndexerManagerBlock> CODEC = simpleCodec(IndexerManagerBlock::new);
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
     private static final VoxelShape SHAPE = Block.box(0, 0, 0, 16, 16, 16);
 
     public IndexerManagerBlock(Properties properties) {
         super(properties);
+    }
+
+    @Override
+    protected MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
     }
 
     @Override
@@ -94,30 +98,28 @@ public class IndexerManagerBlock extends BaseEntityBlock {
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (!level.isClientSide()) {
             BlockEntity entity = level.getBlockEntity(pos);
             if (entity instanceof IndexerManagerBlockEntity be) {
-                NetworkHooks.openScreen((ServerPlayer) player, be, pos);
+                player.openMenu(be);
                 return InteractionResult.CONSUME;
             }
         }
         return InteractionResult.sidedSuccess(level.isClientSide());
     }
 
-    @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new IndexerManagerBlockEntity(pos, state);
     }
 
-    @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
         if (level.isClientSide()) {
             return null;
         }
-        return createTickerHelper(type, ModBlockEntities.INDEXER_MANAGER.get(),
+        return createTickerHelper(type, ModBlockEntities.INDEXER_MANAGER,
                 (lvl, p, st, be) -> ((IndexerManagerBlockEntity) be).tick(lvl, p, st));
     }
 }

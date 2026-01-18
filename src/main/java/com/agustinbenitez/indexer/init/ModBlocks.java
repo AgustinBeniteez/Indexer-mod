@@ -1,82 +1,70 @@
 package com.agustinbenitez.indexer.init;
 
 import com.agustinbenitez.indexer.IndexerMod;
-import com.agustinbenitez.indexer.block.DropBoxBlock;
-import com.agustinbenitez.indexer.block.ExtractorBlock;
-import com.agustinbenitez.indexer.block.IndexerControllerBlock;
-import com.agustinbenitez.indexer.block.IndexerPipeBlock;
-import com.agustinbenitez.indexer.block.IndexerConnectorBlock;
-import com.agustinbenitez.indexer.block.IndexerManagerBlock;
-
+import com.agustinbenitez.indexer.block.*;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.properties.NoteBlockInstrument;
 import net.minecraft.world.level.material.MapColor;
-import net.minecraft.world.level.material.PushReaction;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.RegistryObject;
 
 public class ModBlocks {
-    public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(ForgeRegistries.BLOCKS, IndexerMod.MOD_ID);
-
-    // Registra el bloque controlador principal del indexador
-    public static final RegistryObject<Block> INDEXER_CONTROLLER = BLOCKS.register("indexer_controller",
-            () -> new IndexerControllerBlock(BlockBehaviour.Properties.of()
-                    .mapColor(MapColor.METAL)
-                    .instrument(NoteBlockInstrument.IRON_XYLOPHONE)
-                    .requiresCorrectToolForDrops()
-                    .strength(1.2f, 2.0f) // Aumenta ligeramente la dureza y resistencia
-                    .sound(SoundType.METAL)));
-
-    // Registra el bloque de tubería para conectar componentes
-    public static final RegistryObject<Block> INDEXER_PIPE = BLOCKS.register("indexer_pipe",
-            () -> new IndexerPipeBlock(BlockBehaviour.Properties.of()
-                    .mapColor(MapColor.METAL)
-                    .instrument(NoteBlockInstrument.IRON_XYLOPHONE)
-                    .requiresCorrectToolForDrops()
-                    .strength(0.2f, 0.1f) // Resistencia extremadamente baja para que se rompa instantáneamente
-                    .sound(SoundType.METAL)));
-
-    // Registra el bloque conector que se coloca en los cofres
-    public static final RegistryObject<Block> INDEXER_CONNECTOR = BLOCKS.register("indexer_connector",
-            () -> new IndexerConnectorBlock(BlockBehaviour.Properties.of()
-                    .mapColor(MapColor.METAL)
-                    .instrument(NoteBlockInstrument.IRON_XYLOPHONE)
-                    .requiresCorrectToolForDrops()
-                    .strength(1.2f, 2.0f) // Aumenta ligeramente la dureza y resistencia
-                    .sound(SoundType.METAL)));
-                    
-    // Registra el bloque DropBox que funciona como un cofre con más capacidad
-    public static final RegistryObject<Block> DROP_BOX = BLOCKS.register("drop_box",
-            () -> new DropBoxBlock(BlockBehaviour.Properties.of()
-                    .mapColor(MapColor.METAL)
-                    .instrument(NoteBlockInstrument.IRON_XYLOPHONE)
-                    .requiresCorrectToolForDrops()
-                    .strength(1.2f, 2.0f) // Aumenta ligeramente la dureza y resistencia
-                    .sound(SoundType.METAL)));
-                    
-    // Registra el bloque Extractor que extrae items de contenedores
-    public static final RegistryObject<Block> EXTRACTOR = BLOCKS.register("extractor",
-            () -> new ExtractorBlock(BlockBehaviour.Properties.of()
-                    .mapColor(MapColor.METAL)
-                    .instrument(NoteBlockInstrument.IRON_XYLOPHONE)
-                    .requiresCorrectToolForDrops()
-                    .strength(1.2f, 2.0f) // Aumenta ligeramente la dureza y resistencia
-                    .sound(SoundType.METAL)));
-                    
-    // Registra el bloque Manager que muestra y extrae items agregados
-    public static final RegistryObject<Block> INDEXER_MANAGER = BLOCKS.register("indexer_manager",
-            () -> new IndexerManagerBlock(BlockBehaviour.Properties.of()
+    
+    public static final Block INDEXER_CONTROLLER = register("indexer_controller",
+            new IndexerControllerBlock(BlockBehaviour.Properties.of()
                     .mapColor(MapColor.METAL)
                     .instrument(NoteBlockInstrument.IRON_XYLOPHONE)
                     .requiresCorrectToolForDrops()
                     .strength(1.2f, 2.0f)
                     .sound(SoundType.METAL)));
 
-    public static void register(IEventBus eventBus) {
-        BLOCKS.register(eventBus);
+    public static final Block INDEXER_PIPE = register("indexer_pipe",
+            new IndexerPipeBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.METAL)
+                    .instrument(NoteBlockInstrument.IRON_XYLOPHONE)
+                    .requiresCorrectToolForDrops()
+                    .strength(0.2f, 0.1f)
+                    .sound(SoundType.METAL)));
+
+    public static final Block INDEXER_CONNECTOR = register("indexer_connector",
+            new IndexerConnectorBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.METAL)
+                    .instrument(NoteBlockInstrument.IRON_XYLOPHONE)
+                    .requiresCorrectToolForDrops()
+                    .strength(1.2f, 2.0f)
+                    .sound(SoundType.METAL)));
+
+    public static final Block DROP_BOX = register("drop_box",
+            new DropBoxBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.METAL)
+                    .instrument(NoteBlockInstrument.IRON_XYLOPHONE)
+                    .requiresCorrectToolForDrops()
+                    .strength(1.2f, 2.0f)
+                    .sound(SoundType.METAL)));
+
+    public static final Block EXTRACTOR = register("extractor",
+            new ExtractorBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.METAL)
+                    .instrument(NoteBlockInstrument.IRON_XYLOPHONE)
+                    .requiresCorrectToolForDrops()
+                    .strength(1.2f, 2.0f)
+                    .sound(SoundType.METAL)));
+
+    public static final Block INDEXER_MANAGER = register("indexer_manager",
+            new IndexerManagerBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.METAL)
+                    .instrument(NoteBlockInstrument.IRON_XYLOPHONE)
+                    .requiresCorrectToolForDrops()
+                    .strength(1.2f, 2.0f)
+                    .sound(SoundType.METAL)));
+
+    private static Block register(String name, Block block) {
+        return Registry.register(BuiltInRegistries.BLOCK, IndexerMod.id(name), block);
+    }
+
+    public static void register() {
+        // Just to load the class
     }
 }

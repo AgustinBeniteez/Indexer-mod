@@ -1,60 +1,48 @@
 package com.agustinbenitez.indexer.network;
 
+import com.agustinbenitez.indexer.IndexerMod;
 import com.agustinbenitez.indexer.block.entity.IndexerManagerBlockEntity;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.network.NetworkEvent;
 
-import java.util.function.Supplier;
+public record ExtractItemFromManagerPacket(BlockPos managerPos, ResourceLocation itemId, int count, ItemStack variantStack) implements CustomPacketPayload {
+    
+    public static final CustomPacketPayload.Type<ExtractItemFromManagerPacket> ID = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(IndexerMod.MOD_ID, "extract_item_from_manager"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, ExtractItemFromManagerPacket> CODEC = StreamCodec.composite(
+        BlockPos.STREAM_CODEC, ExtractItemFromManagerPacket::managerPos,
+        ResourceLocation.STREAM_CODEC, ExtractItemFromManagerPacket::itemId,
+        ByteBufCodecs.INT, ExtractItemFromManagerPacket::count,
+        ItemStack.STREAM_CODEC, ExtractItemFromManagerPacket::variantStack,
+        ExtractItemFromManagerPacket::new
+    );
 
-public class ExtractItemFromManagerPacket {
-    private final BlockPos managerPos;
-    private final ResourceLocation itemId;
-    private final int count;
-    private final ItemStack variantStack;
-
-    public ExtractItemFromManagerPacket(BlockPos managerPos, ResourceLocation itemId, int count, ItemStack variantStack) {
-        this.managerPos = managerPos;
-        this.itemId = itemId;
-        this.count = count;
-        this.variantStack = variantStack.copy();
-        this.variantStack.setCount(1);
+    @Override
+    public Type<? extends CustomPacketPayload> type() {
+        return ID;
     }
 
-    public ExtractItemFromManagerPacket(FriendlyByteBuf buf) {
-        this.managerPos = buf.readBlockPos();
-        this.itemId = buf.readResourceLocation();
-        this.count = buf.readInt();
-        this.variantStack = buf.readItem();
-    }
-
-    public void toBytes(FriendlyByteBuf buf) {
-        buf.writeBlockPos(managerPos);
-        buf.writeResourceLocation(itemId);
-        buf.writeInt(count);
-        buf.writeItem(variantStack);
-    }
-
-    public boolean handle(Supplier<NetworkEvent.Context> supplier) {
-        NetworkEvent.Context context = supplier.get();
-        context.enqueueWork(() -> {
-            ServerPlayer player = context.getSender();
+    public static void handle(ExtractItemFromManagerPacket payload, ServerPlayNetworking.Context context) {
+        context.server().execute(() -> {
+            ServerPlayer player = context.player();
             if (player != null) {
-                BlockEntity be = player.level().getBlockEntity(managerPos);
+                BlockEntity be = player.level().getBlockEntity(payload.managerPos());
                 if (be instanceof IndexerManagerBlockEntity manager) {
-                    int moved = manager.extractImmediately(itemId, count, variantStack);
-                    int remaining = Math.max(0, count - moved);
+                    int moved = manager.extractImmediately(payload.itemId(), payload.count(), payload.variantStack());
+                    int remaining = Math.max(0, payload.count() - moved);
                     if (remaining > 0 && !manager.isInventoryFull()) {
-                        manager.queueExtraction(itemId, remaining, variantStack);
+                        manager.queueExtraction(payload.itemId(), remaining, payload.variantStack());
                     }
                     manager.sendItemsTo(player);
                 }
             }
         });
-        return true;
     }
 }

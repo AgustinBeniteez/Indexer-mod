@@ -4,15 +4,14 @@ import com.agustinbenitez.indexer.init.ModBlockEntities;
 import com.agustinbenitez.indexer.menu.IndexerManagerMenu;
 import com.agustinbenitez.indexer.network.ModNetworking;
 import com.agustinbenitez.indexer.network.ManagerItemsUpdatePacket;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.items.IItemHandler;
-import net.minecraftforge.items.ItemHandlerHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
@@ -28,9 +27,10 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-
-import javax.annotation.Nullable;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.component.CustomData;
 import java.util.*;
+import org.jetbrains.annotations.Nullable;
 
 public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity {
     private boolean networkChanged = true;
@@ -44,7 +44,7 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
     private int syncTicker = 0;
 
     public IndexerManagerBlockEntity(BlockPos pos, BlockState state) {
-        super(ModBlockEntities.INDEXER_MANAGER.get(), pos, state);
+        super(ModBlockEntities.INDEXER_MANAGER, pos, state);
     }
 
     @Override
@@ -77,17 +77,17 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
     }
 
     @Override
-    public void load(CompoundTag tag) {
-        super.load(tag);
+    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
         this.items = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
-        net.minecraft.world.ContainerHelper.loadAllItems(tag, this.items);
+        net.minecraft.world.ContainerHelper.loadAllItems(tag, this.items, registries);
         this.extractionCooldown = tag.getInt("ExtractionCooldown");
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag) {
-        super.saveAdditional(tag);
-        net.minecraft.world.ContainerHelper.saveAllItems(tag, this.items);
+    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
+        net.minecraft.world.ContainerHelper.saveAllItems(tag, this.items, registries);
         tag.putInt("ExtractionCooldown", this.extractionCooldown);
     }
 
@@ -111,14 +111,8 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
             BlockEntity be = level.getBlockEntity(containerPos);
             if (be == null) continue;
 
-            // Usar Capability si está disponible (soporte cofres dobles y mods)
-            var cap = be.getCapability(ForgeCapabilities.ITEM_HANDLER, null);
-            if (cap.isPresent()) {
-                IItemHandler handler = cap.resolve().get();
-                for (int i = 0; i < handler.getSlots(); i++) {
-                    aggregateStack(variants, handler.getStackInSlot(i));
-                }
-            } else if (be instanceof Container container) {
+            // Usar Container interface (soporte cofres dobles y mods standard)
+            if (be instanceof Container container) {
                 for (int i = 0; i < container.getContainerSize(); i++) {
                     aggregateStack(variants, container.getItem(i));
                 }
@@ -144,11 +138,12 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
     }
     
     private String buildVariantKey(ItemStack stack) {
-        ResourceLocation base = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(stack.getItem());
+        ResourceLocation base = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem());
         if (base == null) return "unknown";
         StringBuilder sb = new StringBuilder(base.toString());
-        if (stack.hasTag() && stack.getTag() != null) {
-            var tag = stack.getTag();
+        CustomData customData = stack.get(DataComponents.CUSTOM_DATA);
+        if (customData != null) {
+            CompoundTag tag = customData.copyTag();
             java.util.List<String> parts = new java.util.ArrayList<>();
             if (tag.contains("Enchantments")) {
                 var list = tag.getList("Enchantments", 10);
@@ -186,9 +181,9 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
         int idx = key.indexOf("|E:");
         String base = idx >= 0 ? key.substring(0, idx) : key;
         try {
-            return new ResourceLocation(base);
+            return ResourceLocation.parse(base);
         } catch (Exception e) {
-            return net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(net.minecraft.world.item.Items.AIR);
+            return net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(net.minecraft.world.item.Items.AIR);
         }
     }
 
@@ -216,7 +211,7 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
 
     public void queueExtraction(ResourceLocation itemId, int amount, ItemStack variantStack) {
         if (amount <= 0) return;
-        ItemStack icon = variantStack.isEmpty() ? new ItemStack(net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(itemId)) : variantStack.copy();
+        ItemStack icon = variantStack.isEmpty() ? new ItemStack(BuiltInRegistries.ITEM.get(itemId)) : variantStack.copy();
         if (!icon.isEmpty()) icon.setCount(1);
         String key = buildVariantKey(icon);
         int current = pendingExtractions.getOrDefault(key, 0);
@@ -289,7 +284,7 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
         int perTick = getItemsPerTransferFromNearestController();
         int toTransferThisTick = Math.min(perTick, remainingRequest);
         ItemStack var = pendingVariantByKey.getOrDefault(nextKey, ItemStack.EMPTY);
-        ResourceLocation nextId = var.isEmpty() ? parseBaseIdFromKey(nextKey) : net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(var.getItem());
+        ResourceLocation nextId = var.isEmpty() ? parseBaseIdFromKey(nextKey) : BuiltInRegistries.ITEM.getKey(var.getItem());
         int moved = moveFromNetworkIntoInventory(nextId, toTransferThisTick, var);
         if (moved > 0) {
             pendingExtractions.put(nextKey, remainingRequest - moved);
@@ -327,6 +322,8 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
             if (be == null) continue;
 
             // Intentar usar Capability primero
+            /* Capability removed for Fabric */
+            /*
             var cap = be.getCapability(ForgeCapabilities.ITEM_HANDLER, null);
             if (cap.isPresent()) {
                 IItemHandler handler = cap.resolve().get();
@@ -335,7 +332,7 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
                     ItemStack slot = handler.getStackInSlot(i);
                     if (slot.isEmpty()) continue;
                     
-                    ResourceLocation key = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(slot.getItem());
+                    ResourceLocation key = BuiltInRegistries.ITEM.getKey(slot.getItem());
                     if (key == null || !key.equals(itemId)) continue;
                     if (!variantMatches(slot, variantStack)) continue;
                     
@@ -358,12 +355,14 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
                 }
                 continue; // Procesado con capability, pasar al siguiente conector
             }
+            */
 
+            // Fallback: Contenedor Vanilla
             if (!(be instanceof Container container)) continue;
             for (int i = 0; i < container.getContainerSize(); i++) {
                 ItemStack slot = container.getItem(i);
                 if (slot.isEmpty()) continue;
-                ResourceLocation key = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(slot.getItem());
+                ResourceLocation key = BuiltInRegistries.ITEM.getKey(slot.getItem());
                 if (key == null || !key.equals(itemId)) continue;
                 if (!variantMatches(slot, variantStack)) continue;
                 int take = Math.min(remaining, slot.getCount());
@@ -387,54 +386,7 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
     
     private boolean variantMatches(ItemStack a, ItemStack variant) {
         if (variant.isEmpty()) return true;
-        var ta = a.hasTag() ? a.getTag() : null;
-        var tv = variant.hasTag() ? variant.getTag() : null;
-        
-        // Check BlockEntityTag (Shulker Box content)
-        boolean aHasBet = ta != null && ta.contains("BlockEntityTag");
-        boolean vHasBet = tv != null && tv.contains("BlockEntityTag");
-        if (aHasBet != vHasBet) return false;
-        if (aHasBet) {
-            if (!ta.getCompound("BlockEntityTag").equals(tv.getCompound("BlockEntityTag"))) return false;
-        }
-
-        boolean aHas = ta != null && (ta.contains("Enchantments") || ta.contains("StoredEnchantments"));
-        boolean vHas = tv != null && (tv.contains("Enchantments") || tv.contains("StoredEnchantments"));
-        if (!aHas && !vHas) return true;
-        if (aHas != vHas) return false;
-        java.util.List<String> pa = new java.util.ArrayList<>();
-        java.util.List<String> pv = new java.util.ArrayList<>();
-        if (ta != null && ta.contains("Enchantments")) {
-            var la = ta.getList("Enchantments", 10);
-            for (int i = 0; i < la.size(); i++) {
-                var ench = la.getCompound(i);
-                pa.add(ench.getString("id") + ":" + ench.getInt("lvl"));
-            }
-        }
-        if (ta != null && ta.contains("StoredEnchantments")) {
-            var la2 = ta.getList("StoredEnchantments", 10);
-            for (int i = 0; i < la2.size(); i++) {
-                var ench = la2.getCompound(i);
-                pa.add(ench.getString("id") + ":" + ench.getInt("lvl"));
-            }
-        }
-        if (tv != null && tv.contains("Enchantments")) {
-            var lv = tv.getList("Enchantments", 10);
-            for (int i = 0; i < lv.size(); i++) {
-                var ench = lv.getCompound(i);
-                pv.add(ench.getString("id") + ":" + ench.getInt("lvl"));
-            }
-        }
-        if (tv != null && tv.contains("StoredEnchantments")) {
-            var lv2 = tv.getList("StoredEnchantments", 10);
-            for (int i = 0; i < lv2.size(); i++) {
-                var ench = lv2.getCompound(i);
-                pv.add(ench.getString("id") + ":" + ench.getInt("lvl"));
-            }
-        }
-        java.util.Collections.sort(pa);
-        java.util.Collections.sort(pv);
-        return pa.equals(pv);
+        return ItemStack.isSameItemSameComponents(a, variant);
     }
 
     private int insertIntoSelf(ItemStack stack) {

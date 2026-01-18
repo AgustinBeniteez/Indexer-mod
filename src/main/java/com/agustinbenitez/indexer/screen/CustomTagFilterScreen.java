@@ -7,11 +7,14 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.world.item.component.CustomData;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -54,9 +57,12 @@ public class CustomTagFilterScreen extends Screen {
         this.tagEditBox.setTextColorUneditable(0xA0A0A0);
         this.tagEditBox.setMaxLength(100);
         
-        // Establecer el valor actual del tag
-        if (this.filterItem.hasTag() && this.filterItem.getTag().contains("custom_tag")) {
-            this.tagEditBox.setValue(this.filterItem.getTag().getString("custom_tag"));
+        CustomData customData = this.filterItem.get(DataComponents.CUSTOM_DATA);
+        if (customData != null) {
+            CompoundTag tag = customData.copyTag();
+            if (tag.contains("custom_tag")) {
+                this.tagEditBox.setValue(tag.getString("custom_tag"));
+            }
         }
         
         this.tagEditBox.setResponder(this::onTagChanged);
@@ -87,7 +93,7 @@ public class CustomTagFilterScreen extends Screen {
         }
         
         // Generar sugerencias basadas en items registrados
-        this.suggestions = ForgeRegistries.ITEMS.getKeys().stream()
+        this.suggestions = BuiltInRegistries.ITEM.keySet().stream()
                 .map(ResourceLocation::toString)
                 .filter(itemName -> itemName.toLowerCase().contains(text.toLowerCase()))
                 .limit(10)
@@ -134,7 +140,7 @@ public class CustomTagFilterScreen extends Screen {
     
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        this.renderBackground(guiGraphics);
+        this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
         
         int guiLeft = (this.width - GUI_WIDTH) / 2;
         int guiTop = (this.height - GUI_HEIGHT) / 2;

@@ -6,12 +6,9 @@ import com.agustinbenitez.indexer.init.ModItems;
 import com.agustinbenitez.indexer.inventory.IndexerConnectorMenu;
 import com.agustinbenitez.indexer.util.FilterUtils;
 
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.items.IItemHandler;
-import net.minecraftforge.items.ItemHandlerHelper;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.Container;
@@ -32,8 +29,6 @@ import net.minecraft.world.phys.AABB;
 import java.util.List;
 import java.util.ArrayList;
 
-import javax.annotation.Nullable;
-
 public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntity {
     private static final int BASE_FILTER_SLOTS = 9; // 3x3 grid of filter slots
     private static final int UPGRADED_FILTER_SLOTS = 18; // 6x3 when upgraded
@@ -44,7 +39,7 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
     private net.minecraft.core.NonNullList<ItemStack> items = net.minecraft.core.NonNullList.withSize(BASE_FILTER_SLOTS, ItemStack.EMPTY);
 
     public IndexerConnectorBlockEntity(BlockPos pos, BlockState state) {
-        super(ModBlockEntities.INDEXER_CONNECTOR.get(), pos, state);
+        super(ModBlockEntities.INDEXER_CONNECTOR, pos, state);
         // Desfasar el contador de ticks para evitar picos de lag
         this.tickCounter = (int)(Math.random() * 20);
         // Initialize filter items list with empty stacks
@@ -69,8 +64,8 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
     }
 
     @Override
-    public void load(CompoundTag tag) {
-        super.load(tag);
+    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
         // Load connector level
         if (tag.contains("ConnectorLevel")) {
             this.connectorLevel = tag.getInt("ConnectorLevel");
@@ -86,7 +81,25 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
             int maxRead = UPGRADED_FILTER_SLOTS;
             for (int i = 0; i < maxRead; i++) {
                 if (filterItemsTag.contains("Item" + i)) {
-                    this.filterItems.add(ItemStack.of(filterItemsTag.getCompound("Item" + i)));
+                    CompoundTag itemTag = filterItemsTag.getCompound("Item" + i);
+                    if (itemTag.contains("id")) {
+                        net.minecraft.resources.ResourceLocation id = net.minecraft.resources.ResourceLocation.parse(itemTag.getString("id"));
+                        net.minecraft.world.item.Item item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(id);
+                        if (item != null) {
+                            ItemStack stack = new ItemStack(item, 1);
+                            if (itemTag.contains("custom_data")) {
+                                CompoundTag customDataTag = itemTag.getCompound("custom_data");
+                                net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, stack, nbt -> {
+                                    nbt.merge(customDataTag);
+                                });
+                            }
+                            this.filterItems.add(stack);
+                        } else {
+                            this.filterItems.add(ItemStack.EMPTY);
+                        }
+                    } else {
+                        this.filterItems.add(ItemStack.EMPTY);
+                    }
                 } else {
                     this.filterItems.add(ItemStack.EMPTY);
                 }
@@ -110,8 +123,8 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag) {
-        super.saveAdditional(tag);
+    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
         tag.putInt("ConnectorLevel", this.connectorLevel);
         
         // Save filter items
@@ -120,7 +133,14 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
             ItemStack filterItem = this.filterItems.get(i);
             if (!filterItem.isEmpty()) {
                 CompoundTag itemTag = new CompoundTag();
-                filterItem.save(itemTag);
+                net.minecraft.resources.ResourceLocation id = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(filterItem.getItem());
+                if (id != null) {
+                    itemTag.putString("id", id.toString());
+                }
+                net.minecraft.world.item.component.CustomData customData = filterItem.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+                if (customData != null) {
+                    itemTag.put("custom_data", customData.copyTag());
+                }
                 filterItemsTag.put("Item" + i, itemTag);
             }
         }
@@ -321,7 +341,7 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
         // Verificar si hay filtros positivos (no de bloqueo) configurados
         boolean hasPositiveFilters = false;
         for (ItemStack filterItem : this.filterItems) {
-            if (!filterItem.isEmpty() && filterItem.getItem() != ModItems.CUSTOM_TAG_BLOCKER.get()) {
+            if (!filterItem.isEmpty() && filterItem.getItem() != ModItems.CUSTOM_TAG_BLOCKER) {
                 hasPositiveFilters = true;
                 break;
             }
@@ -339,9 +359,9 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
         boolean hasNameFilters = false;
         boolean passesNameFilter = false;
         for (ItemStack filterItem : this.filterItems) {
-            if (!filterItem.isEmpty() && filterItem.getItem() == ModItems.NAME_FILTER.get()) {
+            if (!filterItem.isEmpty() && filterItem.getItem() == ModItems.NAME_FILTER) {
                 hasNameFilters = true;
-                System.out.println("[DEBUG] Evaluando filtro de nombre: " + filterItem.getTag());
+                System.out.println("[DEBUG] Evaluando filtro de nombre: " + filterItem);
                 System.out.println("[DEBUG] Item a evaluar: " + stack.getDisplayName().getString());
                 boolean passes = FilterUtils.passesFilter(stack, filterItem);
                 System.out.println("[DEBUG] ¿Pasa el filtro? " + passes);
@@ -361,7 +381,7 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
         boolean hasAttributeFilters = false;
         boolean passesAttributeFilter = false;
         for (ItemStack filterItem : this.filterItems) {
-            if (!filterItem.isEmpty() && filterItem.getItem() == ModItems.ATTRIBUTE_FILTER.get()) {
+            if (!filterItem.isEmpty() && filterItem.getItem() == ModItems.ATTRIBUTE_FILTER) {
                 hasAttributeFilters = true;
                 if (FilterUtils.passesFilter(stack, filterItem)) {
                     passesAttributeFilter = true;
@@ -379,9 +399,9 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
         boolean passesSpecificFilter = false;
         for (ItemStack filterItem : this.filterItems) {
             if (!filterItem.isEmpty() && 
-                (filterItem.getItem() == ModItems.TOOLS_FILTER.get() ||
-                 filterItem.getItem() == ModItems.FOOD_FILTER.get() ||
-                 filterItem.getItem() == ModItems.FUEL_FILTER.get())) {
+                (filterItem.getItem() == ModItems.TOOLS_FILTER ||
+                 filterItem.getItem() == ModItems.FOOD_FILTER ||
+                 filterItem.getItem() == ModItems.FUEL_FILTER)) {
                 hasSpecificFilters = true;
                 System.out.println("[CONNECTOR_DEBUG] Evaluando filtro específico: " + filterItem.getItem().getDescriptionId() + " para item: " + stack.getItem().getDescriptionId());
                 if (FilterUtils.passesFilter(stack, filterItem)) {
@@ -404,12 +424,12 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
         boolean passesExactFilter = false;
         for (ItemStack filterItem : this.filterItems) {
             if (!filterItem.isEmpty() && 
-                filterItem.getItem() != ModItems.NAME_FILTER.get() &&
-                filterItem.getItem() != ModItems.ATTRIBUTE_FILTER.get() &&
-                filterItem.getItem() != ModItems.TOOLS_FILTER.get() &&
-                filterItem.getItem() != ModItems.FOOD_FILTER.get() &&
-                filterItem.getItem() != ModItems.FUEL_FILTER.get() &&
-                filterItem.getItem() != ModItems.CUSTOM_TAG_BLOCKER.get()) {
+                filterItem.getItem() != ModItems.NAME_FILTER &&
+                filterItem.getItem() != ModItems.ATTRIBUTE_FILTER &&
+                filterItem.getItem() != ModItems.TOOLS_FILTER &&
+                filterItem.getItem() != ModItems.FOOD_FILTER &&
+                filterItem.getItem() != ModItems.FUEL_FILTER &&
+                filterItem.getItem() != ModItems.CUSTOM_TAG_BLOCKER) {
                 hasExactFilters = true;
                 if (FilterUtils.passesFilter(stack, filterItem)) {
                     passesExactFilter = true;
@@ -570,7 +590,7 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
                         }
                         return ItemStack.EMPTY;
                     }
-                } else if (ItemStack.isSameItemSameTags(fuelSlotStack, remainder)) {
+                } else if (ItemStack.isSameItemSameComponents(fuelSlotStack, remainder)) {
                     // Mismo ítem en el slot de combustible, intentar apilar
                     int maxStackSize = Math.min(container.getMaxStackSize(), fuelSlotStack.getMaxStackSize());
                     int space = maxStackSize - fuelSlotStack.getCount();
@@ -649,7 +669,7 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
                         }
                         return ItemStack.EMPTY;
                     }
-                } else if (ItemStack.isSameItemSameTags(inputSlotStack, remainder)) {
+                } else if (ItemStack.isSameItemSameComponents(inputSlotStack, remainder)) {
                     // Mismo ítem en el slot de ingredientes, intentar apilar
                     int maxStackSize = Math.min(container.getMaxStackSize(), inputSlotStack.getMaxStackSize());
                     int space = maxStackSize - inputSlotStack.getCount();
@@ -676,21 +696,7 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
             }
         }
 
-        // Intentar usar IItemHandler (Capability) para inserción universal
-        // Esto soluciona problemas con cofres dobles (detectando el inventario completo) y contenedores de mods
-        var cap = containerEntity.getCapability(ForgeCapabilities.ITEM_HANDLER, null);
-        if (cap.isPresent()) {
-            IItemHandler handler = cap.resolve().get();
-            ItemStack result = ItemHandlerHelper.insertItem(handler, remainder, false);
-            
-            // Si hubo cambios (se insertó algo), marcar el bloque como cambiado
-            if (result.getCount() < initialCount) {
-                if (containerEntity instanceof BlockEntity) {
-                    ((BlockEntity) containerEntity).setChanged();
-                }
-            }
-            return result;
-        }
+        /* Capability support removed for Fabric port - relying on Container interface below */
 
         /* Bloque legacy eliminado: La lógica manual de cofre doble causaba problemas de posicionamiento */
 
@@ -718,7 +724,7 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
                 if (remainder.isEmpty()) {
                     break;
                 }
-            } else if (ItemStack.isSameItemSameTags(slotStack, remainder)) {
+            } else if (ItemStack.isSameItemSameComponents(slotStack, remainder)) {
                 // Mismo ítem, intentar apilar
                 int maxStackSize = Math.min(container.getMaxStackSize(), slotStack.getMaxStackSize());
                 int space = maxStackSize - slotStack.getCount();
@@ -787,7 +793,7 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
                 if (remainder.isEmpty()) {
                     return ItemStack.EMPTY;
                 }
-            } else if (ItemStack.isSameItemSameTags(slotStack, remainder)) {
+            } else if (ItemStack.isSameItemSameComponents(slotStack, remainder)) {
                 // Mismo ítem, intentar apilar
                 int maxStackSize = Math.min(chest1.getMaxStackSize(), slotStack.getMaxStackSize());
                 int space = maxStackSize - slotStack.getCount();
@@ -823,7 +829,7 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
                     if (remainder.isEmpty()) {
                         return ItemStack.EMPTY;
                     }
-                } else if (ItemStack.isSameItemSameTags(slotStack, remainder)) {
+                } else if (ItemStack.isSameItemSameComponents(slotStack, remainder)) {
                     // Mismo ítem, intentar apilar
                     int maxStackSize = Math.min(chest2.getMaxStackSize(), slotStack.getMaxStackSize());
                     int space = maxStackSize - slotStack.getCount();
@@ -910,7 +916,7 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
                         }
                         return ItemStack.EMPTY;
                     }
-                } else if (ItemStack.isSameItemSameTags(fuelSlotStack, remainder)) {
+                } else if (ItemStack.isSameItemSameComponents(fuelSlotStack, remainder)) {
                     // Mismo ítem en el slot de combustible, intentar apilar
                     int maxStackSize = Math.min(container.getMaxStackSize(), fuelSlotStack.getMaxStackSize());
                     int space = maxStackSize - fuelSlotStack.getCount();
@@ -962,7 +968,7 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
                         }
                         return ItemStack.EMPTY;
                     }
-                } else if (ItemStack.isSameItemSameTags(inputSlotStack, remainder)) {
+                } else if (ItemStack.isSameItemSameComponents(inputSlotStack, remainder)) {
                     // Mismo ítem en el slot de ingredientes, intentar apilar
                     int maxStackSize = Math.min(container.getMaxStackSize(), inputSlotStack.getMaxStackSize());
                     int space = maxStackSize - inputSlotStack.getCount();
@@ -1036,7 +1042,7 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
                 if (remainder.isEmpty()) {
                     break;
                 }
-            } else if (ItemStack.isSameItemSameTags(slotStack, remainder)) {
+            } else if (ItemStack.isSameItemSameComponents(slotStack, remainder)) {
                 // Mismo ítem, intentar apilar
                 int maxStackSize = Math.min(container.getMaxStackSize(), slotStack.getMaxStackSize());
                 int space = maxStackSize - slotStack.getCount();
@@ -1286,22 +1292,22 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
 
     // --- Client sync overrides ---
     @Override
-    public net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket getUpdatePacket() {
+    public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
         return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
     }
 
     @Override
-    public net.minecraft.nbt.CompoundTag getUpdateTag() {
+    public net.minecraft.nbt.CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider registries) {
         net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
-        saveAdditional(tag);
+        saveAdditional(tag, registries);
         return tag;
     }
 
-    @Override
+    // Removed @Override as onDataPacket is not a vanilla method
     public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket pkt) {
         net.minecraft.nbt.CompoundTag tag = pkt.getTag();
-        if (tag != null) {
-            load(tag);
+        if (tag != null && this.level != null) {
+            this.loadAdditional(tag, this.level.registryAccess());
         }
     }
 

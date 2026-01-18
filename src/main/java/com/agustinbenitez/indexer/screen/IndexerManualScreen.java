@@ -15,11 +15,9 @@ import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.item.crafting.ShapedRecipe;
 import net.minecraft.world.item.crafting.ShapelessRecipe;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraft.client.Minecraft;
 import com.mojang.math.Axis;
 
@@ -27,13 +25,12 @@ import com.mojang.math.Axis;
  * Pantalla GUI para el manual del Indexer.
  * Muestra instrucciones paso a paso con imágenes y permite navegar entre páginas.
  */
-@OnlyIn(Dist.CLIENT)
 public class IndexerManualScreen extends Screen {
     // Constantes para la pantalla
     private static final int SCREEN_WIDTH = 271;
     private static final int SCREEN_HEIGHT = 180;
-    private static final ResourceLocation BACKGROUND = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/manual/manualgui.png");
-    private static final ResourceLocation LOGO = new ResourceLocation(IndexerMod.MOD_ID, "textures/block/indexer_controller_top.png");
+    private static final ResourceLocation BACKGROUND = ResourceLocation.fromNamespaceAndPath(IndexerMod.MOD_ID, "textures/gui/manual/manualgui.png");
+    private static final ResourceLocation LOGO = ResourceLocation.fromNamespaceAndPath(IndexerMod.MOD_ID, "textures/block/indexer_controller_top.png");
     private static final String WIKI_URL = "https://agustinbeniteez.github.io/Wikimods/mod/index.html?id=indexer&game=minecraft";
     
     // Botones de navegación
@@ -62,9 +59,9 @@ public class IndexerManualScreen extends Screen {
     private long splashEndMillis = 0L;
 
     // Texturas de botones del menú
-    private static final ResourceLocation MENU_CRAFT_TEXTURE = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/manual/menu/menucraft.png");
-    private static final ResourceLocation MENU_TUTORIAL_TEXTURE = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/manual/menu/menututorial.png");
-    private static final ResourceLocation MENU_WIKI_TEXTURE = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/manual/menu/menuwiki.png");
+    private static final ResourceLocation MENU_CRAFT_TEXTURE = ResourceLocation.fromNamespaceAndPath(IndexerMod.MOD_ID, "textures/gui/manual/menu/menucraft.png");
+    private static final ResourceLocation MENU_TUTORIAL_TEXTURE = ResourceLocation.fromNamespaceAndPath(IndexerMod.MOD_ID, "textures/gui/manual/menu/menututorial.png");
+    private static final ResourceLocation MENU_WIKI_TEXTURE = ResourceLocation.fromNamespaceAndPath(IndexerMod.MOD_ID, "textures/gui/manual/menu/menuwiki.png");
 
     // Posición/tamaño de botones del menú (para reutilizar)
     private int menuBtnWidth;
@@ -110,7 +107,7 @@ public class IndexerManualScreen extends Screen {
         
         // Initialize page images
         for (int i = 0; i < totalPages; i++) {
-            pageImages[i] = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/manual/manual" + (i + 1) + ".png");
+            pageImages[i] = ResourceLocation.fromNamespaceAndPath(IndexerMod.MOD_ID, "textures/gui/manual/manual" + (i + 1) + ".png");
         }
         this.splashEndMillis = System.currentTimeMillis() + 1000L;
     }
@@ -179,7 +176,7 @@ public class IndexerManualScreen extends Screen {
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         // Renderizar fondo oscuro
-        this.renderBackground(guiGraphics);
+        this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
         
         // Calcular posiciones centradas
         int centerX = this.width / 2;
@@ -358,10 +355,11 @@ public class IndexerManualScreen extends Screen {
             var manager = this.minecraft.level.getRecipeManager();
             var recipes = manager.getAllRecipesFor(RecipeType.CRAFTING);
             java.util.List<Recipe<?>> modList = new java.util.ArrayList<>();
-            for (Recipe<?> recipe : recipes) {
+            for (net.minecraft.world.item.crafting.RecipeHolder<net.minecraft.world.item.crafting.CraftingRecipe> holder : recipes) {
+                Recipe<?> recipe = holder.value();
                 ItemStack result = recipe.getResultItem(this.minecraft.level.registryAccess());
                 if (!result.isEmpty()) {
-                    var key = ForgeRegistries.ITEMS.getKey(result.getItem());
+                    var key = BuiltInRegistries.ITEM.getKey(result.getItem());
                     if (key != null && IndexerMod.MOD_ID.equals(key.getNamespace())) {
                         modList.add(recipe);
                     }
@@ -440,8 +438,8 @@ public class IndexerManualScreen extends Screen {
     private void renderRecipeGrid(GuiGraphics g, Recipe<?> recipe, int gridX, int gridY) {
         // Siempre dibujar un grid 3x3 manteniendo huecos vacíos
         if (recipe instanceof ShapedRecipe shaped) {
-            int w = shaped.getRecipeWidth();
-            int h = shaped.getRecipeHeight();
+            int w = shaped.getWidth();
+            int h = shaped.getHeight();
             java.util.List<Ingredient> ing = shaped.getIngredients();
             int offsetX = (3 - Math.min(3, w)) / 2;
             int offsetY = (3 - Math.min(3, h)) / 2;

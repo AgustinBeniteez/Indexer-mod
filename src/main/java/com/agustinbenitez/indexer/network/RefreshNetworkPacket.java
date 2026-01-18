@@ -1,47 +1,48 @@
 package com.agustinbenitez.indexer.network;
 
+import com.agustinbenitez.indexer.IndexerMod;
 import com.agustinbenitez.indexer.block.entity.IndexerControllerBlockEntity;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.network.NetworkEvent;
 
 import java.util.List;
-import java.util.function.Supplier;
 
-public class RefreshNetworkPacket {
-    private final BlockPos controllerPos;
+public record RefreshNetworkPacket(BlockPos controllerPos) implements CustomPacketPayload {
     
-    public RefreshNetworkPacket(BlockPos controllerPos) {
-        this.controllerPos = controllerPos;
+    public static final CustomPacketPayload.Type<RefreshNetworkPacket> ID = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(IndexerMod.MOD_ID, "refresh_network"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, RefreshNetworkPacket> CODEC = StreamCodec.composite(
+        BlockPos.STREAM_CODEC, RefreshNetworkPacket::controllerPos,
+        RefreshNetworkPacket::new
+    );
+
+    @Override
+    public Type<? extends CustomPacketPayload> type() {
+        return ID;
     }
-    
-    public RefreshNetworkPacket(FriendlyByteBuf buf) {
-        this.controllerPos = buf.readBlockPos();
-    }
-    
-    public void toBytes(FriendlyByteBuf buf) {
-        buf.writeBlockPos(controllerPos);
-    }
-    
-    public boolean handle(Supplier<NetworkEvent.Context> supplier) {
-        NetworkEvent.Context context = supplier.get();
-        context.enqueueWork(() -> {
-            ServerPlayer player = context.getSender();
+
+    public static void handle(RefreshNetworkPacket payload, ServerPlayNetworking.Context context) {
+        context.server().execute(() -> {
+            ServerPlayer player = context.player();
             if (player != null) {
-                BlockEntity blockEntity = player.level().getBlockEntity(controllerPos);
+                BlockEntity blockEntity = player.level().getBlockEntity(payload.controllerPos());
                 
                 if (blockEntity instanceof IndexerControllerBlockEntity controller) {
-                    // Forzar actualización de la red
                     controller.forceNetworkRefresh();
                     
-                    // Enviar la lista actualizada de contenedores al cliente
                     List<IndexerControllerBlockEntity.ContainerNetworkInfo> containers = controller.getNetworkContainers();
-                    ModNetworking.sendToPlayer(new ContainerListUpdatePacket(containers), player);
+                    java.util.List<ContainerListUpdatePacket.ContainerData> containerDataList = new java.util.ArrayList<>();
+                    for (IndexerControllerBlockEntity.ContainerNetworkInfo info : containers) {
+                        containerDataList.add(new ContainerListUpdatePacket.ContainerData(info));
+                    }
+                    ModNetworking.sendToPlayer(new ContainerListUpdatePacket(containerDataList), player);
                 }
             }
         });
-        return true;
     }
 }

@@ -1,9 +1,10 @@
 package com.agustinbenitez.indexer.util;
 
 import com.agustinbenitez.indexer.init.ModItems;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.*;
 import net.minecraft.world.level.block.Block;
-import net.minecraftforge.common.ForgeHooks;
 
 public class FilterUtils {
     
@@ -15,32 +16,32 @@ public class FilterUtils {
         Item filterType = filterItem.getItem();
         
         // Filtro de herramientas
-        if (filterType == ModItems.TOOLS_FILTER.get()) {
+        if (filterType == ModItems.TOOLS_FILTER) {
             return isToolItem(itemToCheck);
         }
         
         // Filtro de comida
-        if (filterType == ModItems.FOOD_FILTER.get()) {
-            return itemToCheck.isEdible();
+        if (filterType == ModItems.FOOD_FILTER) {
+            return itemToCheck.get(net.minecraft.core.component.DataComponents.FOOD) != null;
         }
         
         // Filtro de combustibles
-        if (filterType == ModItems.FUEL_FILTER.get()) {
+        if (filterType == ModItems.FUEL_FILTER) {
             return isFuelItem(itemToCheck);
         }
         
         // Filtro personalizable (bloqueador)
-        if (filterType == ModItems.CUSTOM_TAG_BLOCKER.get()) {
+        if (filterType == ModItems.CUSTOM_TAG_BLOCKER) {
             return passesCustomTagFilter(itemToCheck, filterItem);
         }
         
         // Filtro de atributos
-        if (filterType == ModItems.ATTRIBUTE_FILTER.get()) {
+        if (filterType == ModItems.ATTRIBUTE_FILTER) {
             return passesAttributeFilter(itemToCheck, filterItem);
         }
         
         // Filtro por nombre personalizado
-        if (filterType == ModItems.NAME_FILTER.get()) {
+        if (filterType == ModItems.NAME_FILTER) {
             return passesNameFilter(itemToCheck, filterItem);
         }
         
@@ -59,7 +60,7 @@ public class FilterUtils {
         if (filterItem.isEmpty()) {
             return false;
         }
-        return filterItem.getItem() == ModItems.CUSTOM_TAG_BLOCKER.get();
+        return filterItem.getItem() == ModItems.CUSTOM_TAG_BLOCKER;
     }
     
     private static boolean isToolItem(ItemStack stack) {
@@ -83,11 +84,13 @@ public class FilterUtils {
     }
     
     private static boolean passesCustomTagFilter(ItemStack itemToCheck, ItemStack filterItem) {
-        if (!filterItem.hasTag()) {
+        net.minecraft.world.item.component.CustomData customData = filterItem.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+        if (customData == null) {
             return true; // Sin tag configurado, permite todo (no bloquea nada)
         }
         
-        String customTag = filterItem.getTag().getString("custom_tag");
+        CompoundTag tag = customData.copyTag();
+        String customTag = tag.getString("custom_tag_filter");
         if (customTag.isEmpty()) {
             return true; // Sin tag configurado, permite todo (no bloquea nada)
         }
@@ -113,33 +116,24 @@ public class FilterUtils {
     }
     
     private static boolean passesAttributeFilter(ItemStack itemToCheck, ItemStack filterItem) {
-        if (!filterItem.hasTag()) {
+        net.minecraft.world.item.component.CustomData customData = filterItem.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+        if (customData == null) {
             return false; // Sin atributo configurado, no pasa nada
         }
         
-        String attributeFilter = filterItem.getTag().getString("attribute_filter");
+        CompoundTag tag = customData.copyTag();
+        String attributeFilter = tag.getString("attribute_filter");
         if (attributeFilter.isEmpty()) {
             return false; // Sin atributo configurado, no pasa nada
         }
         
         // Verificar si el item tiene el atributo especificado
-        // Primero verificar encantamientos
-        if (itemToCheck.isEnchanted()) {
-            return itemToCheck.getAllEnchantments().keySet().stream()
-                    .anyMatch(enchantment -> {
-                        net.minecraft.resources.ResourceLocation enchantmentKey = net.minecraftforge.registries.ForgeRegistries.ENCHANTMENTS.getKey(enchantment);
-                        return enchantment.getDescriptionId().contains(attributeFilter) ||
-                               (enchantmentKey != null && enchantmentKey.toString().equals(attributeFilter));
-                    });
-        }
+        String filterLower = attributeFilter.toLowerCase();
         
-        // También verificar otros atributos del item (nombre, tags, etc.)
-        String itemName = itemToCheck.getItem().toString().toLowerCase();
-        String displayName = itemToCheck.getDisplayName().getString().toLowerCase();
+        String itemName = itemToCheck.getItem().getDescriptionId().toLowerCase();
+        String displayName = itemToCheck.getHoverName().getString().toLowerCase();
         
-        return itemName.contains(attributeFilter.toLowerCase()) ||
-               displayName.contains(attributeFilter.toLowerCase()) ||
-               itemToCheck.getTags().anyMatch(tag -> tag.location().toString().contains(attributeFilter));
+        return itemName.contains(filterLower) || displayName.contains(filterLower);
     }
     
     /**
@@ -148,48 +142,20 @@ public class FilterUtils {
      * Útil para items renombrados con yunque.
      */
     private static boolean passesNameFilter(ItemStack itemToCheck, ItemStack filterItem) {
-        if (!filterItem.hasTag()) {
+        net.minecraft.world.item.component.CustomData customData = filterItem.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+        if (customData == null) {
             return false; // Sin nombre configurado, no pasa nada
         }
         
-        String nameFilter = filterItem.getTag().getString("custom_name");
+        CompoundTag tag = customData.copyTag();
+        String nameFilter = tag.getString("custom_name");
         if (nameFilter.isEmpty()) {
             return false; // Sin nombre configurado, no pasa nada
         }
         
         // SOLO permitir items que tengan EXACTAMENTE el nombre configurado
-        
-        // Verificar específicamente el NBT tag que crea el yunque
-        // Cuando se renombra con yunque, Minecraft guarda el nombre en display.Name
-        if (itemToCheck.hasTag() && itemToCheck.getTag().contains("display")) {
-            var displayTag = itemToCheck.getTag().getCompound("display");
-            if (displayTag.contains("Name")) {
-                String anvilName = displayTag.getString("Name");
-                
-                // El yunque guarda el nombre en formato JSON: {"text":"NombrePersonalizado"}
-                if (anvilName.startsWith("{") && anvilName.contains("\"text\"")) {
-                    try {
-                        // Extraer el texto del JSON del yunque
-                        int textStart = anvilName.indexOf("\"text\":\"") + 8;
-                        int textEnd = anvilName.indexOf("\"", textStart);
-                        if (textStart > 7 && textEnd > textStart) {
-                            String extractedName = anvilName.substring(textStart, textEnd);
-                            // SOLO permitir si el nombre es EXACTAMENTE igual
-                            return extractedName.equals(nameFilter);
-                        }
-                    } catch (Exception e) {
-                        // Si falla el parsing JSON, intentar comparación directa
-                    }
-                }
-                
-                // Fallback: comparar directamente el string del NBT
-                // SOLO permitir coincidencia exacta
-                return anvilName.equals(nameFilter) || anvilName.equals("{\"text\":\"" + nameFilter + "\"}");
-            }
-        }
-        
-        // Si el item NO tiene nombre personalizado, NO debe pasar el filtro de nombre
-        return false;
+        String displayName = itemToCheck.getHoverName().getString();
+        return displayName.equals(nameFilter);
     }
     
     /**

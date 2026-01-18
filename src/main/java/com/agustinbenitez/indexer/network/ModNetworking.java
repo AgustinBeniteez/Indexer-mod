@@ -1,111 +1,46 @@
 package com.agustinbenitez.indexer.network;
 
 import com.agustinbenitez.indexer.IndexerMod;
-import net.minecraft.resources.ResourceLocation;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkDirection;
-import net.minecraftforge.network.NetworkRegistry;
-import net.minecraftforge.network.PacketDistributor;
-import net.minecraftforge.network.simple.SimpleChannel;
 
 public class ModNetworking {
-    private static SimpleChannel INSTANCE;
-    private static int packetId = 0;
-    
-    private static int id() {
-        return packetId++;
-    }
     
     public static void register() {
-        SimpleChannel net = NetworkRegistry.ChannelBuilder
-                .named(new ResourceLocation(IndexerMod.MOD_ID, "messages"))
-                .networkProtocolVersion(() -> "1.0")
-                .clientAcceptedVersions(s -> true)
-                .serverAcceptedVersions(s -> true)
-                .simpleChannel();
+        // Register C2S Packets
+        PayloadTypeRegistry.playC2S().register(ToggleControllerPacket.ID, ToggleControllerPacket.CODEC);
+        PayloadTypeRegistry.playC2S().register(TransferAllItemsPacket.ID, TransferAllItemsPacket.CODEC);
+        PayloadTypeRegistry.playC2S().register(RefreshNetworkPacket.ID, RefreshNetworkPacket.CODEC);
+        PayloadTypeRegistry.playC2S().register(CustomTagFilterPacket.ID, CustomTagFilterPacket.CODEC);
+        PayloadTypeRegistry.playC2S().register(AttributeFilterPacket.ID, AttributeFilterPacket.CODEC);
+        PayloadTypeRegistry.playC2S().register(NameFilterPacket.ID, NameFilterPacket.CODEC);
+        PayloadTypeRegistry.playC2S().register(RequestManagerItemsPacket.ID, RequestManagerItemsPacket.CODEC);
+        PayloadTypeRegistry.playC2S().register(ExtractItemFromManagerPacket.ID, ExtractItemFromManagerPacket.CODEC);
+        PayloadTypeRegistry.playC2S().register(CancelExtractionFromManagerPacket.ID, CancelExtractionFromManagerPacket.CODEC);
         
-        INSTANCE = net;
-        
-        // Registrar el paquete ToggleControllerPacket
-        net.messageBuilder(ToggleControllerPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
-                .decoder(ToggleControllerPacket::new)
-                .encoder(ToggleControllerPacket::toBytes)
-                .consumerMainThread(ToggleControllerPacket::handle)
-                .add();
-        
-        // Registrar el paquete TransferAllItemsPacket
-        net.messageBuilder(TransferAllItemsPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
-                .decoder(TransferAllItemsPacket::new)
-                .encoder(TransferAllItemsPacket::toBytes)
-                .consumerMainThread(TransferAllItemsPacket::handle)
-                .add();
-        
-        // Registrar el paquete RefreshNetworkPacket
-        net.messageBuilder(RefreshNetworkPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
-                .decoder(RefreshNetworkPacket::new)
-                .encoder(RefreshNetworkPacket::toBytes)
-                .consumerMainThread(RefreshNetworkPacket::handle)
-                .add();
-        
-        // Registrar el paquete ContainerListUpdatePacket
-        net.messageBuilder(ContainerListUpdatePacket.class, id(), NetworkDirection.PLAY_TO_CLIENT)
-                .decoder(ContainerListUpdatePacket::new)
-                .encoder(ContainerListUpdatePacket::toBytes)
-                .consumerMainThread(ContainerListUpdatePacket::handle)
-                .add();
-        
-        // Registrar el paquete CustomTagFilterPacket
-        net.messageBuilder(CustomTagFilterPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
-                .decoder(CustomTagFilterPacket::new)
-                .encoder(CustomTagFilterPacket::toBytes)
-                .consumerMainThread(CustomTagFilterPacket::handle)
-                .add();
-        
-        // Registrar el paquete AttributeFilterPacket
-        net.messageBuilder(AttributeFilterPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
-                .decoder(AttributeFilterPacket::new)
-                .encoder(AttributeFilterPacket::toBytes)
-                .consumerMainThread(AttributeFilterPacket::handle)
-                .add();
-        
-        // Registrar el paquete NameFilterPacket
-        net.messageBuilder(NameFilterPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
-                .decoder(NameFilterPacket::new)
-                .encoder(NameFilterPacket::toBytes)
-                .consumerMainThread(NameFilterPacket::handle)
-                .add();
-        
-        // Registrar paquetes del Indexer Manager
-        net.messageBuilder(RequestManagerItemsPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
-                .decoder(RequestManagerItemsPacket::new)
-                .encoder(RequestManagerItemsPacket::toBytes)
-                .consumerMainThread(RequestManagerItemsPacket::handle)
-                .add();
-        
-        net.messageBuilder(ManagerItemsUpdatePacket.class, id(), NetworkDirection.PLAY_TO_CLIENT)
-                .decoder(ManagerItemsUpdatePacket::new)
-                .encoder(ManagerItemsUpdatePacket::toBytes)
-                .consumerMainThread(ManagerItemsUpdatePacket::handle)
-                .add();
-        
-        net.messageBuilder(ExtractItemFromManagerPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
-                .decoder(ExtractItemFromManagerPacket::new)
-                .encoder(ExtractItemFromManagerPacket::toBytes)
-                .consumerMainThread(ExtractItemFromManagerPacket::handle)
-                .add();
-        
-        net.messageBuilder(CancelExtractionFromManagerPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
-                .decoder(CancelExtractionFromManagerPacket::new)
-                .encoder(CancelExtractionFromManagerPacket::toBytes)
-                .consumerMainThread(CancelExtractionFromManagerPacket::handle)
-                .add();
+        // Register S2C Packets
+        PayloadTypeRegistry.playS2C().register(ContainerListUpdatePacket.ID, ContainerListUpdatePacket.CODEC);
+        PayloadTypeRegistry.playS2C().register(ManagerItemsUpdatePacket.ID, ManagerItemsUpdatePacket.CODEC);
+
+        // Register Server Receivers
+        ServerPlayNetworking.registerGlobalReceiver(ToggleControllerPacket.ID, ToggleControllerPacket::handle);
+        ServerPlayNetworking.registerGlobalReceiver(TransferAllItemsPacket.ID, TransferAllItemsPacket::handle);
+        ServerPlayNetworking.registerGlobalReceiver(RefreshNetworkPacket.ID, RefreshNetworkPacket::handle);
+        ServerPlayNetworking.registerGlobalReceiver(CustomTagFilterPacket.ID, CustomTagFilterPacket::handle);
+        ServerPlayNetworking.registerGlobalReceiver(AttributeFilterPacket.ID, AttributeFilterPacket::handle);
+        ServerPlayNetworking.registerGlobalReceiver(NameFilterPacket.ID, NameFilterPacket::handle);
+        ServerPlayNetworking.registerGlobalReceiver(RequestManagerItemsPacket.ID, RequestManagerItemsPacket::handle);
+        ServerPlayNetworking.registerGlobalReceiver(ExtractItemFromManagerPacket.ID, ExtractItemFromManagerPacket::handle);
+        ServerPlayNetworking.registerGlobalReceiver(CancelExtractionFromManagerPacket.ID, CancelExtractionFromManagerPacket::handle);
     }
     
-    public static <MSG> void sendToServer(MSG message) {
-        INSTANCE.sendToServer(message);
+    public static void sendToPlayer(net.minecraft.network.protocol.common.custom.CustomPacketPayload payload, ServerPlayer player) {
+        ServerPlayNetworking.send(player, payload);
     }
-    
-    public static <MSG> void sendToPlayer(MSG message, ServerPlayer player) {
-        INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), message);
+
+    public static void sendToServer(net.minecraft.network.protocol.common.custom.CustomPacketPayload payload) {
+        ClientPlayNetworking.send(payload);
     }
 }

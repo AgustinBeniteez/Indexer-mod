@@ -7,57 +7,37 @@ import com.agustinbenitez.indexer.block.entity.IndexerControllerBlockEntity;
 import com.agustinbenitez.indexer.block.entity.IndexerConnectorBlockEntity;
 import com.agustinbenitez.indexer.block.entity.IndexerManagerBlockEntity;
 
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.RegistryObject;
 
 public class ModBlockEntities {
-    public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES = 
-            DeferredRegister.create(ForgeRegistries.BLOCK_ENTITY_TYPES, IndexerMod.MOD_ID);
 
     // Entidad de bloque para el controlador del indexador
-    public static final RegistryObject<BlockEntityType<IndexerControllerBlockEntity>> INDEXER_CONTROLLER = 
-            BLOCK_ENTITIES.register("indexer_controller", 
-                    () -> BlockEntityType.Builder.of(
-                            IndexerControllerBlockEntity::new, 
-                            ModBlocks.INDEXER_CONTROLLER.get())
-                    .build(null));
+    public static final BlockEntityType<IndexerControllerBlockEntity> INDEXER_CONTROLLER = register("indexer_controller",
+            BlockEntityType.Builder.of(IndexerControllerBlockEntity::new, ModBlocks.INDEXER_CONTROLLER).build(null));
 
     // Entidad de bloque para el conector del indexador
-    public static final RegistryObject<BlockEntityType<IndexerConnectorBlockEntity>> INDEXER_CONNECTOR = 
-            BLOCK_ENTITIES.register("indexer_connector", 
-                    () -> BlockEntityType.Builder.of(
-                            IndexerConnectorBlockEntity::new, 
-                            ModBlocks.INDEXER_CONNECTOR.get())
-                    .build(null));
-                    
+    public static final BlockEntityType<IndexerConnectorBlockEntity> INDEXER_CONNECTOR = register("indexer_connector",
+            BlockEntityType.Builder.of(IndexerConnectorBlockEntity::new, ModBlocks.INDEXER_CONNECTOR).build(null));
+            
     // Entidad de bloque para el DropBox
-    public static final RegistryObject<BlockEntityType<DropBoxBlockEntity>> DROP_BOX = 
-            BLOCK_ENTITIES.register("drop_box", 
-                    () -> BlockEntityType.Builder.of(
-                            DropBoxBlockEntity::new, 
-                            ModBlocks.DROP_BOX.get())
-                    .build(null));
-                    
+    public static final BlockEntityType<DropBoxBlockEntity> DROP_BOX = register("drop_box",
+            BlockEntityType.Builder.of(DropBoxBlockEntity::new, ModBlocks.DROP_BOX).build(null));
+            
     // Entidad de bloque para el Extractor
-    public static final RegistryObject<BlockEntityType<ExtractorBlockEntity>> EXTRACTOR = 
-            BLOCK_ENTITIES.register("extractor", 
-                    () -> BlockEntityType.Builder.of(
-                            ExtractorBlockEntity::new, 
-                            ModBlocks.EXTRACTOR.get())
-                    .build(null));
-                    
+    public static final BlockEntityType<ExtractorBlockEntity> EXTRACTOR = register("extractor",
+            BlockEntityType.Builder.of(ExtractorBlockEntity::new, ModBlocks.EXTRACTOR).build(null));
+            
     // Entidad de bloque para el Manager
-    public static final RegistryObject<BlockEntityType<IndexerManagerBlockEntity>> INDEXER_MANAGER = 
-            BLOCK_ENTITIES.register("indexer_manager", 
-                    () -> BlockEntityType.Builder.of(
-                            IndexerManagerBlockEntity::new, 
-                            ModBlocks.INDEXER_MANAGER.get())
-                    .build(null));
+    public static final BlockEntityType<IndexerManagerBlockEntity> INDEXER_MANAGER = register("indexer_manager",
+            BlockEntityType.Builder.of(IndexerManagerBlockEntity::new, ModBlocks.INDEXER_MANAGER).build(null));
 
-    public static void register(IEventBus eventBus) {
-        BLOCK_ENTITIES.register(eventBus);
+    private static <T extends BlockEntityType<?>> T register(String name, T blockEntityType) {
+        return Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, IndexerMod.id(name), blockEntityType);
+    }
+
+    public static void register() {
+        // Just to load class
     }
 }

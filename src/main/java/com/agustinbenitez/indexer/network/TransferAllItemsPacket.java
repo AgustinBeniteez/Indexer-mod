@@ -1,34 +1,30 @@
 package com.agustinbenitez.indexer.network;
 
+import com.agustinbenitez.indexer.IndexerMod;
 import com.agustinbenitez.indexer.menu.DropBoxMenu;
-import net.minecraft.network.FriendlyByteBuf;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
 
-import java.util.function.Supplier;
+public record TransferAllItemsPacket() implements CustomPacketPayload {
+    
+    public static final CustomPacketPayload.Type<TransferAllItemsPacket> ID = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(IndexerMod.MOD_ID, "transfer_all_items"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, TransferAllItemsPacket> CODEC = StreamCodec.unit(new TransferAllItemsPacket());
 
-public class TransferAllItemsPacket {
-    
-    public TransferAllItemsPacket() {
-        // Constructor vacío para el paquete
+    @Override
+    public Type<? extends CustomPacketPayload> type() {
+        return ID;
     }
-    
-    public TransferAllItemsPacket(FriendlyByteBuf buf) {
-        // No hay datos que leer
-    }
-    
-    public void toBytes(FriendlyByteBuf buf) {
-        // No hay datos que escribir
-    }
-    
-    public boolean handle(Supplier<NetworkEvent.Context> supplier) {
-        NetworkEvent.Context context = supplier.get();
-        context.enqueueWork(() -> {
-            ServerPlayer player = context.getSender();
+
+    public static void handle(TransferAllItemsPacket payload, ServerPlayNetworking.Context context) {
+        context.server().execute(() -> {
+            ServerPlayer player = context.player();
             if (player != null && player.containerMenu instanceof DropBoxMenu menu) {
                 menu.transferAllItemsToDropBox(player);
             }
         });
-        return true;
     }
 }

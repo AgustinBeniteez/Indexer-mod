@@ -15,15 +15,15 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.core.BlockPos;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 import java.text.DecimalFormat;
 import java.util.*;
 
-@OnlyIn(Dist.CLIENT)
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
+
 public class IndexerControllerNetworkScreen extends AbstractContainerScreen<IndexerControllerNetworkMenu> {
-    private static final ResourceLocation TEXTURE = new ResourceLocation("indexer", "textures/gui/indexer_controller_network_gui.png");
+    private static final ResourceLocation TEXTURE = ResourceLocation.parse("indexer:textures/gui/indexer_controller_network_gui.png");
     
     // Dimensiones de la GUI
     private static final int GUI_WIDTH = 400;
@@ -991,7 +991,7 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
     }
     
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         // Scroll en la lista de contenedores
         if (mouseX >= LEFT_PANEL_X && mouseX <= LEFT_PANEL_X + LEFT_PANEL_WIDTH &&
             mouseY >= LEFT_PANEL_Y && mouseY <= LEFT_PANEL_Y + LEFT_PANEL_HEIGHT) {
@@ -999,7 +999,7 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
             List<ContainerInfo> filteredContainers = getFilteredContainers();
             int maxScroll = Math.max(0, filteredContainers.size() - maxVisibleContainers);
             
-            scrollOffset = Math.max(0, Math.min(maxScroll, scrollOffset - (int)delta));
+            scrollOffset = Math.max(0, Math.min(maxScroll, scrollOffset - (int)scrollY));
             return true;
         }
 
@@ -1015,11 +1015,11 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
             int totalRows = (int) Math.ceil(totalItems / (double) itemsPerRow);
             int maxRowOffset = Math.max(0, totalRows - visibleRows);
 
-            detailedItemsScrollRowOffset = Math.max(0, Math.min(maxRowOffset, detailedItemsScrollRowOffset - (int)delta));
+            detailedItemsScrollRowOffset = Math.max(0, Math.min(maxRowOffset, detailedItemsScrollRowOffset - (int)scrollY));
             return true;
         }
         
-        return super.mouseScrolled(mouseX, mouseY, delta);
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
     
     @Override
@@ -1132,8 +1132,8 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
     private ItemStack createItemStackFromName(String itemName) {
         try {
             // Intentar crear el ItemStack desde el ResourceLocation
-            ResourceLocation itemLocation = new ResourceLocation(itemName);
-            net.minecraft.world.item.Item item = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(itemLocation);
+            ResourceLocation itemLocation = ResourceLocation.parse(itemName);
+            net.minecraft.world.item.Item item = BuiltInRegistries.ITEM.get(itemLocation);
             if (item != null && item != Items.AIR) {
                 return new ItemStack(item);
             }
@@ -1145,12 +1145,12 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
     
     private ItemStack getUpgradeItemForLevel(int level) {
         switch (level) {
-            case 0: return new ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_ZERO.get());
-            case 1: return new ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_BASIC.get());
-            case 2: return new ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_COPPER.get());
-            case 3: return new ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_ADVANCED.get());
-            case 4: return new ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_ELITE.get());
-            case 5: return new ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_DEFINITIVE.get());
+            case 0: return new ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_ZERO);
+            case 1: return new ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_BASIC);
+            case 2: return new ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_COPPER);
+            case 3: return new ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_ADVANCED);
+            case 4: return new ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_ELITE);
+            case 5: return new ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_DEFINITIVE);
             default: return ItemStack.EMPTY;
         }
     }

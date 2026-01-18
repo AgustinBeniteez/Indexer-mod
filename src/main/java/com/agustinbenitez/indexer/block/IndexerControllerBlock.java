@@ -4,7 +4,6 @@ import com.agustinbenitez.indexer.block.entity.IndexerControllerBlockEntity;
 import com.agustinbenitez.indexer.init.ModBlockEntities;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -24,13 +23,18 @@ import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.network.NetworkHooks;
+import org.jetbrains.annotations.Nullable;
+// NetworkHooks import removed
 
-import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.component.CustomData;
+import com.mojang.serialization.MapCodec;
 
 public class IndexerControllerBlock extends BaseEntityBlock {
+    public static final MapCodec<IndexerControllerBlock> CODEC = simpleCodec(IndexerControllerBlock::new);
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
     private static final VoxelShape SHAPE = Block.box(0, 0, 0, 16, 16, 16);
     
@@ -39,6 +43,11 @@ public class IndexerControllerBlock extends BaseEntityBlock {
 
     public IndexerControllerBlock(Properties properties) {
         super(properties);
+    }
+
+    @Override
+    protected MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
     }
 
     @Override
@@ -56,8 +65,9 @@ public class IndexerControllerBlock extends BaseEntityBlock {
         super.setPlacedBy(level, pos, state, placer, stack);
         
         // Restaurar el estado de mejoras si existe en el NBT del item
-        if (stack.hasTag()) {
-            net.minecraft.nbt.CompoundTag nbt = stack.getTag();
+        CustomData customData = stack.get(DataComponents.CUSTOM_DATA);
+        if (customData != null) {
+            net.minecraft.nbt.CompoundTag nbt = customData.copyTag();
             if (nbt.contains("UpgradeLevel") && nbt.contains("ItemsPerTransfer")) {
                 BlockEntity blockEntity = level.getBlockEntity(pos);
                 if (blockEntity instanceof IndexerControllerBlockEntity controller) {
@@ -85,10 +95,10 @@ public class IndexerControllerBlock extends BaseEntityBlock {
     }
 
     @Override
-    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         // Registrar si el jugador está en modo creativo
         creativeModeBreaks.put(pos, player.getAbilities().instabuild);
-        super.playerWillDestroy(level, pos, state, player);
+        return super.playerWillDestroy(level, pos, state, player);
     }
     
     @Override
@@ -110,9 +120,10 @@ public class IndexerControllerBlock extends BaseEntityBlock {
                     int itemsPerTransfer = controller.getItemsPerTransfer();
                     
                     if (upgradeLevel > 0) {
-                        net.minecraft.nbt.CompoundTag nbt = itemStack.getOrCreateTag();
-                        nbt.putInt("UpgradeLevel", upgradeLevel);
-                        nbt.putInt("ItemsPerTransfer", itemsPerTransfer);
+                        CustomData.update(DataComponents.CUSTOM_DATA, itemStack, (tag) -> {
+                            tag.putInt("UpgradeLevel", upgradeLevel);
+                            tag.putInt("ItemsPerTransfer", itemsPerTransfer);
+                        });
                     }
                 }
                 
@@ -124,7 +135,7 @@ public class IndexerControllerBlock extends BaseEntityBlock {
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (!level.isClientSide()) {
             BlockEntity entity = level.getBlockEntity(pos);
             if (entity instanceof IndexerControllerBlockEntity controller) {
@@ -145,6 +156,6 @@ public class IndexerControllerBlock extends BaseEntityBlock {
     @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-        return createTickerHelper(type, ModBlockEntities.INDEXER_CONTROLLER.get(), IndexerControllerBlockEntity::tick);
+        return createTickerHelper(type, ModBlockEntities.INDEXER_CONTROLLER, IndexerControllerBlockEntity::tick);
     }
 }

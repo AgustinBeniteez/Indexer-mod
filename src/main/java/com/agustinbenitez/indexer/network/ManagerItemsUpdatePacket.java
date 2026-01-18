@@ -1,61 +1,63 @@
 package com.agustinbenitez.indexer.network;
 
+import com.agustinbenitez.indexer.IndexerMod;
 import com.agustinbenitez.indexer.screen.IndexerManagerScreen;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkEvent;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Supplier;
 
-public class ManagerItemsUpdatePacket {
+public record ManagerItemsUpdatePacket(List<Entry> entries) implements CustomPacketPayload {
+    
+    public static final CustomPacketPayload.Type<ManagerItemsUpdatePacket> ID = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(IndexerMod.MOD_ID, "manager_items_update"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, ManagerItemsUpdatePacket> CODEC = StreamCodec.composite(
+        ByteBufCodecs.collection(ArrayList::new, Entry.STREAM_CODEC), ManagerItemsUpdatePacket::entries,
+        ManagerItemsUpdatePacket::new
+    );
+
+    @Override
+    public Type<? extends CustomPacketPayload> type() {
+        return ID;
+    }
+
+    public static void handle(ManagerItemsUpdatePacket payload, ClientPlayNetworking.Context context) {
+        context.client().execute(() -> {
+            Minecraft mc = context.client();
+            if (mc.screen instanceof IndexerManagerScreen screen) {
+                screen.updateItemListFromServer(payload.entries());
+            }
+        });
+    }
+
     public static class Entry {
+        public static final StreamCodec<RegistryFriendlyByteBuf, Entry> STREAM_CODEC = StreamCodec.of(
+            Entry::encode,
+            Entry::decode
+        );
+
         public final ItemStack stackVariant;
         public final int count;
         public final boolean pending;
         public Entry(ItemStack s, int c, boolean p) { this.stackVariant = s; this.count = c; this.pending = p; }
-    }
 
-    private final List<Entry> entries;
+        private static void encode(RegistryFriendlyByteBuf buf, Entry entry) {
+            ItemStack.STREAM_CODEC.encode(buf, entry.stackVariant);
+            buf.writeInt(entry.count);
+            buf.writeBoolean(entry.pending);
+        }
 
-    public ManagerItemsUpdatePacket(List<Entry> entries) {
-        this.entries = new ArrayList<>(entries);
-    }
-
-    public ManagerItemsUpdatePacket(FriendlyByteBuf buf) {
-        int size = buf.readInt();
-        this.entries = new ArrayList<>(size);
-        for (int i = 0; i < size; i++) {
-            ItemStack s = buf.readItem();
+        private static Entry decode(RegistryFriendlyByteBuf buf) {
+            ItemStack s = ItemStack.STREAM_CODEC.decode(buf);
             int c = buf.readInt();
             boolean p = buf.readBoolean();
-            this.entries.add(new Entry(s, c, p));
+            return new Entry(s, c, p);
         }
-    }
-
-    public void toBytes(FriendlyByteBuf buf) {
-        buf.writeInt(entries.size());
-        for (Entry e : entries) {
-            buf.writeItem(e.stackVariant);
-            buf.writeInt(e.count);
-            buf.writeBoolean(e.pending);
-        }
-    }
-
-    public boolean handle(Supplier<NetworkEvent.Context> supplier) {
-        NetworkEvent.Context context = supplier.get();
-        context.enqueueWork(() -> {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
-                Minecraft mc = Minecraft.getInstance();
-                if (mc.screen instanceof IndexerManagerScreen screen) {
-                    screen.updateItemListFromServer(entries);
-                }
-            });
-        });
-        return true;
     }
 }

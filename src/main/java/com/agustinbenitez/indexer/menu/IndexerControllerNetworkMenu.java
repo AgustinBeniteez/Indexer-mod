@@ -24,7 +24,7 @@ public class IndexerControllerNetworkMenu extends AbstractContainerMenu {
     }
     
     public IndexerControllerNetworkMenu(int id, Inventory inv, BlockEntity entity, ContainerData data) {
-        super(ModMenuTypes.INDEXER_CONTROLLER_NETWORK_MENU.get(), id);
+        super(ModMenuTypes.INDEXER_CONTROLLER_NETWORK_MENU, id);
         checkContainerSize(inv, 0); // No slots needed for this GUI
         blockEntity = ((IndexerControllerBlockEntity) entity);
         this.level = inv.player.level();

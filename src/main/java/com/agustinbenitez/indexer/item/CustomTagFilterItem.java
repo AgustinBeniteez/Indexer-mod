@@ -9,9 +9,8 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.fml.DistExecutor;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.component.CustomData;
 
 import java.util.List;
 
@@ -37,42 +36,46 @@ public class CustomTagFilterItem extends Item {
         return InteractionResultHolder.sidedSuccess(itemStack, level.isClientSide);
     }
     
-    @OnlyIn(Dist.CLIENT)
     private void openCustomTagFilterScreen(ItemStack itemStack, int slotIndex) {
-        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
-            net.minecraft.client.Minecraft.getInstance().setScreen(
-                new com.agustinbenitez.indexer.screen.CustomTagFilterScreen(itemStack, slotIndex));
-        });
+        net.minecraft.client.Minecraft.getInstance().setScreen(
+            new com.agustinbenitez.indexer.screen.CustomTagFilterScreen(itemStack, slotIndex));
     }
     
     @Override
-    public void appendHoverText(ItemStack stack, Level level, List<Component> tooltipComponents, TooltipFlag isAdvanced) {
-        tooltipComponents.add(Component.translatable("item.indexer.custom_tag_blocker.tooltip"));
-        tooltipComponents.add(Component.translatable("item.indexer.custom_tag_blocker.description"));
+    public void appendHoverText(ItemStack stack, net.minecraft.world.item.Item.TooltipContext context, List<Component> tooltipComponents, TooltipFlag isAdvanced) {
+        tooltipComponents.add(Component.translatable("item.indexer.custom_tag_filter.description"));
         
-        CompoundTag tag = stack.getTag();
-        if (tag != null && tag.contains("custom_tag")) {
-            String customTag = tag.getString("custom_tag");
-            Component tagComponent = Component.translatable("item.indexer.custom_tag_blocker.current_tag", 
-                Component.literal(customTag).withStyle(style -> style.withColor(0x5555FF))); // Azul
-            tooltipComponents.add(tagComponent);
-        } else {
-            tooltipComponents.add(Component.translatable("item.indexer.custom_tag_blocker.no_tag"));
+        CustomData customData = stack.get(DataComponents.CUSTOM_DATA);
+        if (customData != null) {
+            CompoundTag tag = customData.copyTag();
+            if (tag.contains("custom_tag_filter")) {
+                String filter = tag.getString("custom_tag_filter");
+                Component filterComponent = Component.translatable("item.indexer.custom_tag_filter.current_filter",
+                    Component.literal(filter).withStyle(style -> style.withColor(0x55FF55))); // Verde
+                tooltipComponents.add(filterComponent);
+                super.appendHoverText(stack, context, tooltipComponents, isAdvanced);
+                return;
+            }
         }
+        tooltipComponents.add(Component.translatable("item.indexer.custom_tag_filter.no_filter"));
         
-        super.appendHoverText(stack, level, tooltipComponents, isAdvanced);
+        super.appendHoverText(stack, context, tooltipComponents, isAdvanced);
     }
     
-    public String getCustomTag(ItemStack stack) {
-        CompoundTag tag = stack.getTag();
-        if (tag != null && tag.contains("custom_tag")) {
-            return tag.getString("custom_tag");
+    public String getFilter(ItemStack stack) {
+        CustomData customData = stack.get(DataComponents.CUSTOM_DATA);
+        if (customData != null) {
+            CompoundTag tag = customData.copyTag();
+            if (tag.contains("custom_tag_filter")) {
+                return tag.getString("custom_tag_filter");
+            }
         }
         return "";
     }
     
-    public void setCustomTag(ItemStack stack, String customTag) {
-        CompoundTag tag = stack.getOrCreateTag();
-        tag.putString("custom_tag", customTag);
+    public void setFilter(ItemStack stack, String filter) {
+        CustomData.update(DataComponents.CUSTOM_DATA, stack, (tag) -> {
+            tag.putString("custom_tag_filter", filter);
+        });
     }
 }

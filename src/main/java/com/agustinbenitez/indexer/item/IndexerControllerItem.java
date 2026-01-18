@@ -18,20 +18,23 @@ public class IndexerControllerItem extends BlockItem {
     }
     
     @Override
-    public void appendHoverText(ItemStack stack, Level level, List<Component> tooltip, TooltipFlag flag) {
-        super.appendHoverText(stack, level, tooltip, flag);
+    public void appendHoverText(ItemStack stack, net.minecraft.world.item.Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+        super.appendHoverText(stack, context, tooltip, flag);
         
         // Verificar si el item tiene datos de mejoras guardados
-        CompoundTag tag = stack.getTag();
-        if (tag != null && tag.contains("UpgradeLevel")) {
-            int upgradeLevel = tag.getInt("UpgradeLevel");
-            int itemsPerTransfer = tag.getInt("ItemsPerTransfer");
-            
-            if (upgradeLevel > 0) {
-                // Agregar información de mejora al tooltip
-                tooltip.add(Component.translatable("item.indexer.controller.upgrade_info", 
-                    getUpgradeName(upgradeLevel), itemsPerTransfer)
-                    .withStyle(ChatFormatting.AQUA));
+        net.minecraft.world.item.component.CustomData customData = stack.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+        if (customData != null) {
+            CompoundTag tag = customData.copyTag();
+            if (tag.contains("UpgradeLevel")) {
+                int upgradeLevel = tag.getInt("UpgradeLevel");
+                int itemsPerTransfer = tag.getInt("ItemsPerTransfer");
+                
+                if (upgradeLevel > 0) {
+                    // Agregar información de mejora al tooltip
+                    tooltip.add(Component.translatable("item.indexer.controller.upgrade_info", 
+                        getUpgradeName(upgradeLevel), itemsPerTransfer)
+                        .withStyle(ChatFormatting.AQUA));
+                }
             }
         }
     }

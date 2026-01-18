@@ -9,9 +9,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.fml.DistExecutor;
 
 import java.util.List;
 
@@ -42,37 +39,40 @@ public class NameFilterItem extends Item {
         return InteractionResultHolder.sidedSuccess(itemStack, level.isClientSide);
     }
     
-    @OnlyIn(Dist.CLIENT)
     private void openNameFilterScreen(ItemStack itemStack, int slotIndex) {
-        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
-            net.minecraft.client.Minecraft.getInstance().setScreen(
-                new com.agustinbenitez.indexer.screen.NameFilterScreen(itemStack, slotIndex));
-        });
+        net.minecraft.client.Minecraft.getInstance().setScreen(
+            new com.agustinbenitez.indexer.screen.NameFilterScreen(itemStack, slotIndex));
     }
     
     @Override
-    public void appendHoverText(ItemStack stack, Level level, List<Component> tooltipComponents, TooltipFlag isAdvanced) {
+    public void appendHoverText(ItemStack stack, net.minecraft.world.item.Item.TooltipContext context, List<Component> tooltipComponents, TooltipFlag isAdvanced) {
         tooltipComponents.add(Component.translatable("item.indexer.name_filter.tooltip"));
         tooltipComponents.add(Component.translatable("item.indexer.name_filter.description"));
         
-        CompoundTag tag = stack.getTag();
-        if (tag != null && tag.contains("custom_name")) {
-            String customName = tag.getString("custom_name");
-            if (!customName.isEmpty()) {
-                tooltipComponents.add(Component.literal("§eNombre configurado: " + customName));
+        net.minecraft.world.item.component.CustomData customData = stack.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+        if (customData != null) {
+            CompoundTag tag = customData.copyTag();
+            if (tag.contains("custom_name")) {
+                String customName = tag.getString("custom_name");
+                if (!customName.isEmpty()) {
+                    tooltipComponents.add(Component.literal("§eNombre configurado: " + customName));
+                    return;
+                }
             }
-        } else {
-            tooltipComponents.add(Component.literal("§7Haz clic derecho para configurar"));
         }
+        tooltipComponents.add(Component.literal("§7Haz clic derecho para configurar"));
     }
     
     /**
      * Obtiene el nombre personalizado configurado en el filtro
      */
     public String getCustomName(ItemStack stack) {
-        CompoundTag tag = stack.getTag();
-        if (tag != null && tag.contains("custom_name")) {
-            return tag.getString("custom_name");
+        net.minecraft.world.item.component.CustomData customData = stack.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+        if (customData != null) {
+            CompoundTag tag = customData.copyTag();
+            if (tag.contains("custom_name")) {
+                return tag.getString("custom_name");
+            }
         }
         return "";
     }
@@ -81,6 +81,8 @@ public class NameFilterItem extends Item {
      * Establece el nombre personalizado en el filtro
      */
     public void setCustomName(ItemStack stack, String customName) {
-        stack.getOrCreateTag().putString("custom_name", customName);
+        net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, stack, (tag) -> {
+            tag.putString("custom_name", customName);
+        });
     }
 }

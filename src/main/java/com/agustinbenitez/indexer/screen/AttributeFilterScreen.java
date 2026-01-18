@@ -7,12 +7,15 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.enchantment.Enchantment;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -55,9 +58,12 @@ public class AttributeFilterScreen extends Screen {
         this.attributeEditBox.setTextColorUneditable(0xA0A0A0);
         this.attributeEditBox.setMaxLength(100);
         
-        // Establecer el valor actual del atributo
-        if (this.filterItem.hasTag() && this.filterItem.getTag().contains("attribute_filter")) {
-            this.attributeEditBox.setValue(this.filterItem.getTag().getString("attribute_filter"));
+        CustomData customData = this.filterItem.get(DataComponents.CUSTOM_DATA);
+        if (customData != null) {
+            CompoundTag tag = customData.copyTag();
+            if (tag.contains("attribute_filter")) {
+                this.attributeEditBox.setValue(tag.getString("attribute_filter"));
+            }
         }
         
         this.attributeEditBox.setResponder(this::onAttributeChanged);
@@ -88,11 +94,16 @@ public class AttributeFilterScreen extends Screen {
         }
         
         // Generar sugerencias basadas en encantamientos
-        this.suggestions = ForgeRegistries.ENCHANTMENTS.getKeys().stream()
-                .map(ResourceLocation::toString)
-                .filter(enchantName -> enchantName.toLowerCase().contains(text.toLowerCase()))
-                .limit(10)
-                .collect(Collectors.toList());
+        var registryAccess = net.minecraft.client.Minecraft.getInstance().level != null ? net.minecraft.client.Minecraft.getInstance().level.registryAccess() : null;
+        if (registryAccess != null) {
+            this.suggestions = registryAccess.registryOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT).keySet().stream()
+                    .map(ResourceLocation::toString)
+                    .filter(enchantName -> enchantName.toLowerCase().contains(text.toLowerCase()))
+                    .limit(10)
+                    .collect(Collectors.toList());
+        } else {
+            this.suggestions = new ArrayList<>();
+        }
         
         // También agregar sugerencias de atributos comunes
         List<String> commonAttributes = List.of(
@@ -139,7 +150,7 @@ public class AttributeFilterScreen extends Screen {
     
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        this.renderBackground(guiGraphics);
+        this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
         
         int guiLeft = (this.width - GUI_WIDTH) / 2;
         int guiTop = (this.height - GUI_HEIGHT) / 2;

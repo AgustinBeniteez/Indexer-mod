@@ -7,13 +7,10 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class IndexerConnectorScreen extends AbstractContainerScreen<IndexerConnectorMenu> {
-    private static final ResourceLocation TEXTURE_BASE = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/menu_conector.png");
-    private static final ResourceLocation TEXTURE_LVL2 = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/menu_conector_lvl2.png");
+    private static final ResourceLocation TEXTURE_BASE = ResourceLocation.fromNamespaceAndPath(IndexerMod.MOD_ID, "textures/gui/menu_conector.png");
+    private static final ResourceLocation TEXTURE_LVL2 = ResourceLocation.fromNamespaceAndPath(IndexerMod.MOD_ID, "textures/gui/menu_conector_lvl2.png");
     
     public IndexerConnectorScreen(IndexerConnectorMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);

@@ -143,11 +143,11 @@ public class IndexerPipeBlock extends Block {
         Block neighborBlock = neighborState.getBlock();
 
         return neighborBlock == this ||
-               neighborBlock == ModBlocks.INDEXER_CONTROLLER.get() ||
-               neighborBlock == ModBlocks.INDEXER_CONNECTOR.get() ||
-               neighborBlock == ModBlocks.INDEXER_MANAGER.get() ||
-               neighborBlock == ModBlocks.DROP_BOX.get() ||
-               neighborBlock == ModBlocks.EXTRACTOR.get();
+               neighborBlock == ModBlocks.INDEXER_CONTROLLER ||
+                neighborBlock == ModBlocks.INDEXER_CONNECTOR ||
+                neighborBlock == ModBlocks.INDEXER_MANAGER ||
+                neighborBlock == ModBlocks.DROP_BOX ||
+                neighborBlock == ModBlocks.EXTRACTOR;
     }
     
     public static BooleanProperty getPropertyForDirection(Direction direction) {
@@ -187,10 +187,11 @@ public class IndexerPipeBlock extends Block {
         return shape;
     }
     
-    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+    @Override
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         // Registrar si el jugador está en modo creativo
         creativeModeBreaks.put(pos, player.getAbilities().instabuild);
-        super.playerWillDestroy(level, pos, state, player);
+        return super.playerWillDestroy(level, pos, state, player);
     }
     
     @Override

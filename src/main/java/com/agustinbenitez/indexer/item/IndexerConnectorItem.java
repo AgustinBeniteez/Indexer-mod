@@ -7,7 +7,6 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 
-import javax.annotation.Nullable;
 import java.util.List;
 
 public class IndexerConnectorItem extends BlockItem {
@@ -17,10 +16,11 @@ public class IndexerConnectorItem extends BlockItem {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, net.minecraft.world.item.Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("item.indexer.indexer_connector.tooltip"));
-        if (stack.hasTag()) {
-            net.minecraft.nbt.CompoundTag nbt = stack.getTag();
+        net.minecraft.world.item.component.CustomData customData = stack.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+        if (customData != null) {
+            net.minecraft.nbt.CompoundTag nbt = customData.copyTag();
             if (nbt.contains("ConnectorLevel")) {
                 int connectorLevel = nbt.getInt("ConnectorLevel");
                 if (connectorLevel >= 2) {
@@ -28,6 +28,6 @@ public class IndexerConnectorItem extends BlockItem {
                 }
             }
         }
-        super.appendHoverText(stack, level, tooltip, flag);
+        super.appendHoverText(stack, context, tooltip, flag);
     }
 }

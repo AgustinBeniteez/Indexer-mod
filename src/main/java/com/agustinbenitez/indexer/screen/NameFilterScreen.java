@@ -7,9 +7,12 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
 
 public class NameFilterScreen extends Screen {
     private static final int GUI_WIDTH = 300;
@@ -64,10 +67,13 @@ public class NameFilterScreen extends Screen {
         // Configurar el responder DESPUÉS de crear los botones
         this.nameEditBox.setResponder(this::onNameChanged);
         
-        // Cargar el nombre actual si existe
-        if (this.filterItem.hasTag() && this.filterItem.getTag().contains("custom_name")) {
-            String currentName = this.filterItem.getTag().getString("custom_name");
-            this.nameEditBox.setValue(currentName);
+        CustomData customData = this.filterItem.get(DataComponents.CUSTOM_DATA);
+        if (customData != null) {
+            CompoundTag tag = customData.copyTag();
+            if (tag.contains("custom_name")) {
+                String currentName = tag.getString("custom_name");
+                this.nameEditBox.setValue(currentName);
+            }
         }
         
         // Actualizar estado del botón confirmar
@@ -88,7 +94,7 @@ public class NameFilterScreen extends Screen {
     
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        this.renderBackground(guiGraphics);
+        this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
         
         int guiLeft = (this.width - GUI_WIDTH) / 2;
         int guiTop = (this.height - GUI_HEIGHT) / 2;

@@ -6,6 +6,7 @@ import com.agustinbenitez.indexer.menu.DropBoxMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.ContainerHelper;
@@ -20,8 +21,6 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
-import javax.annotation.Nullable;
-
 public class DropBoxBlockEntity extends RandomizableContainerBlockEntity implements WorldlyContainer {
     private static final int CONTAINER_SIZE = 54; // 6 rows of 9 slots = 54 slots (double the size of a normal chest)
     private NonNullList<ItemStack> items = NonNullList.withSize(CONTAINER_SIZE, ItemStack.EMPTY);
@@ -34,7 +33,7 @@ public class DropBoxBlockEntity extends RandomizableContainerBlockEntity impleme
     }
 
     public DropBoxBlockEntity(BlockPos pos, BlockState state) {
-        super(ModBlockEntities.DROP_BOX.get(), pos, state);
+        super(ModBlockEntities.DROP_BOX, pos, state);
     }
 
     @Override
@@ -63,18 +62,18 @@ public class DropBoxBlockEntity extends RandomizableContainerBlockEntity impleme
     }
 
     @Override
-    public void load(CompoundTag tag) {
-        super.load(tag);
+    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
         this.items = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
-        ContainerHelper.loadAllItems(tag, this.items);
+        ContainerHelper.loadAllItems(tag, this.items, registries);
         // Initialize the hadItemsLastTick variable based on current inventory state
         this.hadItemsLastTick = hasItems();
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag) {
-        super.saveAdditional(tag);
-        ContainerHelper.saveAllItems(tag, this.items);
+    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
+        ContainerHelper.saveAllItems(tag, this.items, registries);
     }
     
     @Override
@@ -166,7 +165,7 @@ public class DropBoxBlockEntity extends RandomizableContainerBlockEntity impleme
     }
 
     @Override
-    public boolean canPlaceItemThroughFace(int index, ItemStack itemStack, @Nullable Direction direction) {
+    public boolean canPlaceItemThroughFace(int index, ItemStack itemStack, Direction direction) {
         return true; // Allows inserting items from any side
     }
 
@@ -228,7 +227,6 @@ public class DropBoxBlockEntity extends RandomizableContainerBlockEntity impleme
     }
     
     // Method to find the connected IndexerController
-    @Nullable
     public IndexerControllerBlockEntity findConnectedController() {
         if (this.level == null) return null;
         

@@ -1,47 +1,41 @@
 package com.agustinbenitez.indexer.network;
 
+import com.agustinbenitez.indexer.IndexerMod;
 import com.agustinbenitez.indexer.block.entity.IndexerManagerBlockEntity;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.network.NetworkEvent;
 
-import java.util.function.Supplier;
+public record CancelExtractionFromManagerPacket(BlockPos managerPos, ItemStack variantStack) implements CustomPacketPayload {
+    
+    public static final CustomPacketPayload.Type<CancelExtractionFromManagerPacket> ID = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(IndexerMod.MOD_ID, "cancel_extraction_from_manager"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, CancelExtractionFromManagerPacket> CODEC = StreamCodec.composite(
+        BlockPos.STREAM_CODEC, CancelExtractionFromManagerPacket::managerPos,
+        ItemStack.STREAM_CODEC, CancelExtractionFromManagerPacket::variantStack,
+        CancelExtractionFromManagerPacket::new
+    );
 
-public class CancelExtractionFromManagerPacket {
-    private final BlockPos managerPos;
-    private final ItemStack variantStack;
-
-    public CancelExtractionFromManagerPacket(BlockPos managerPos, ItemStack variantStack) {
-        this.managerPos = managerPos;
-        this.variantStack = variantStack.copy();
-        this.variantStack.setCount(1);
+    @Override
+    public Type<? extends CustomPacketPayload> type() {
+        return ID;
     }
 
-    public CancelExtractionFromManagerPacket(FriendlyByteBuf buf) {
-        this.managerPos = buf.readBlockPos();
-        this.variantStack = buf.readItem();
-    }
-
-    public void toBytes(FriendlyByteBuf buf) {
-        buf.writeBlockPos(managerPos);
-        buf.writeItem(variantStack);
-    }
-
-    public boolean handle(Supplier<NetworkEvent.Context> supplier) {
-        NetworkEvent.Context context = supplier.get();
-        context.enqueueWork(() -> {
-            ServerPlayer player = context.getSender();
+    public static void handle(CancelExtractionFromManagerPacket payload, ServerPlayNetworking.Context context) {
+        context.server().execute(() -> {
+            ServerPlayer player = context.player();
             if (player != null) {
-                BlockEntity be = player.level().getBlockEntity(managerPos);
+                BlockEntity be = player.level().getBlockEntity(payload.managerPos());
                 if (be instanceof IndexerManagerBlockEntity manager) {
-                    manager.cancelPendingExtraction(variantStack);
+                    manager.cancelPendingExtraction(payload.variantStack());
                     manager.sendItemsTo(player);
                 }
             }
         });
-        return true;
     }
 }

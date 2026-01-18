@@ -6,6 +6,7 @@ import com.agustinbenitez.indexer.block.IndexerPipeBlock;
 import com.agustinbenitez.indexer.util.FilterUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
@@ -24,12 +25,12 @@ public class ExtractorBlockEntity extends BlockEntity {
     private static final int EXTRACTION_COOLDOWN_MAX = 8; // Mismo cooldown que el IndexerController
 
     public ExtractorBlockEntity(BlockPos pos, BlockState state) {
-        super(ModBlockEntities.EXTRACTOR.get(), pos, state);
+        super(ModBlockEntities.EXTRACTOR, pos, state);
     }
 
     @Override
-    public void load(CompoundTag tag) {
-        super.load(tag);
+    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
         if (tag.contains("ContainerX") && tag.contains("ContainerY") && tag.contains("ContainerZ")) {
             this.connectedContainerPos = new BlockPos(
                     tag.getInt("ContainerX"),
@@ -41,8 +42,8 @@ public class ExtractorBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag) {
-        super.saveAdditional(tag);
+    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
         if (this.connectedContainerPos != null) {
             tag.putInt("ContainerX", this.connectedContainerPos.getX());
             tag.putInt("ContainerY", this.connectedContainerPos.getY());
@@ -611,7 +612,7 @@ public class ExtractorBlockEntity extends BlockEntity {
             if (slotStack.isEmpty()) {
                 return true;
             }
-            if (ItemStack.isSameItemSameTags(slotStack, stack)) {
+            if (ItemStack.isSameItemSameComponents(slotStack, stack)) {
                 int maxStackSize = Math.min(container.getMaxStackSize(), slotStack.getMaxStackSize());
                 if (slotStack.getCount() < maxStackSize) {
                     return true;

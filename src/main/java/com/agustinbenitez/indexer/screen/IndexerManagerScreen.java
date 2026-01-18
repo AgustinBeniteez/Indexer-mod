@@ -17,7 +17,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Item;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.TieredItem;
@@ -28,15 +28,15 @@ import java.util.*;
 import java.text.DecimalFormat;
 
 public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManagerMenu> {
-    private static final ResourceLocation TEXTURE = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/indexer_manager.png");
-    private static final ResourceLocation FILTER_CUANTITY_ICON = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/filter_cuantity.png");
-    private static final ResourceLocation FILTER_AZ_ICON = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/filter_az.png");
-    private static final ResourceLocation FILTER_BLOCK_ICON = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/filter_block.png");
-    private static final ResourceLocation FILTER_ITEM_ICON = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/filter_item.png");
-    private static final ResourceLocation FILTER_MOD_ICON = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/filter_mods.png");
-    private static final ResourceLocation CONTROL_STACK_ICON = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/controllstack.png");
-    private static final ResourceLocation CONTROL_CLICK_ICON = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/controllclick.png");
-    private static final ResourceLocation CONTROL_CLICK_RIGHT_ICON = new ResourceLocation(IndexerMod.MOD_ID, "textures/gui/controllclickright.png");
+    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(IndexerMod.MOD_ID, "textures/gui/indexer_manager.png");
+    private static final ResourceLocation FILTER_CUANTITY_ICON = ResourceLocation.fromNamespaceAndPath(IndexerMod.MOD_ID, "textures/gui/filter_cuantity.png");
+    private static final ResourceLocation FILTER_AZ_ICON = ResourceLocation.fromNamespaceAndPath(IndexerMod.MOD_ID, "textures/gui/filter_az.png");
+    private static final ResourceLocation FILTER_BLOCK_ICON = ResourceLocation.fromNamespaceAndPath(IndexerMod.MOD_ID, "textures/gui/filter_block.png");
+    private static final ResourceLocation FILTER_ITEM_ICON = ResourceLocation.fromNamespaceAndPath(IndexerMod.MOD_ID, "textures/gui/filter_item.png");
+    private static final ResourceLocation FILTER_MOD_ICON = ResourceLocation.fromNamespaceAndPath(IndexerMod.MOD_ID, "textures/gui/filter_mods.png");
+    private static final ResourceLocation CONTROL_STACK_ICON = ResourceLocation.fromNamespaceAndPath(IndexerMod.MOD_ID, "textures/gui/controllstack.png");
+    private static final ResourceLocation CONTROL_CLICK_ICON = ResourceLocation.fromNamespaceAndPath(IndexerMod.MOD_ID, "textures/gui/controllclick.png");
+    private static final ResourceLocation CONTROL_CLICK_RIGHT_ICON = ResourceLocation.fromNamespaceAndPath(IndexerMod.MOD_ID, "textures/gui/controllclickright.png");
     private static final int STATS_PANEL_WIDTH = 100;
     private EditBox searchBox;
     private final List<ItemVariantEntry> items = new ArrayList<>();
@@ -85,7 +85,7 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        this.renderBackground(graphics);
+        this.renderBackground(graphics, mouseX, mouseY, partialTick);
         super.render(graphics, mouseX, mouseY, partialTick);
 
         boolean isConnected = this.menu.isControllerConnected();
@@ -111,7 +111,7 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
         filtered.clear();
         for (ItemVariantEntry e : items) {
             String name = Component.translatable(e.stack.getItem().getDescriptionId()).getString().toLowerCase(Locale.ROOT);
-            String idStr = ForgeRegistries.ITEMS.getKey(e.stack.getItem()).toString();
+            String idStr = BuiltInRegistries.ITEM.getKey(e.stack.getItem()).toString();
             String enchTokens = getEnchantSearchTokens(e.stack);
             if (query.isEmpty() || idStr.toLowerCase(Locale.ROOT).contains(query) || name.contains(query) || enchTokens.contains(query)) {
                 filtered.add(e);
@@ -186,69 +186,6 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
                     tooltipToRender.add(full ? name.withStyle(ChatFormatting.RED) : name);
                 }
                 tooltipToRender.add(Component.literal("x" + e.count));
-                var tag = stack.getTag();
-                if (tag != null) {
-                    java.util.List<Component> enchLines = new java.util.ArrayList<>();
-                    if (tag.contains("Enchantments")) {
-                        var list = tag.getList("Enchantments", 10);
-                        for (int j = 0; j < list.size(); j++) {
-                            var ench = list.getCompound(j);
-                            String id = ench.getString("id");
-                            int lvl = ench.getInt("lvl");
-                            var rl = new net.minecraft.resources.ResourceLocation(id);
-                            var eobj = net.minecraftforge.registries.ForgeRegistries.ENCHANTMENTS.getValue(rl);
-                            String nameTxt = eobj != null ? Component.translatable(eobj.getDescriptionId()).getString() : id;
-                            String lvlTxt = Component.translatable("enchantment.level." + lvl).getString();
-                            enchLines.add(Component.literal(nameTxt + " " + lvlTxt));
-                        }
-                    }
-                    if (tag.contains("StoredEnchantments")) {
-                        var list2 = tag.getList("StoredEnchantments", 10);
-                        for (int k = 0; k < list2.size(); k++) {
-                            var ench = list2.getCompound(k);
-                            String id = ench.getString("id");
-                            int lvl = ench.getInt("lvl");
-                            var rl = new net.minecraft.resources.ResourceLocation(id);
-                            var eobj = net.minecraftforge.registries.ForgeRegistries.ENCHANTMENTS.getValue(rl);
-                            String nameTxt = eobj != null ? Component.translatable(eobj.getDescriptionId()).getString() : id;
-                            String lvlTxt = Component.translatable("enchantment.level." + lvl).getString();
-                            enchLines.add(Component.literal(nameTxt + " " + lvlTxt));
-                        }
-                    }
-                    for (var c : enchLines) tooltipToRender.add(c);
-                    
-                    if (tag.contains("BlockEntityTag")) {
-                        var bet = tag.getCompound("BlockEntityTag");
-                        if (bet.contains("Items")) {
-                            var items = bet.getList("Items", 10);
-                            if (!items.isEmpty()) {
-                                tooltipToRender.add(Component.literal("Contents:").withStyle(ChatFormatting.GRAY));
-                                int limit = 5;
-                                int countShown = 0;
-                                for (int k = 0; k < items.size(); k++) {
-                                    if (countShown >= limit) {
-                                        tooltipToRender.add(Component.literal("... and " + (items.size() - limit) + " more").withStyle(ChatFormatting.ITALIC, ChatFormatting.GRAY));
-                                        break;
-                                    }
-                                    var itemTag = items.getCompound(k);
-                                    String id = itemTag.getString("id");
-                                    if (id.isEmpty()) continue;
-                                    int count = itemTag.contains("Count") ? itemTag.getByte("Count") : 1;
-                                    var rl = new net.minecraft.resources.ResourceLocation(id);
-                                    var item = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(rl);
-                                    MutableComponent line = Component.literal("- ");
-                                    if (item != null) {
-                                        line.append(Component.translatable(item.getDescriptionId())).append(" x" + count);
-                                    } else {
-                                        line.append(id + " x" + count);
-                                    }
-                                    tooltipToRender.add(line.withStyle(ChatFormatting.GRAY));
-                                    countShown++;
-                                }
-                            }
-                        }
-                    }
-                }
             }
             idx++;
         }
@@ -421,12 +358,12 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
     
     private net.minecraft.world.item.ItemStack getUpgradeItemForLevel(int level) {
         switch (level) {
-            case 0: return new net.minecraft.world.item.ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_ZERO.get());
-            case 1: return new net.minecraft.world.item.ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_BASIC.get());
-            case 2: return new net.minecraft.world.item.ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_COPPER.get());
-            case 3: return new net.minecraft.world.item.ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_ADVANCED.get());
-            case 4: return new net.minecraft.world.item.ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_ELITE.get());
-            case 5: return new net.minecraft.world.item.ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_DEFINITIVE.get());
+            case 0: return new net.minecraft.world.item.ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_ZERO);
+            case 1: return new net.minecraft.world.item.ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_BASIC);
+            case 2: return new net.minecraft.world.item.ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_COPPER);
+            case 3: return new net.minecraft.world.item.ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_ADVANCED);
+            case 4: return new net.minecraft.world.item.ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_ELITE);
+            case 5: return new net.minecraft.world.item.ItemStack(com.agustinbenitez.indexer.init.ModItems.TRANSFER_SPEED_UPGRADE_DEFINITIVE);
             default: return net.minecraft.world.item.ItemStack.EMPTY;
         }
     }
@@ -469,7 +406,7 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
                 updateSuggestion();
                 return true;
             }
-            if (Minecraft.getInstance().options.keyInventory.isActiveAndMatches(InputConstants.getKey(keyCode, scanCode))) {
+            if (Minecraft.getInstance().options.keyInventory.matches(keyCode, scanCode)) {
                 return true;
             }
             this.searchBox.keyPressed(keyCode, scanCode, modifiers);
@@ -568,9 +505,9 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
     }
     
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
-        if (delta < 0) scrollRowOffset++;
-        if (delta > 0) scrollRowOffset--;
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (scrollY < 0) scrollRowOffset++;
+        if (scrollY > 0) scrollRowOffset--;
         return true;
     }
     
@@ -627,7 +564,7 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
 
     public void requestExtract(ItemStack stackVariant, int count) {
         ModNetworking.sendToServer(new ExtractItemFromManagerPacket(this.menu.getBlockEntity().getBlockPos(),
-                net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(stackVariant.getItem()), count, stackVariant));
+                BuiltInRegistries.ITEM.getKey(stackVariant.getItem()), count, stackVariant));
     }
     
     private void sortFiltered() {
@@ -648,7 +585,7 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
                 break;
             case MOD:
                 filtered.sort(Comparator.comparing((ItemVariantEntry e) -> {
-                            var key = ForgeRegistries.ITEMS.getKey(e.stack.getItem());
+                            var key = BuiltInRegistries.ITEM.getKey(e.stack.getItem());
                             return key == null ? "" : key.getNamespace();
                         }, String.CASE_INSENSITIVE_ORDER)
                         .thenComparing((ItemVariantEntry e) -> getItemName(e), String.CASE_INSENSITIVE_ORDER));
@@ -664,45 +601,7 @@ public class IndexerManagerScreen extends AbstractContainerScreen<IndexerManager
     }
     
     private String getEnchantSearchTokens(ItemStack stack) {
-        StringBuilder sb = new StringBuilder();
-        var tag = stack.getTag();
-        if (tag != null) {
-            if (tag.contains("Enchantments")) {
-                var list = tag.getList("Enchantments", 10);
-                for (int i = 0; i < list.size(); i++) {
-                    var ench = list.getCompound(i);
-                    String id = ench.getString("id");
-                    int lvl = ench.getInt("lvl");
-                    var rl = new net.minecraft.resources.ResourceLocation(id);
-                    var eobj = net.minecraftforge.registries.ForgeRegistries.ENCHANTMENTS.getValue(rl);
-                    if (eobj != null) {
-                        sb.append(net.minecraftforge.registries.ForgeRegistries.ENCHANTMENTS.getKey(eobj).toString().toLowerCase(Locale.ROOT)).append(" ");
-                        sb.append(Component.translatable(eobj.getDescriptionId()).getString().toLowerCase(Locale.ROOT)).append(" ");
-                    } else {
-                        sb.append(id.toLowerCase(Locale.ROOT)).append(" ");
-                    }
-                    sb.append(Component.translatable("enchantment.level." + lvl).getString().toLowerCase(Locale.ROOT)).append(" ");
-                }
-            }
-            if (tag.contains("StoredEnchantments")) {
-                var list2 = tag.getList("StoredEnchantments", 10);
-                for (int i = 0; i < list2.size(); i++) {
-                    var ench = list2.getCompound(i);
-                    String id = ench.getString("id");
-                    int lvl = ench.getInt("lvl");
-                    var rl = new net.minecraft.resources.ResourceLocation(id);
-                    var eobj = net.minecraftforge.registries.ForgeRegistries.ENCHANTMENTS.getValue(rl);
-                    if (eobj != null) {
-                        sb.append(net.minecraftforge.registries.ForgeRegistries.ENCHANTMENTS.getKey(eobj).toString().toLowerCase(Locale.ROOT)).append(" ");
-                        sb.append(Component.translatable(eobj.getDescriptionId()).getString().toLowerCase(Locale.ROOT)).append(" ");
-                    } else {
-                        sb.append(id.toLowerCase(Locale.ROOT)).append(" ");
-                    }
-                    sb.append(Component.translatable("enchantment.level." + lvl).getString().toLowerCase(Locale.ROOT)).append(" ");
-                }
-            }
-        }
-        return sb.toString();
+        return "";
     }
     
     private boolean isConstruction(ItemVariantEntry e) {

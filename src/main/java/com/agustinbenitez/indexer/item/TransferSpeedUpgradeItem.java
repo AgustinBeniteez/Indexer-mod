@@ -15,8 +15,6 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
-
-import javax.annotation.Nullable;
 import java.util.List;
 
 public class TransferSpeedUpgradeItem extends Item {
@@ -30,12 +28,12 @@ public class TransferSpeedUpgradeItem extends Item {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, net.minecraft.world.item.Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("item.indexer.transfer_speed_upgrade.tooltip").withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("item.indexer.transfer_speed_upgrade.transfers_info", transferRate).withStyle(ChatFormatting.GOLD));
         tooltip.add(Component.translatable("item.indexer.transfer_speed_upgrade.usage").withStyle(ChatFormatting.AQUA));
         tooltip.add(Component.translatable("item.indexer.transfer_speed_upgrade.single_use").withStyle(ChatFormatting.RED));
-        super.appendHoverText(stack, level, tooltip, flag);
+        super.appendHoverText(stack, context, tooltip, flag);
     }
 
     @Override

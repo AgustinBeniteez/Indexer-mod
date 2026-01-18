@@ -30,7 +30,7 @@ public class DropBoxMenu extends AbstractContainerMenu {
 
     // Private constructor
     private DropBoxMenu(int id, Inventory playerInventory, Container container, ContainerData data, DropBoxBlockEntity dropBoxEntity) {
-        super(ModMenuTypes.DROP_BOX_MENU.get(), id);
+        super(ModMenuTypes.DROP_BOX_MENU, id);
         this.container = container;
         this.data = data;
         this.dropBoxEntity = dropBoxEntity;

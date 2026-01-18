@@ -30,7 +30,7 @@ public class IndexerConnectorMenu extends AbstractContainerMenu {
     private static final int SLOT_SIZE = 18;
 
     public IndexerConnectorMenu(int id, Inventory playerInventory, Container container, IndexerConnectorBlockEntity blockEntity) {
-        super(ModMenuTypes.INDEXER_CONNECTOR_MENU.get(), id);
+        super(ModMenuTypes.INDEXER_CONNECTOR_MENU, id);
         this.container = container;
         this.blockEntity = blockEntity;
         this.access = blockEntity != null ? ContainerLevelAccess.create(blockEntity.getLevel(), blockEntity.getBlockPos()) : ContainerLevelAccess.NULL;

@@ -33,7 +33,7 @@ public class IndexerManagerMenu extends AbstractContainerMenu {
     private static final int MANAGER_GRID_START_Y = 86;
 
     public IndexerManagerMenu(int id, Inventory inv, FriendlyByteBuf extraData) {
-        super(ModMenuTypes.INDEXER_MANAGER_MENU.get(), id);
+        super(ModMenuTypes.INDEXER_MANAGER_MENU, id);
         BlockEntity be = inv.player.level().getBlockEntity(extraData.readBlockPos());
         this.blockEntity = (IndexerManagerBlockEntity) be;
         this.level = inv.player.level();
@@ -59,7 +59,7 @@ public class IndexerManagerMenu extends AbstractContainerMenu {
     }
 
     public IndexerManagerMenu(int id, Inventory inv, BlockEntity entity) {
-        super(ModMenuTypes.INDEXER_MANAGER_MENU.get(), id);
+        super(ModMenuTypes.INDEXER_MANAGER_MENU, id);
         this.blockEntity = (IndexerManagerBlockEntity) entity;
         this.level = inv.player.level();
         this.data = createContainerData();
