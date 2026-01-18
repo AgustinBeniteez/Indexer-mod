@@ -870,7 +870,11 @@ public class IndexerControllerNetworkScreen extends AbstractContainerScreen<Inde
                         mouseY >= detailedItemsAreaY && mouseY < detailedItemsAreaY + detailedItemsAreaHeight) {
                         List<Component> tooltip = new ArrayList<>();
                         tooltip.add(displayItem.getHoverName());
-                        tooltip.add(Component.literal("Cantidad: " + formatNumber(quantity)));
+                        tooltip.add(
+                            Component.translatable("gui.indexer.manager.sort_cantidad")
+                                     .append(": ")
+                                     .append(formatNumber(quantity))
+                        );
                         guiGraphics.renderComponentTooltip(this.font, tooltip, mouseX, mouseY);
                     }
                 }

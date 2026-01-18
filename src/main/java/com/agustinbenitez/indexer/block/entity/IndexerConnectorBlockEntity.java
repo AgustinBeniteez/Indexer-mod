@@ -3,9 +3,11 @@ package com.agustinbenitez.indexer.block.entity;
 import com.agustinbenitez.indexer.block.IndexerConnectorBlock;
 import com.agustinbenitez.indexer.init.ModBlockEntities;
 import com.agustinbenitez.indexer.init.ModItems;
+import com.agustinbenitez.indexer.init.ModMenuTypes;
 import com.agustinbenitez.indexer.inventory.IndexerConnectorMenu;
 import com.agustinbenitez.indexer.util.FilterUtils;
 
+import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerFactory;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
@@ -29,7 +31,7 @@ import net.minecraft.world.phys.AABB;
 import java.util.List;
 import java.util.ArrayList;
 
-public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntity {
+public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntity implements ExtendedScreenHandlerFactory<ModMenuTypes.BlockPosPayload> {
     private static final int BASE_FILTER_SLOTS = 9; // 3x3 grid of filter slots
     private static final int UPGRADED_FILTER_SLOTS = 18; // 6x3 when upgraded
     private int connectorLevel = 1;
@@ -40,12 +42,15 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
 
     public IndexerConnectorBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.INDEXER_CONNECTOR, pos, state);
-        // Desfasar el contador de ticks para evitar picos de lag
         this.tickCounter = (int)(Math.random() * 20);
-        // Initialize filter items list with empty stacks
         for (int i = 0; i < BASE_FILTER_SLOTS; i++) {
             filterItems.add(ItemStack.EMPTY);
         }
+    }
+
+    @Override
+    public ModMenuTypes.BlockPosPayload getScreenOpeningData(net.minecraft.server.level.ServerPlayer player) {
+        return new ModMenuTypes.BlockPosPayload(this.worldPosition);
     }
 
     @Override

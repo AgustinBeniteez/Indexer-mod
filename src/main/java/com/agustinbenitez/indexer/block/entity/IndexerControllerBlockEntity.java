@@ -8,9 +8,11 @@ import com.agustinbenitez.indexer.block.IndexerManagerBlock;
 import com.agustinbenitez.indexer.block.IndexerPipeBlock;
 import com.agustinbenitez.indexer.init.ModBlockEntities;
 import com.agustinbenitez.indexer.init.ModBlocks;
+import com.agustinbenitez.indexer.init.ModMenuTypes;
 import com.agustinbenitez.indexer.menu.IndexerControllerNetworkMenu;
 import com.agustinbenitez.indexer.util.FilterUtils;
 
+import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerFactory;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
@@ -33,7 +35,7 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import java.util.*;
 
-public class IndexerControllerBlockEntity extends BlockEntity implements MenuProvider {
+public class IndexerControllerBlockEntity extends BlockEntity implements MenuProvider, ExtendedScreenHandlerFactory<ModMenuTypes.BlockPosPayload> {
     private static final int TRANSFER_COOLDOWN_MAX = 8;
     private static final int DEFAULT_ITEMS_PER_TRANSFER = 1; // Valor predeterminado
     private static final int SEARCH_RANGE = 250; // Aumentado de 10 a 50 para permitir más conectores
@@ -82,6 +84,11 @@ public class IndexerControllerBlockEntity extends BlockEntity implements MenuPro
                 return 8;
             }
         };
+    }
+
+    @Override
+    public ModMenuTypes.BlockPosPayload getScreenOpeningData(net.minecraft.server.level.ServerPlayer player) {
+        return new ModMenuTypes.BlockPosPayload(this.worldPosition);
     }
 
     @Override

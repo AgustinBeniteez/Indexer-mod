@@ -31,8 +31,10 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.component.CustomData;
 import java.util.*;
 import org.jetbrains.annotations.Nullable;
+import com.agustinbenitez.indexer.init.ModMenuTypes;
+import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerFactory;
 
-public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity {
+public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity implements ExtendedScreenHandlerFactory<ModMenuTypes.BlockPosPayload> {
     private boolean networkChanged = true;
     private List<IndexerConnectorBlockEntity> connectorCache = null;
     private static final int CONTAINER_SIZE = 9;
@@ -45,6 +47,11 @@ public class IndexerManagerBlockEntity extends RandomizableContainerBlockEntity 
 
     public IndexerManagerBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.INDEXER_MANAGER, pos, state);
+    }
+
+    @Override
+    public ModMenuTypes.BlockPosPayload getScreenOpeningData(net.minecraft.server.level.ServerPlayer player) {
+        return new ModMenuTypes.BlockPosPayload(this.worldPosition);
     }
 
     @Override
