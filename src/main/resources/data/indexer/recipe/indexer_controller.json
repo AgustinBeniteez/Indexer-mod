@@ -20,6 +20,6 @@
     }
   },
   "result": {
-    "item": "indexer:indexer_controller"
+    "id": "indexer:indexer_controller"
   }
 }

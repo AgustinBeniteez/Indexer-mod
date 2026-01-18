@@ -9,7 +9,7 @@
     }
   },
   "result": {
-    "item": "indexer:indexer_pipe",
+    "id": "indexer:indexer_pipe",
     "count": 10
   }
 }

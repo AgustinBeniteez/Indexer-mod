@@ -10,7 +10,7 @@
 ![Indexer Logo](src/main/resources/assets/indexer/textures/gui/logo.png)
 # [View Video](https://youtu.be/rm9Hx_9Qvbw?si=IMnWUiCvcO_cNHbx)
 ## Description
-Indexer is a mod for Minecraft 1.20.1 that helps you organize and manage your items. This automation system allows you to filter and automatically distribute the contents of your Chests/Containers, eliminating the need to manually sort your resources.
+Indexer is a mod for Minecraft 1.21.1 that helps you organize and manage your items. This automation system allows you to filter and automatically distribute the contents of your Chests/Containers, eliminating the need to manually sort your resources.
 
 With Indexer, you can deposit all your items in a central point and the system will take care of distributing them to the appropriate containers according to the filters you have configured, saving you time and keeping your base perfectly organized!
 
@@ -181,11 +181,11 @@ All interface elements, item names, tooltips, and system messages are fully tran
    - If an item does not match any filter, it will remain in the controller.
 
 ## Requirements
-- Minecraft 1.20.1
+- Minecraft 1.21.1
 - Forge 47.1.0 or higher
 
 ## Installation
-1. Install Minecraft Forge for version 1.20.1.
+1. Install Minecraft Forge for version 1.21.1.
 2. Download the mod's .jar file.
 3. Place the .jar file in the "mods" folder of your Minecraft installation.
 4. Start Minecraft with the Forge profile.
@@ -253,6 +253,6 @@ Contributions to the Indexer Mod are welcome! If you'd like to contribute to the
 - Write clear, descriptive commit messages
 - Include comments in your code when necessary
 - Update documentation if needed
-- Make sure your code works with Minecraft 1.20.1 and Forge 47.1.0+
+- Make sure your code works with Minecraft 1.21.1 and Forge 47.1.0+
 
 Thank you for helping improve the Indexer Mod!

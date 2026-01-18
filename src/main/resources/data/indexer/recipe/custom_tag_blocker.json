@@ -17,6 +17,6 @@
     }
   },
   "result": {
-    "item": "indexer:custom_tag_blocker"
+    "id": "indexer:custom_tag_blocker"
   }
 }

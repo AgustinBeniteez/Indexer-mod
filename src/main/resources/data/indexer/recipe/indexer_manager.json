@@ -23,7 +23,7 @@
     }
   },
   "result": {
-    "item": "indexer:indexer_manager",
+    "id": "indexer:indexer_manager",
     "count": 1
   }
 }

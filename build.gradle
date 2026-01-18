@@ -14,7 +14,7 @@ apply plugin: 'net.minecraftforge.gradle'
 
 version = '1.0.7'
 group = 'com.agustinbenitez.indexer'
-archivesBaseName = 'indexer-1.21.1-v'
+archivesBaseName = 'indexer-forge-1.21.1-v'
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 

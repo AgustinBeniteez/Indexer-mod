@@ -23,6 +23,6 @@
     }
   },
   "result": {
-    "item": "indexer:tools_filter"
+    "id": "indexer:tools_filter"
   }
 }

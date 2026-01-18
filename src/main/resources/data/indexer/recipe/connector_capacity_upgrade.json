@@ -17,7 +17,7 @@
     }
   },
   "result": {
-    "item": "indexer:connector_capacity_upgrade",
+    "id": "indexer:connector_capacity_upgrade",
     "count": 1
   }
 }

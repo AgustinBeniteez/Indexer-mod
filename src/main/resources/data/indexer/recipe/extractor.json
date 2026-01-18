@@ -23,6 +23,6 @@
     }
   },
   "result": {
-    "item": "indexer:extractor"
+    "id": "indexer:extractor"
   }
 }

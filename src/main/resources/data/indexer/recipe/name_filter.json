@@ -17,6 +17,6 @@
     }
   },
   "result": {
-    "item": "indexer:name_filter"
+    "id": "indexer:name_filter"
   }
 }

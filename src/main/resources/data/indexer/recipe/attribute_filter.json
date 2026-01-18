@@ -17,6 +17,6 @@
     }
   },
   "result": {
-    "item": "indexer:attribute_filter"
+    "id": "indexer:attribute_filter"
   }
 }

@@ -14,7 +14,7 @@
     }
   },
   "result": {
-    "item": "indexer:transfer_speed_upgrade_copper",
+    "id": "indexer:transfer_speed_upgrade_copper",
     "count": 1
   }
 }

@@ -20,6 +20,6 @@
     }
   },
   "result": {
-    "item": "indexer:drop_box"
+    "id": "indexer:drop_box"
   }
 }

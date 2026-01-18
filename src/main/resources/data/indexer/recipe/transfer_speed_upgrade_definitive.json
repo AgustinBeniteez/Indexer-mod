@@ -20,7 +20,7 @@
     }
   },
   "result": {
-    "item": "indexer:transfer_speed_upgrade_definitive",
+    "id": "indexer:transfer_speed_upgrade_definitive",
     "count": 1
   }
 }
