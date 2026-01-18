@@ -32,6 +32,7 @@ public class IndexerManualScreen extends Screen {
     private static final ResourceLocation BACKGROUND = ResourceLocation.fromNamespaceAndPath(IndexerMod.MOD_ID, "textures/gui/manual/manualgui.png");
     private static final ResourceLocation LOGO = ResourceLocation.fromNamespaceAndPath(IndexerMod.MOD_ID, "textures/block/indexer_controller_top.png");
     private static final String WIKI_URL = "https://agustinbeniteez.github.io/Wikimods/mod/index.html?id=indexer&game=minecraft";
+    private static final String WIKI_CRAFTS_URL = "https://agustinbeniteez.github.io/Wikimods/mod/index.html?id=indexer&game=minecraft&tab=crafts";
     
     // Botones de navegación
     private Button nextButton;
@@ -51,7 +52,7 @@ public class IndexerManualScreen extends Screen {
     private final ResourceLocation[] pageImages = new ResourceLocation[totalPages];
     
     // Estados de vista
-    private enum ViewMode { MENU, TUTORIAL, CRAFTING }
+    private enum ViewMode { MENU, TUTORIAL }
     private ViewMode currentView = ViewMode.MENU;
     
     // Splash del logo
@@ -149,7 +150,7 @@ public class IndexerManualScreen extends Screen {
         this.menuBtnHeight =70;
         this.menuStartX = centerX - (menuBtnWidth * 3 + 20) / 2; // 3 botones + separaciones
         this.menuY = topPos + 60;
-        this.craftingButton = new TexturedMenuButton(menuStartX, menuY, menuBtnWidth, menuBtnHeight, Component.translatable("gui.indexer.manual.crafting"), b -> switchToCrafting(), MENU_CRAFT_TEXTURE);
+        this.craftingButton = new TexturedMenuButton(menuStartX, menuY, menuBtnWidth, menuBtnHeight, Component.translatable("gui.indexer.manual.crafting"), b -> openCraftsWiki(), MENU_CRAFT_TEXTURE);
         this.tutorialButton = new TexturedMenuButton(menuStartX + menuBtnWidth + 10, menuY, menuBtnWidth, menuBtnHeight, Component.translatable("gui.indexer.manual.tutorial"), b -> switchToTutorial(), MENU_TUTORIAL_TEXTURE);
         this.wikiButton = new TexturedMenuButton(menuStartX + (menuBtnWidth + 10) * 2, menuY, menuBtnWidth, menuBtnHeight, Component.translatable("gui.indexer.manual.wiki"), b -> openWiki(), MENU_WIKI_TEXTURE);
         
@@ -221,9 +222,6 @@ public class IndexerManualScreen extends Screen {
                     guiGraphics.drawString(this.font, net.minecraft.client.resources.language.I18n.get("gui.indexer.manual.error_image"), leftPos + 28, topPos + 70, 0xFF0000, false);
                 }
             }
-            case CRAFTING -> {
-                renderCraftingList(guiGraphics, leftPos, topPos, mouseX, mouseY);
-            }
         }
         guiGraphics.pose().popPose();
 
@@ -253,11 +251,6 @@ public class IndexerManualScreen extends Screen {
             if (currentPage < totalPages - 1) {
                 currentPage++;
             }
-        } else if (currentView == ViewMode.CRAFTING) {
-            int maxPage = Math.max(0, (int)Math.ceil((double)filteredCraftingRecipes.size() / recipesPerPage) - 1);
-            if (craftingPage < maxPage) {
-                craftingPage++;
-            }
         }
         updateButtonStates();
     }
@@ -270,10 +263,6 @@ public class IndexerManualScreen extends Screen {
             if (currentPage > 0) {
                 currentPage--;
             }
-        } else if (currentView == ViewMode.CRAFTING) {
-            if (craftingPage > 0) {
-                craftingPage--;
-            }
         }
         updateButtonStates();
     }
@@ -285,10 +274,6 @@ public class IndexerManualScreen extends Screen {
         if (currentView == ViewMode.TUTORIAL) {
             this.prevButton.active = currentPage > 0;
             this.nextButton.active = currentPage < totalPages - 1;
-        } else if (currentView == ViewMode.CRAFTING) {
-            int maxPage = Math.max(0, (int)Math.ceil((double)filteredCraftingRecipes.size() / recipesPerPage) - 1);
-            this.prevButton.active = craftingPage > 0;
-            this.nextButton.active = craftingPage < maxPage;
         } else {
             this.prevButton.active = false;
             this.nextButton.active = false;
@@ -309,15 +294,6 @@ public class IndexerManualScreen extends Screen {
         currentView = ViewMode.TUTORIAL;
         updateVisibilityForView();
     }
-    private void switchToCrafting() {
-        currentView = ViewMode.CRAFTING;
-        if (this.minecraft != null && this.minecraft.level != null) {
-            loadModCraftingRecipes();
-            applyCraftingFilter(this.searchBox.getValue());
-        }
-        craftingPage = 0;
-        updateVisibilityForView();
-    }
     private void openWiki() {
         this.minecraft.setScreen(new ConfirmLinkScreen(accepted -> {
             if (accepted) {
@@ -325,6 +301,14 @@ public class IndexerManualScreen extends Screen {
             }
             this.minecraft.setScreen(this);
         }, WIKI_URL, true));
+    }
+    private void openCraftsWiki() {
+        this.minecraft.setScreen(new ConfirmLinkScreen(accepted -> {
+            if (accepted) {
+                Util.getPlatform().openUri(WIKI_CRAFTS_URL);
+            }
+            this.minecraft.setScreen(this);
+        }, WIKI_CRAFTS_URL, true));
     }
     private void updateVisibilityForView() {
         if (inSplash) {
@@ -340,40 +324,53 @@ public class IndexerManualScreen extends Screen {
         }
         boolean isMenu = currentView == ViewMode.MENU;
         boolean isTutorial = currentView == ViewMode.TUTORIAL;
-        boolean isCrafting = currentView == ViewMode.CRAFTING;
         // Navegación
-        this.prevButton.visible = isTutorial || isCrafting;
-        this.nextButton.visible = isTutorial || isCrafting;
+        this.prevButton.visible = isTutorial;
+        this.nextButton.visible = isTutorial;
         this.menuButton.visible = !isMenu; // mostrar volver al menú fuera del menú
         // Menú principal
         this.craftingButton.visible = isMenu;
         this.tutorialButton.visible = isMenu;
         this.wikiButton.visible = isMenu;
-        // Búsqueda crafteos
-        this.searchBox.visible = isCrafting;
+        this.searchBox.visible = false;
         updateButtonStates();
     }
     
     // ---- Crafteos ----
     private void loadModCraftingRecipes() {
         try {
-            var manager = this.minecraft.level.getRecipeManager();
+            if (this.minecraft == null) {
+                this.modCraftingRecipes = java.util.Collections.emptyList();
+                this.filteredCraftingRecipes = java.util.Collections.emptyList();
+                return;
+            }
+            
+            var connection = this.minecraft.getConnection();
+            var manager = connection != null
+                    ? connection.getRecipeManager()
+                    : (this.minecraft.level != null ? this.minecraft.level.getRecipeManager() : null);
+            
+            if (manager == null) {
+                this.modCraftingRecipes = java.util.Collections.emptyList();
+                this.filteredCraftingRecipes = java.util.Collections.emptyList();
+                return;
+            }
+            
             var recipes = manager.getAllRecipesFor(RecipeType.CRAFTING);
             java.util.List<Recipe<?>> modList = new java.util.ArrayList<>();
             for (net.minecraft.world.item.crafting.RecipeHolder<net.minecraft.world.item.crafting.CraftingRecipe> holder : recipes) {
+                var id = holder.id();
+                if (id == null || !IndexerMod.MOD_ID.equals(id.getNamespace())) {
+                    continue;
+                }
                 Recipe<?> recipe = holder.value();
-                ItemStack result = recipe.getResultItem(this.minecraft.level.registryAccess());
-                if (!result.isEmpty()) {
-                    var key = BuiltInRegistries.ITEM.getKey(result.getItem());
-                    if (key != null && IndexerMod.MOD_ID.equals(key.getNamespace())) {
-                        modList.add(recipe);
-                    }
+                if (recipe != null) {
+                    modList.add(recipe);
                 }
             }
             this.modCraftingRecipes = modList;
             this.filteredCraftingRecipes = modList;
         } catch (Exception e) {
-            // En caso de error, mantener listas vacías
             this.modCraftingRecipes = java.util.Collections.emptyList();
             this.filteredCraftingRecipes = java.util.Collections.emptyList();
         }
@@ -398,13 +395,22 @@ public class IndexerManualScreen extends Screen {
         updateButtonStates();
     }
     private void renderCraftingList(GuiGraphics g, int leftPos, int topPos, int mouseX, int mouseY) {
-        // Título y caja búsqueda ya posicionados
         String title = net.minecraft.client.resources.language.I18n.get("gui.indexer.manual.crafting");
         int centerX = this.width / 2;
         g.drawString(this.font, title, centerX - (this.font.width(title) / 2), topPos + 12, 0xFFFFFF, false);
         this.searchBox.render(g, mouseX, mouseY, 0f);
         
-        // Calcular ventana de recetas
+        if (this.filteredCraftingRecipes.isEmpty()) {
+            String noRecipes = net.minecraft.client.resources.language.I18n.get("gui.indexer.manual.no_crafting");
+            int tx = centerX - (this.font.width(noRecipes) / 2);
+            int ty = topPos + SCREEN_HEIGHT / 2 - 10;
+            g.drawString(this.font, noRecipes, tx, ty, 0xAAAAAA, false);
+            String checkBook = net.minecraft.client.resources.language.I18n.get("gui.indexer.manual.no_crafting_hint");
+            int tx2 = centerX - (this.font.width(checkBook) / 2);
+            g.drawString(this.font, checkBook, tx2, ty + 12, 0x666666, false);
+            return;
+        }
+        
         int startIndex = craftingPage * recipesPerPage;
         int endIndex = Math.min(startIndex + recipesPerPage, filteredCraftingRecipes.size());
 
