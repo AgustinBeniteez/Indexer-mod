@@ -1,6 +1,6 @@
 # Guía de Desarrollo para Indexer Mod
 
-Esta guía está destinada a desarrolladores que deseen compilar, modificar o probar el mod Indexer para Minecraft 1.20.1.
+Esta guía está destinada a desarrolladores que deseen compilar, modificar o probar el mod Indexer para Minecraft 1.21.1.
 
 ## Requisitos Previos
 
@@ -14,7 +14,7 @@ Esta guía está destinada a desarrolladores que deseen compilar, modificar o pr
 ### Clonar el Repositorio
 
 ```bash
-git clone https://github.com/tu-usuario/Indexer-mod.git
+git clone https://github.com/AgustinBeniteez/Indexer-mod.git
 cd Indexer-mod
 ```
 
@@ -80,7 +80,7 @@ Puedes ejecutar el mod directamente desde tu IDE:
 Para probar el mod manualmente:
 
 1. Compila el mod como se indicó anteriormente.
-2. Copia el archivo JAR generado (`build/libs/indexer-<version>.jar`) a la carpeta `mods` de tu instalación de Minecraft con Forge 1.20.1.
+2. Copia el archivo JAR generado (`build/libs/indexer-<version>.jar`) a la carpeta `mods` de tu instalación de Minecraft con Forge 1.21.1.
 3. Inicia Minecraft con Forge instalado.
 4. Verifica que el mod aparezca en la lista de mods cargados.
 5. Prueba la funcionalidad en el juego:
