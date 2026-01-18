@@ -1,13 +1,13 @@
 {
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    " R ",
-    "RFR",
+    " P ",
+    "PFP",
     " N "
   ],
   "key": {
-    "R": {
-      "item": "minecraft:redstone"
+    "P": {
+      "item": "minecraft:paper"
     },
     "F": {
       "item": "indexer:base_filter"
@@ -17,6 +17,7 @@
     }
   },
   "result": {
-    "item": "indexer:custom_tag_blocker"
+    "id": "indexer:name_filter"
   }
 }
+

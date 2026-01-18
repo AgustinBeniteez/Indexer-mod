@@ -12,6 +12,7 @@
     }
   ],
   "result": {
-    "item": "indexer:indexer_manual"
+    "id": "indexer:indexer_manual"
   }
 }
+

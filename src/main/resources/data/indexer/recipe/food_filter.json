@@ -20,6 +20,7 @@
     }
   },
   "result": {
-    "item": "indexer:food_filter"
+    "id": "indexer:food_filter"
   }
 }
+

@@ -1,13 +1,13 @@
 {
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    " P ",
-    "PFP",
+    " E ",
+    " F ",
     " N "
   ],
   "key": {
-    "P": {
-      "item": "minecraft:paper"
+    "E": {
+      "item": "minecraft:enchanted_book"
     },
     "F": {
       "item": "indexer:base_filter"
@@ -17,6 +17,6 @@
     }
   },
   "result": {
-    "item": "indexer:name_filter"
+    "id": "indexer:attribute_filter"
   }
 }

@@ -1,19 +1,16 @@
 {
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    "LLL",
-    "LIL",
-    "LLL"
+    "III"
   ],
   "key": {
-    "L": {
-      "item": "minecraft:leather"
-    },
     "I": {
       "item": "minecraft:iron_ingot"
     }
   },
   "result": {
-    "item": "indexer:base_filter"
+    "id": "indexer:indexer_pipe",
+    "count": 10
   }
 }
+

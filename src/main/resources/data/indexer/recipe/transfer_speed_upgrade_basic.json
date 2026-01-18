@@ -17,7 +17,8 @@
     }
   },
   "result": {
-    "item": "indexer:transfer_speed_upgrade_basic",
+    "id": "indexer:transfer_speed_upgrade_basic",
     "count": 1
   }
 }
+

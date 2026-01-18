@@ -20,7 +20,8 @@
     }
   },
   "result": {
-    "item": "indexer:fuel_filter",
+    "id": "indexer:fuel_filter",
     "count": 1
   }
 }
+

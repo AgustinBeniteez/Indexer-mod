@@ -1,13 +1,13 @@
 {
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    " E ",
-    " F ",
+    " R ",
+    "RFR",
     " N "
   ],
   "key": {
-    "E": {
-      "item": "minecraft:enchanted_book"
+    "R": {
+      "item": "minecraft:redstone"
     },
     "F": {
       "item": "indexer:base_filter"
@@ -17,6 +17,7 @@
     }
   },
   "result": {
-    "item": "indexer:attribute_filter"
+    "id": "indexer:custom_tag_blocker"
   }
 }
+

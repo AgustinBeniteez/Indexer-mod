@@ -14,7 +14,8 @@
     }
   },
   "result": {
-    "item": "indexer:transfer_speed_upgrade_elite",
+    "id": "indexer:transfer_speed_upgrade_elite",
     "count": 1
   }
 }
+

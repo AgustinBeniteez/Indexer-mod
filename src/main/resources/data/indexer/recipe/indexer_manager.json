@@ -1,28 +1,30 @@
 {
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    "IHI",
-    "RCR",
-    "IPI"
+    "RSR",
+    "ICI",
+    "RBR"
   ],
   "key": {
+    "S": {
+      "item": "indexer:screen"
+    },
     "I": {
       "item": "minecraft:iron_ingot"
-    },
-    "H": {
-      "item": "minecraft:hopper"
     },
     "R": {
       "item": "minecraft:redstone"
     },
     "C": {
-      "item": "minecraft:chest"
+      "item": "indexer:chip_manager"
     },
-    "P": {
-      "item": "minecraft:piston"
+    "B": {
+      "item": "minecraft:chest"
     }
   },
   "result": {
-    "item": "indexer:extractor"
+    "id": "indexer:indexer_manager",
+    "count": 1
   }
 }
+
