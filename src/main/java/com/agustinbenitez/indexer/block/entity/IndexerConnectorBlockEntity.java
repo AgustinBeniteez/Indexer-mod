@@ -700,19 +700,31 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
 
         /* Capability support removed for Fabric port - relying on Container interface below */
 
-        /* Bloque legacy eliminado: La lógica manual de cofre doble causaba problemas de posicionamiento */
+        if (isChestBlockEntity(containerEntity)) {
+            BlockPos partnerPos = findDoubleChestPartner(this.connectedContainerPos);
+            if (partnerPos != null) {
+                BlockPos mainChestPos = getMainChestPosition(this.connectedContainerPos, partnerPos);
+                BlockPos secondChestPos = mainChestPos.equals(this.connectedContainerPos) ? partnerPos : this.connectedContainerPos;
+                remainder = insertIntoDoubleChest(remainder, mainChestPos, secondChestPos);
+                if (containerEntity instanceof BlockEntity) {
+                    ((BlockEntity) containerEntity).setChanged();
+                }
+                BlockEntity partnerEntity = this.level.getBlockEntity(partnerPos);
+                if (partnerEntity instanceof BlockEntity) {
+                    ((BlockEntity) partnerEntity).setChanged();
+                }
+                return remainder;
+            }
+        }
 
-        // Comportamiento normal para otros contenedores o cofres simples
         for (int i = 0; i < container.getContainerSize(); i++) {
-            // Si es un horno, no permitir inserción en el slot de salida (slot 2)
             if (isFurnace && i == 2) {
-                continue; // Saltar el slot de salida del horno
+                continue;
             }
             
             ItemStack slotStack = container.getItem(i);
             
             if (slotStack.isEmpty()) {
-                // Slot vacío, insertar todo lo que podamos
                 int maxStackSize = Math.min(container.getMaxStackSize(), remainder.getMaxStackSize());
                 int toInsert = Math.min(remainder.getCount(), maxStackSize);
                 
@@ -722,12 +734,10 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
                 
                 remainder.shrink(toInsert);
 
-                
                 if (remainder.isEmpty()) {
                     break;
                 }
             } else if (ItemStack.isSameItemSameComponents(slotStack, remainder)) {
-                // Mismo ítem, intentar apilar
                 int maxStackSize = Math.min(container.getMaxStackSize(), slotStack.getMaxStackSize());
                 int space = maxStackSize - slotStack.getCount();
                 
@@ -735,8 +745,6 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
                     int toInsert = Math.min(remainder.getCount(), space);
                     slotStack.grow(toInsert);
                     remainder.shrink(toInsert);
-                    
-
                     
                     if (remainder.isEmpty()) {
                         break;
@@ -749,14 +757,6 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
             ((BlockEntity) containerEntity).setChanged();
         }
         
-        int inserted = initialCount - remainder.getCount();
-        if (inserted > 0) {
-
-            // Ya no enviamos mensajes de notificación al chat
-        } else {
-
-        }
-
         return remainder;
     }
     
