@@ -14,6 +14,7 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.Container;
+import net.minecraft.world.WorldlyContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -28,10 +29,12 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
+import org.jetbrains.annotations.Nullable;
 import java.util.List;
 import java.util.ArrayList;
 
-public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntity implements ExtendedScreenHandlerFactory<ModMenuTypes.BlockPosPayload> {
+public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntity implements ExtendedScreenHandlerFactory<ModMenuTypes.BlockPosPayload>, WorldlyContainer {
+    private static final int[] SLOTS_FOR_SIDES = new int[0];
     private static final int BASE_FILTER_SLOTS = 9; // 3x3 grid of filter slots
     private static final int UPGRADED_FILTER_SLOTS = 18; // 6x3 when upgraded
     private int connectorLevel = 1;
@@ -1311,6 +1314,22 @@ public class IndexerConnectorBlockEntity extends RandomizableContainerBlockEntit
         if (tag != null && this.level != null) {
             this.loadAdditional(tag, this.level.registryAccess());
         }
+    }
+
+    // --- WorldlyContainer Implementation ---
+    @Override
+    public int[] getSlotsForFace(Direction side) {
+        return SLOTS_FOR_SIDES;
+    }
+
+    @Override
+    public boolean canPlaceItemThroughFace(int index, ItemStack itemStack, @Nullable Direction direction) {
+        return false;
+    }
+
+    @Override
+    public boolean canTakeItemThroughFace(int index, ItemStack itemStack, Direction direction) {
+        return false;
     }
 
     public void ensureFilterCapacity() {

@@ -1,5 +1,5 @@
 plugins {
-	id 'fabric-loom' version '1.8-SNAPSHOT'
+	id 'fabric-loom' version '1.7-SNAPSHOT'
 	id 'maven-publish'
 }
 
@@ -52,10 +52,16 @@ java {
 }
 
 jar {
+	from sourceSets.main.output
 	from("LICENSE") {
 		rename { "${it}_${project.base.archivesName.get()}" }
 	}
 	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+	manifest {
+		attributes(
+			"Fabric-Mapping-Namespace": "named"
+		)
+	}
 }
 
 // configure the maven publication
