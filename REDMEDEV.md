@@ -50,7 +50,7 @@ Para compilar el mod y generar el archivo JAR:
 ./gradlew build
 ```
 
-El archivo JAR compilado se encontrará en la carpeta `build/libs/` (por ejemplo `indexer-fabric-1.21.1-1.0.7.jar`, según `gradle.properties`).
+El archivo JAR compilado se encontrará en la carpeta `build/libs/` (por ejemplo `indexer-fabric-1.21.1-1.0.7.1.jar`, según `gradle.properties`).
 
 ## Ejecución y Pruebas
 
